@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 from omegaconf import OmegaConf
 
-from zotero_arxiv_daily.executor import Executor, normalize_path_patterns
+from zotero_arxiv_daily.executor import Executor, normalize_path_patterns, write_daily_report
 from zotero_arxiv_daily.protocol import CorpusPaper
 
 
@@ -141,6 +141,27 @@ def test_fetch_zotero_corpus_paper_with_zero_collections(config, monkeypatch):
 
     assert len(corpus) == 1
     assert corpus[0].paths == []
+
+
+def test_write_daily_report(config, tmp_path):
+    from omegaconf import open_dict
+    from tests.canned_responses import make_sample_paper
+
+    with open_dict(config):
+        config.report.output_dir = str(tmp_path / "reports")
+    paper = make_sample_paper(
+        title="Stored Paper",
+        tldr="Stored summary",
+        score=8.5,
+        research_brief={"why_it_matters": "Important"},
+    )
+
+    report_dir = write_daily_report(config, [paper], "<html>digest</html>")
+
+    assert (report_dir / "digest.html").read_text(encoding="utf-8") == "<html>digest</html>"
+    papers_json = (report_dir / "papers.json").read_text(encoding="utf-8")
+    assert "Stored Paper" in papers_json
+    assert "Stored summary" in papers_json
 
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,9 @@ email:
   smtp_port: ??? # The port of SMTP server. Example: 465
   sender_password: ??? # The password of the sender account. Note that it's not necessarily the password for logging in the e-mail client, but the authentication code for SMTP service. Ask your email provider for this. Example: abcdefghijklmn
 
+report:
+  output_dir: outputs/reports # Local directory for generated digest artifacts.
+
 daily_radar:
   weather_city: Harbin # City used in the warm morning opening. Example: Harbin
   quote_enabled: true # Whether to fetch a daily quote before falling back to local warm lines. Example: true

@@ -45,3 +45,11 @@ jobs:
           echo "Use custom config: "
           cat config/custom.yaml
           uv run src/zotero_arxiv_daily/main.py
+
+      - name: Upload daily report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-research-radar
+          path: outputs/reports/**
+          if-no-files-found: ignore

@@ -49,3 +49,11 @@ jobs:
           echo "Use custom config: "
           cat config/custom.yaml
           uv run src/zotero_arxiv_daily/main.py executor.source='[arxiv]' executor.max_paper_num=1
+
+      - name: Upload daily report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-research-radar-test
+          path: outputs/reports/**
+          if-no-files-found: ignore
