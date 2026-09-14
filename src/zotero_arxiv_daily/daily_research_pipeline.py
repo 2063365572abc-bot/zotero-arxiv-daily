@@ -415,10 +415,17 @@ def _config_get(config: DictConfig, section: str, key: str, default: Any) -> Any
     return default
 
 
+def _config_int(config: DictConfig, section: str, key: str, default: int) -> int:
+    value = _config_get(config, section, key, default)
+    if value in (None, "", "null"):
+        return default
+    return int(value)
+
+
 def run_daily_file_pipeline(config: DictConfig) -> Path:
     output_root = _config_get(config, "daily_pipeline", "output_dir", "outputs/daily")
-    candidate_count = int(_config_get(config, "daily_pipeline", "candidate_count", 20))
-    selected_count = int(_config_get(config, "daily_pipeline", "selected_count", 3))
+    candidate_count = _config_int(config, "daily_pipeline", "candidate_count", 20)
+    selected_count = _config_int(config, "daily_pipeline", "selected_count", 3)
     output_dir = daily_output_dir(output_root)
     output_dir.mkdir(parents=True, exist_ok=True)
 
