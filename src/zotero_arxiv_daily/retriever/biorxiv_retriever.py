@@ -45,7 +45,7 @@ class BiorxivRetriever(BaseRetriever):
         categories = [c.lower() for c in self.retriever_config.category]
         collection = [c for c in collection if c['category'] in categories]
         if self.config.executor.debug:
-            collection = collection[:10]
+            collection = collection[: self.debug_paper_limit]
         return collection
 
 

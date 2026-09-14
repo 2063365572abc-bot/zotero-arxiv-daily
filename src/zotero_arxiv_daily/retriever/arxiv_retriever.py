@@ -129,7 +129,7 @@ class ArxivRetriever(BaseRetriever):
             if i.get("arxiv_announce_type", "new") in allowed_announce_types
         ]
         if self.config.executor.debug:
-            all_paper_ids = all_paper_ids[:10]
+            all_paper_ids = all_paper_ids[: self.debug_paper_limit]
 
         # Get full information of each paper from arxiv api
         bar = tqdm(total=len(all_paper_ids))

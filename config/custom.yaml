@@ -63,5 +63,6 @@ reranker:
 
 executor:
   debug: ${oc.env:DEBUG,null}
+  debug_paper_limit: ${oc.env:DEBUG_PAPER_LIMIT,10}
   source: ['arxiv','biorxiv','medrxiv','chemrxiv']
   reranker: api

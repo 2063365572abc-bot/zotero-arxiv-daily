@@ -13,6 +13,10 @@ class BaseRetriever(ABC):
         self.config = config
         self.retriever_config = getattr(config.source,self.name)
 
+    @property
+    def debug_paper_limit(self) -> int:
+        return int(getattr(self.config.executor, "debug_paper_limit", 10))
+
     @abstractmethod
     def _retrieve_raw_papers(self) -> list[RawPaperItem]:
         pass

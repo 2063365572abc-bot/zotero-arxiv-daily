@@ -111,7 +111,7 @@ class ChemrxivRetriever(BaseRetriever):
         if len(collection) == 0:
             logger.warning(f"No chemRxiv paper found in the last {self.lookback_hours} hours.")
         if self.config.executor.debug:
-            collection = collection[:10]
+            collection = collection[: self.debug_paper_limit]
         return collection
 
     @classmethod
