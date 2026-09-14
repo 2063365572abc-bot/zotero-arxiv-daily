@@ -8,6 +8,7 @@ import re
 
 from omegaconf import DictConfig
 import requests
+from loguru import logger
 
 from .protocol import Paper
 
@@ -51,6 +52,7 @@ KNOWN_WEATHER_LOCATIONS = {
     "harbin": ("哈尔滨", 45.75, 126.65),
     "哈尔滨": ("哈尔滨", 45.75, 126.65),
 }
+WEATHER_HEADERS = {"User-Agent": "zotero-arxiv-daily/1.0 daily research radar"}
 
 
 framework = """
@@ -117,6 +119,7 @@ def _format_open_meteo_weather(city_name: str, latitude: float, longitude: float
             "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
             "timezone": "auto",
         },
+        headers=WEATHER_HEADERS,
         timeout=20,
     )
     weather_response.raise_for_status()
@@ -138,6 +141,7 @@ def _fetch_open_meteo_weather(city: str) -> str:
     geo_response = requests.get(
         "https://geocoding-api.open-meteo.com/v1/search",
         params={"name": city, "count": 1, "language": "zh", "format": "json"},
+        headers=WEATHER_HEADERS,
         timeout=20,
     )
     geo_response.raise_for_status()
@@ -156,17 +160,19 @@ def _fetch_weather(config: DictConfig | None) -> str:
         response = requests.get(
             f"https://wttr.in/{city}",
             params={"format": "%l: %C, %t, feels like %f, humidity %h, wind %w", "lang": "zh-cn"},
+            headers=WEATHER_HEADERS,
             timeout=12,
         )
         response.raise_for_status()
         text = response.text.strip()
         return text if text else f"{city} 天气暂时没有返回"
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"wttr weather lookup failed for {city}: {exc}")
 
     try:
         return _fetch_open_meteo_weather(city)
-    except Exception:
+    except Exception as exc:
+        logger.warning(f"Open-Meteo weather lookup failed for {city}: {exc}")
         return f"{city} 天气暂时获取失败，出门前看一眼实时天气。"
 
 
