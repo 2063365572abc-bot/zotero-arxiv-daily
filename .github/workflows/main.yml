@@ -29,6 +29,7 @@ jobs:
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           DASHSCOPE_API_BASE: ${{ vars.DASHSCOPE_API_BASE }}
           EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+          ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |
           if [ -n "$CUSTOM_CONFIG" ]; then

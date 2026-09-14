@@ -35,6 +35,7 @@ source:
       "q-bio.BM","q-bio.CB","q-bio.GN","q-bio.MN","q-bio.NC","q-bio.OT","q-bio.PE","q-bio.QM","q-bio.SC","q-bio.TO"
     ]
     include_cross_list: true
+    extract_full_text: ${oc.env:ARXIV_EXTRACT_FULL_TEXT,false}
   biorxiv:
     category: [
       "animal behavior and cognition","bioengineering","bioinformatics","biophysics",
