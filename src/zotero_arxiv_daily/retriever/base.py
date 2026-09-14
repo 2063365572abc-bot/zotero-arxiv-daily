@@ -17,6 +17,13 @@ class BaseRetriever(ABC):
     def debug_paper_limit(self) -> int:
         return int(getattr(self.config.executor, "debug_paper_limit", 10))
 
+    @property
+    def max_candidate_num(self) -> int | None:
+        value = getattr(self.config.executor, "max_candidate_num", None)
+        if value in (None, "null", ""):
+            return None
+        return int(value)
+
     @abstractmethod
     def _retrieve_raw_papers(self) -> list[RawPaperItem]:
         pass
@@ -27,6 +34,8 @@ class BaseRetriever(ABC):
 
     def retrieve_papers(self) -> list[Paper]:
         raw_papers = self._retrieve_raw_papers()
+        if self.max_candidate_num is not None:
+            raw_papers = raw_papers[:self.max_candidate_num]
         logger.info("Processing papers...")
         papers = []
         for raw_paper in tqdm(raw_papers, total=len(raw_papers), desc="Converting papers"):

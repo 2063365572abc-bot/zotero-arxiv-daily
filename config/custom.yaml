@@ -77,6 +77,7 @@ reranker:
 executor:
   debug: ${oc.env:DEBUG,null}
   debug_paper_limit: ${oc.env:DEBUG_PAPER_LIMIT,10}
+  max_candidate_num: ${oc.env:MAX_CANDIDATE_NUM,10}
   max_paper_num: ${oc.env:MAX_PAPER_NUM,3}
   source: ['arxiv']
   reranker: api

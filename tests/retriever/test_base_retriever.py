@@ -95,6 +95,18 @@ def test_retrieve_papers_runs_serially(config, monkeypatch):
     assert [p.title for p in papers] == ["paper 1", "paper 2", "paper 3"]
 
 
+def test_retrieve_papers_respects_max_candidate_num(config, monkeypatch):
+    monkeypatch.setattr("zotero_arxiv_daily.retriever.base.sleep", lambda _: None)
+    with open_dict(config):
+        config.source.serial_test = {}
+        config.executor.max_candidate_num = 2
+    seen: list[str] = []
+    retriever = SerialTestRetriever(config, seen)
+    papers = retriever.retrieve_papers()
+    assert seen == ["paper 1", "paper 2"]
+    assert [p.title for p in papers] == ["paper 1", "paper 2"]
+
+
 def test_retrieve_papers_skips_none_results(config, monkeypatch):
     monkeypatch.setattr("zotero_arxiv_daily.retriever.base.sleep", lambda _: None)
     with open_dict(config.source):

@@ -35,6 +35,7 @@ jobs:
           ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
           WEATHER_CITY: ${{ vars.WEATHER_CITY }}
           DAILY_QUOTE_ENABLED: ${{ vars.DAILY_QUOTE_ENABLED }}
+          MAX_CANDIDATE_NUM: ${{ vars.MAX_CANDIDATE_NUM }}
           MAX_PAPER_NUM: ${{ vars.MAX_PAPER_NUM }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |
