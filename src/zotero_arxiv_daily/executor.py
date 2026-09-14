@@ -8,7 +8,7 @@ import random
 from datetime import datetime
 from .reranker import get_reranker_cls
 from .construct_email import render_email
-from .utils import send_email
+from .utils import send_email, send_notifications
 from openai import OpenAI
 from tqdm import tqdm
 
@@ -118,7 +118,9 @@ class Executor:
         elif not self.config.executor.send_empty:
             logger.info("No new papers found. No email will be sent.")
             return
-        logger.info("Sending email...")
         email_content = render_email(reranked_papers)
-        send_email(self.config, email_content)
-        logger.info("Email sent successfully")
+        if self.config.get("email", {}).get("enabled", True):
+            logger.info("Sending email...")
+            send_email(self.config, email_content)
+            logger.info("Email sent successfully")
+        send_notifications(self.config, email_content)

@@ -3,6 +3,7 @@ import re
 import glob
 import math
 import smtplib
+import requests
 from collections import Counter
 from email.header import Header
 from email.mime.text import MIMEText
@@ -169,3 +170,74 @@ def send_email(config:DictConfig, html:str):
     server.login(sender, password)
     server.sendmail(sender, [receiver], msg.as_string())
     server.quit()
+
+
+def _html_to_text(html: str) -> str:
+    text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
+    text = re.sub(r"</(p|div|tr|table|h[1-6])>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def send_wechat_notification(config: DictConfig, html: str) -> None:
+    wechat = config.get("notification", {}).get("wechat", {})
+    provider = wechat.get("provider")
+    if not provider:
+        return
+
+    today = datetime.datetime.now().strftime("%Y/%m/%d")
+    title = f"Daily Research Radar {today}"
+    provider = str(provider).lower()
+
+    if provider == "serverchan":
+        send_key = wechat.get("serverchan_send_key")
+        if not send_key:
+            logger.warning("SERVERCHAN_SENDKEY is missing; skip ServerChan notification.")
+            return
+        response = requests.post(
+            f"https://sctapi.ftqq.com/{send_key}.send",
+            data={"title": title, "desp": html},
+            timeout=30,
+        )
+        response.raise_for_status()
+        logger.info("ServerChan notification sent successfully")
+        return
+
+    if provider == "pushplus":
+        token = wechat.get("pushplus_token")
+        if not token:
+            logger.warning("PUSHPLUS_TOKEN is missing; skip PushPlus notification.")
+            return
+        response = requests.post(
+            "https://www.pushplus.plus/send",
+            json={"token": token, "title": title, "content": html, "template": "html"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        logger.info("PushPlus notification sent successfully")
+        return
+
+    if provider == "wecom":
+        webhook = wechat.get("wecom_webhook")
+        if not webhook:
+            logger.warning("WECOM_WEBHOOK is missing; skip WeCom notification.")
+            return
+        text = _html_to_text(html)
+        response = requests.post(
+            webhook,
+            json={"msgtype": "markdown", "markdown": {"content": f"### {title}\n\n{text[:3800]}"}},
+            timeout=30,
+        )
+        response.raise_for_status()
+        logger.info("WeCom notification sent successfully")
+        return
+
+    logger.warning(f"Unsupported WECHAT_PUSH_PROVIDER: {provider}")
+
+
+def send_notifications(config: DictConfig, html: str) -> None:
+    try:
+        send_wechat_notification(config, html)
+    except Exception as exc:
+        logger.warning(f"Failed to send WeChat notification: {exc}")

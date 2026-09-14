@@ -4,24 +4,64 @@ zotero:
   include_path: null # Or set a list of glob patterns, e.g. ["2026/survey/**","2026/reading-group/**"]
 
 email:
+  enabled: ${oc.env:EMAIL_ENABLED,true}
   sender: ${oc.env:SENDER}
   receiver: ${oc.env:RECEIVER}
   smtp_server: smtp.qq.com
   smtp_port: 465
   sender_password: ${oc.env:SENDER_PASSWORD}
 
+notification:
+  wechat:
+    provider: ${oc.env:WECHAT_PUSH_PROVIDER,null} # serverchan, pushplus, or wecom
+    serverchan_send_key: ${oc.env:SERVERCHAN_SENDKEY,null}
+    pushplus_token: ${oc.env:PUSHPLUS_TOKEN,null}
+    wecom_webhook: ${oc.env:WECOM_WEBHOOK,null}
+
 llm:
   api:
     key: ${oc.env:OPENAI_API_KEY}
     base_url: ${oc.env:OPENAI_API_BASE}
-  api_mode: chat_completion
+  api_mode: response
   generation_kwargs:
-    model: gpt-4o-mini
+    model: gpt-5.5
+  language: Chinese
 
 source:
   arxiv:
-    category: ["cs.AI","cs.CV","cs.LG","cs.CL"]
+    category: [
+      "cs.AI","cs.CL","cs.CV","cs.LG","cs.NE",
+      "stat.ML","stat.AP",
+      "q-bio.BM","q-bio.CB","q-bio.GN","q-bio.MN","q-bio.NC","q-bio.OT","q-bio.PE","q-bio.QM","q-bio.SC","q-bio.TO"
+    ]
+    include_cross_list: true
+  biorxiv:
+    category: [
+      "animal behavior and cognition","bioengineering","bioinformatics","biophysics",
+      "cancer biology","cell biology","developmental biology","ecology",
+      "evolutionary biology","genetics","genomics","immunology","microbiology",
+      "molecular biology","neuroscience","pharmacology and toxicology",
+      "physiology","plant biology","systems biology"
+    ]
+  medrxiv:
+    category: [
+      "allergy and immunology","cardiovascular medicine","endocrinology",
+      "epidemiology","genetic and genomic medicine","health informatics",
+      "health policy","infectious diseases","neurology","oncology",
+      "psychiatry and clinical psychology","public and global health",
+      "radiology and imaging"
+    ]
+  chemrxiv:
+    include_new_versions: false
+
+reranker:
+  api:
+    key: ${oc.env:DASHSCOPE_API_KEY}
+    base_url: ${oc.env:DASHSCOPE_API_BASE,https://dashscope.aliyuncs.com/compatible-mode/v1}
+    model: ${oc.env:EMBEDDING_MODEL,text-embedding-v4}
+    batch_size: 10
 
 executor:
   debug: ${oc.env:DEBUG,null}
-  source: ['arxiv']
+  source: ['arxiv','biorxiv','medrxiv','chemrxiv']
+  reranker: api
