@@ -13,6 +13,7 @@ from time import sleep
 from typing import Any, Callable, TypeVar
 from loguru import logger
 import requests
+import re
 
 T = TypeVar("T")
 
@@ -123,13 +124,19 @@ class ArxivRetriever(BaseRetriever):
             raise Exception(f"Invalid ARXIV_QUERY: {query}.")
         raw_papers = []
         allowed_announce_types = {"new", "cross"} if include_cross_list else {"new"}
-        all_paper_ids = [
-            i.id.removeprefix("oai:arXiv.org:")
-            for i in feed.entries
+        feed_entries = [
+            i for i in feed.entries
             if i.get("arxiv_announce_type", "new") in allowed_announce_types
         ]
         if self.config.executor.debug:
-            all_paper_ids = all_paper_ids[: self.debug_paper_limit]
+            feed_entries = feed_entries[: self.debug_paper_limit]
+        if self.retriever_config.get("use_rss_metadata", True):
+            return feed_entries
+
+        all_paper_ids = [
+            i.id.removeprefix("oai:arXiv.org:")
+            for i in feed_entries
+        ]
 
         # Get full information of each paper from arxiv api
         bar = tqdm(total=len(all_paper_ids))
@@ -156,7 +163,28 @@ class ArxivRetriever(BaseRetriever):
 
         return raw_papers
 
-    def convert_to_paper(self, raw_paper: ArxivResult) -> Paper:
+    def convert_to_paper(self, raw_paper: ArxivResult | dict[str, Any]) -> Paper:
+        if not isinstance(raw_paper, ArxivResult):
+            title = raw_paper["title"]
+            authors = []
+            for author in raw_paper.get("authors", []):
+                name = author.get("name", "")
+                authors.extend([a.strip() for a in name.split(",") if a.strip()])
+            abstract = raw_paper.get("summary", "")
+            abstract = re.sub(r"^arXiv:\S+\s+Announce Type:\s+\S+\s+Abstract:\s*", "", abstract, flags=re.DOTALL)
+            url = raw_paper.get("link")
+            paper_id = raw_paper.get("id", "").removeprefix("oai:arXiv.org:")
+            pdf_url = f"https://arxiv.org/pdf/{paper_id}" if paper_id else url
+            return Paper(
+                source=self.name,
+                title=title,
+                authors=authors,
+                abstract=abstract,
+                url=url,
+                pdf_url=pdf_url,
+                full_text=None,
+            )
+
         title = raw_paper.title
         authors = [a.name for a in raw_paper.authors]
         abstract = raw_paper.summary

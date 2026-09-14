@@ -31,6 +31,7 @@ jobs:
           DASHSCOPE_API_BASE: ${{ vars.DASHSCOPE_API_BASE }}
           DASHSCOPE_API_TIMEOUT: ${{ vars.DASHSCOPE_API_TIMEOUT }}
           EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+          ARXIV_USE_RSS_METADATA: ${{ vars.ARXIV_USE_RSS_METADATA }}
           ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |
