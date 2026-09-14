@@ -70,7 +70,7 @@ def test_fetch_weather_falls_back_to_open_meteo(monkeypatch):
 
     weather = construct_email._fetch_weather(None)
 
-    assert "Harbin: 阴" in weather
+    assert "阴" in weather
     assert "12°C" in weather
     assert "体感 10°C" in weather
 

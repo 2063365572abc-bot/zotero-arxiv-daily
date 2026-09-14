@@ -47,6 +47,11 @@ WEATHER_CODES = {
     95: "雷雨",
 }
 
+KNOWN_WEATHER_LOCATIONS = {
+    "harbin": ("哈尔滨", 45.75, 126.65),
+    "哈尔滨": ("哈尔滨", 45.75, 126.65),
+}
+
 
 framework = """
 <!DOCTYPE HTML>
@@ -103,6 +108,47 @@ def _affiliation_text(p: Paper) -> str:
     return text
 
 
+def _format_open_meteo_weather(city_name: str, latitude: float, longitude: float) -> str:
+    weather_response = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
+            "timezone": "auto",
+        },
+        timeout=20,
+    )
+    weather_response.raise_for_status()
+    current = weather_response.json()["current"]
+    condition = WEATHER_CODES.get(int(current.get("weather_code", -1)), "天气状态未知")
+    temperature = round(float(current["temperature_2m"]))
+    feels_like = round(float(current["apparent_temperature"]))
+    humidity = round(float(current["relative_humidity_2m"]))
+    wind = round(float(current["wind_speed_10m"]))
+    return f"{city_name}: {condition}, {temperature}°C, 体感 {feels_like}°C, 湿度 {humidity}%, 风速 {wind} km/h"
+
+
+def _fetch_open_meteo_weather(city: str) -> str:
+    known = KNOWN_WEATHER_LOCATIONS.get(str(city).strip().lower()) or KNOWN_WEATHER_LOCATIONS.get(str(city).strip())
+    if known is not None:
+        city_name, latitude, longitude = known
+        return _format_open_meteo_weather(city_name, latitude, longitude)
+
+    geo_response = requests.get(
+        "https://geocoding-api.open-meteo.com/v1/search",
+        params={"name": city, "count": 1, "language": "zh", "format": "json"},
+        timeout=20,
+    )
+    geo_response.raise_for_status()
+    location = geo_response.json()["results"][0]
+    return _format_open_meteo_weather(
+        location.get("name", city),
+        location["latitude"],
+        location["longitude"],
+    )
+
+
 def _fetch_weather(config: DictConfig | None) -> str:
     radar = (config or {}).get("daily_radar", {}) if config is not None else {}
     city = radar.get("weather_city", "Harbin")
@@ -119,32 +165,7 @@ def _fetch_weather(config: DictConfig | None) -> str:
         pass
 
     try:
-        geo_response = requests.get(
-            "https://geocoding-api.open-meteo.com/v1/search",
-            params={"name": city, "count": 1, "language": "zh", "format": "json"},
-            timeout=12,
-        )
-        geo_response.raise_for_status()
-        location = geo_response.json()["results"][0]
-        weather_response = requests.get(
-            "https://api.open-meteo.com/v1/forecast",
-            params={
-                "latitude": location["latitude"],
-                "longitude": location["longitude"],
-                "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
-                "timezone": "auto",
-            },
-            timeout=12,
-        )
-        weather_response.raise_for_status()
-        current = weather_response.json()["current"]
-        condition = WEATHER_CODES.get(int(current.get("weather_code", -1)), "天气状态未知")
-        temperature = round(float(current["temperature_2m"]))
-        feels_like = round(float(current["apparent_temperature"]))
-        humidity = round(float(current["relative_humidity_2m"]))
-        wind = round(float(current["wind_speed_10m"]))
-        city_name = location.get("name", city)
-        return f"{city_name}: {condition}, {temperature}°C, 体感 {feels_like}°C, 湿度 {humidity}%, 风速 {wind} km/h"
+        return _fetch_open_meteo_weather(city)
     except Exception:
         return f"{city} 天气暂时获取失败，出门前看一眼实时天气。"
 
