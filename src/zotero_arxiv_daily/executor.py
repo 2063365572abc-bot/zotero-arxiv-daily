@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 from .reranker import get_reranker_cls
-from .construct_email import render_email
+from .construct_email import render_email, render_markdown
 from .utils import send_email, send_notifications
 from openai import OpenAI
 from tqdm import tqdm
@@ -41,12 +41,13 @@ def normalize_path_patterns(patterns: list[str] | ListConfig | None, config_key:
     return list(patterns)
 
 
-def write_daily_report(config: DictConfig, papers, html: str) -> Path:
+def write_daily_report(config: DictConfig, papers, html: str, markdown: str) -> Path:
     report_root = Path(str(config.get("report", {}).get("output_dir", "outputs/reports")))
     report_dir = report_root / datetime.now().strftime("%Y-%m-%d")
     report_dir.mkdir(parents=True, exist_ok=True)
 
     (report_dir / "digest.html").write_text(html, encoding="utf-8")
+    (report_dir / "digest.md").write_text(markdown, encoding="utf-8")
     payload = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "paper_count": len(papers),
@@ -168,9 +169,10 @@ class Executor:
             logger.info("No new papers found. No email will be sent.")
             return
         email_content = render_email(reranked_papers, self.config)
-        write_daily_report(self.config, reranked_papers, email_content)
+        markdown_content = render_markdown(reranked_papers, self.config)
+        write_daily_report(self.config, reranked_papers, email_content, markdown_content)
         if config_bool(self.config.get("email", {}).get("enabled", True), True):
             logger.info("Sending email...")
             send_email(self.config, email_content)
             logger.info("Email sent successfully")
-        send_notifications(self.config, email_content)
+        send_notifications(self.config, markdown_content)

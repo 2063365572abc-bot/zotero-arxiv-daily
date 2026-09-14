@@ -58,6 +58,12 @@ def _safe(value: object) -> str:
     return escape("" if value is None else str(value))
 
 
+def _md_safe(value: object) -> str:
+    text = "" if value is None else str(value)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 def _author_text(p: Paper) -> str:
     author_list = [a for a in p.authors]
     if len(author_list) <= 5:
@@ -162,6 +168,19 @@ def get_empty_html(config: DictConfig | None = None):
     return content
 
 
+def get_empty_markdown(config: DictConfig | None = None) -> str:
+    weather = _md_safe(_fetch_weather(config))
+    quote = _md_safe(_fetch_quote(config))
+    return "\n\n".join(
+        [
+            "**早上好，一多。**",
+            weather,
+            f"今天这句话送你：\n> {quote}",
+            "今天没有筛到足够相关的新论文。也挺好，留一点空白，把昨天没读完的东西收束一下。",
+        ]
+    )
+
+
 def get_block_html(title: str, authors: str, rate: str, tldr: str, pdf_url: str, affiliations: str = None, brief: dict[str, str] | None = None):
     brief = brief or {}
     return f"""
@@ -178,6 +197,25 @@ def get_block_html(title: str, authors: str, rate: str, tldr: str, pdf_url: str,
       <p><a class="button" href="{_safe(pdf_url)}">PDF / 原文</a></p>
     </div>
     """
+
+
+def get_block_markdown(index: int, title: str, authors: str, rate: str, tldr: str, pdf_url: str, affiliations: str = None, brief: dict[str, str] | None = None):
+    brief = brief or {}
+    lines = [
+        f"### {index}. {_md_safe(title)}",
+        f"- 相关度：{_md_safe(rate)}",
+        f"- 作者：{_md_safe(authors)}",
+        f"- 机构：{_md_safe(affiliations)}",
+        f"- 一句话：{_md_safe(tldr)}",
+        f"- 为什么重要：{_md_safe(brief.get('why_it_matters', ''))}",
+        f"- 方法核心：{_md_safe(brief.get('method_core', ''))}",
+        f"- 实验/证据：{_md_safe(brief.get('evidence', ''))}",
+        f"- 局限：{_md_safe(brief.get('limitations', ''))}",
+        f"- 给你的启发：{_md_safe(brief.get('research_inspiration', ''))}",
+    ]
+    if pdf_url:
+        lines.append(f"- [PDF / 原文]({pdf_url})")
+    return "\n".join(lines)
 
 
 def render_email(papers: list[Paper], config: DictConfig | None = None) -> str:
@@ -235,3 +273,52 @@ def render_email(papers: list[Paper], config: DictConfig | None = None) -> str:
         """
     )
     return framework.replace("__CONTENT__", "\n".join(parts))
+
+
+def render_markdown(papers: list[Paper], config: DictConfig | None = None) -> str:
+    if len(papers) == 0:
+        return get_empty_markdown(config)
+
+    weather = _md_safe(_fetch_weather(config))
+    quote = _md_safe(_fetch_quote(config))
+    trends = "\n".join(f"- {_md_safe(item)}" for item in _trend_sentences(papers))
+    top_paper = papers[0]
+    deep_reason = (
+        top_paper.research_brief or {}
+    ).get("research_inspiration") or top_paper.tldr or "它和你的研究画像最接近，适合作为今天的深读入口。"
+
+    parts = [
+        "**早上好，一多。**",
+        weather,
+        f"今天这句话送你：\n> {quote}",
+        f"我今天替你扫了一轮新论文，先把最值得看的内容放在前面。今天筛出 **{len(papers)}** 篇重点论文，建议先看趋势，再挑一篇深读。",
+        f"## 今日趋势\n{trends}",
+        "## 重点论文",
+    ]
+
+    for index, p in enumerate(papers, start=1):
+        rate = round(p.score, 1) if p.score is not None else "Unknown"
+        parts.append(
+            get_block_markdown(
+                index,
+                p.title,
+                _author_text(p),
+                str(rate),
+                p.tldr or p.abstract,
+                p.pdf_url or p.url,
+                _affiliation_text(p),
+                p.research_brief,
+            )
+        )
+
+    parts.append(
+        "\n".join(
+            [
+                "## 今日深读建议",
+                f"优先深读：**{_md_safe(top_paper.title)}**",
+                _md_safe(deep_reason),
+                "下一步可以让“一多科研”对这篇走 Paper Card：下载 PDF、生成 evidence-grounded 分析卡，再决定是否导入 Zotero。",
+            ]
+        )
+    )
+    return "\n\n".join(parts)

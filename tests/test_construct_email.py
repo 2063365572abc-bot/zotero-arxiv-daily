@@ -1,7 +1,7 @@
 """Tests for zotero_arxiv_daily.construct_email: daily research radar rendering."""
 
 import zotero_arxiv_daily.construct_email as construct_email
-from zotero_arxiv_daily.construct_email import render_email, get_stars, get_block_html, get_empty_html
+from zotero_arxiv_daily.construct_email import render_email, render_markdown, get_stars, get_block_html, get_empty_html
 from tests.canned_responses import make_sample_paper
 
 
@@ -31,6 +31,29 @@ def test_render_email_empty_list(monkeypatch):
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     html = render_email([])
     assert "今天没有筛到足够相关的新论文" in html
+
+
+def test_render_markdown_for_wechat(monkeypatch):
+    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
+    monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
+    papers = [make_sample_paper(score=7.5, tldr="A great paper.", affiliations=["MIT"])]
+    papers[0].research_brief = {
+        "why_it_matters": "Useful for single-cell.",
+        "method_core": "Graph attention.",
+        "evidence": "Public benchmarks.",
+        "limitations": "Small validation.",
+        "research_inspiration": "Try it on spatial data.",
+    }
+
+    markdown = render_markdown(papers)
+
+    assert "**早上好，一多。**" in markdown
+    assert "## 今日趋势" in markdown
+    assert "### 1. Sample Paper Title" in markdown
+    assert "- [PDF / 原文](" in markdown
+    assert "Useful for single-cell" in markdown
+    assert "<div" not in markdown
+    assert "<table" not in markdown
 
 
 def test_render_email_author_truncation(monkeypatch):

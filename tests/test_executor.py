@@ -156,9 +156,10 @@ def test_write_daily_report(config, tmp_path):
         research_brief={"why_it_matters": "Important"},
     )
 
-    report_dir = write_daily_report(config, [paper], "<html>digest</html>")
+    report_dir = write_daily_report(config, [paper], "<html>digest</html>", "# digest")
 
     assert (report_dir / "digest.html").read_text(encoding="utf-8") == "<html>digest</html>"
+    assert (report_dir / "digest.md").read_text(encoding="utf-8") == "# digest"
     papers_json = (report_dir / "papers.json").read_text(encoding="utf-8")
     assert "Stored Paper" in papers_json
     assert "Stored summary" in papers_json

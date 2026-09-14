@@ -180,7 +180,7 @@ def _html_to_text(html: str) -> str:
     return text.strip()
 
 
-def send_wechat_notification(config: DictConfig, html: str) -> None:
+def send_wechat_notification(config: DictConfig, markdown: str) -> None:
     wechat = config.get("notification", {}).get("wechat", {})
     provider = wechat.get("provider")
     if not provider:
@@ -197,7 +197,7 @@ def send_wechat_notification(config: DictConfig, html: str) -> None:
             return
         response = requests.post(
             f"https://sctapi.ftqq.com/{send_key}.send",
-            data={"title": title, "desp": html},
+            data={"title": title, "desp": markdown},
             timeout=30,
         )
         response.raise_for_status()
@@ -211,7 +211,7 @@ def send_wechat_notification(config: DictConfig, html: str) -> None:
             return
         response = requests.post(
             "https://www.pushplus.plus/send",
-            json={"token": token, "title": title, "content": html, "template": "html"},
+            json={"token": token, "title": title, "content": markdown, "template": "markdown"},
             timeout=30,
         )
         response.raise_for_status()
@@ -223,10 +223,9 @@ def send_wechat_notification(config: DictConfig, html: str) -> None:
         if not webhook:
             logger.warning("WECOM_WEBHOOK is missing; skip WeCom notification.")
             return
-        text = _html_to_text(html)
         response = requests.post(
             webhook,
-            json={"msgtype": "markdown", "markdown": {"content": f"### {title}\n\n{text[:3800]}"}},
+            json={"msgtype": "markdown", "markdown": {"content": f"### {title}\n\n{markdown[:3800]}"}},
             timeout=30,
         )
         response.raise_for_status()
@@ -236,8 +235,8 @@ def send_wechat_notification(config: DictConfig, html: str) -> None:
     logger.warning(f"Unsupported WECHAT_PUSH_PROVIDER: {provider}")
 
 
-def send_notifications(config: DictConfig, html: str) -> None:
+def send_notifications(config: DictConfig, markdown: str) -> None:
     try:
-        send_wechat_notification(config, html)
+        send_wechat_notification(config, markdown)
     except Exception as exc:
         logger.warning(f"Failed to send WeChat notification: {exc}")

@@ -5,8 +5,9 @@ import tarfile
 import io
 
 import pytest
+from omegaconf import open_dict
 
-from zotero_arxiv_daily.utils import glob_match, send_email, extract_tex_code_from_tar, _bm25_pick
+from zotero_arxiv_daily.utils import glob_match, send_email, send_wechat_notification, extract_tex_code_from_tar, _bm25_pick
 from tests.canned_responses import make_stub_smtp
 
 
@@ -184,6 +185,29 @@ def test_send_email_falls_back_to_plain(config, monkeypatch):
     monkeypatch.setattr(smtplib, "SMTP_SSL", StubSMTP_SSL_Fails)
     send_email(config, "<html>plain</html>")
     assert len(sent) == 1
+
+
+def test_serverchan_uses_markdown_desp(config, monkeypatch):
+    calls = []
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+    def fake_post(url, data=None, **kwargs):
+        calls.append({"url": url, "data": data, "kwargs": kwargs})
+        return Response()
+
+    with open_dict(config):
+        config.notification = {"wechat": {"provider": "serverchan", "serverchan_send_key": "SCT-test"}}
+
+    monkeypatch.setattr("zotero_arxiv_daily.utils.requests.post", fake_post)
+
+    send_wechat_notification(config, "**早上好**\n\n## 今日趋势")
+
+    assert calls[0]["url"] == "https://sctapi.ftqq.com/SCT-test.send"
+    assert calls[0]["data"]["desp"] == "**早上好**\n\n## 今日趋势"
+    assert "<div" not in calls[0]["data"]["desp"]
 
 
 # ---------------------------------------------------------------------------
