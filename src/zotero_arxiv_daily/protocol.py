@@ -27,8 +27,18 @@ def _parse_research_brief(content: str) -> dict[str, str]:
     return {field: parsed.get(field, "") for field in fields}
 
 
+def _compact_summary(text: str, limit: int = 280) -> str:
+    clean = re.sub(r"\s+", " ", text or "").strip()
+    if len(clean) <= limit:
+        return clean
+    first_sentence = re.split(r"(?<=[.!?。！？])\s+", clean, maxsplit=1)[0]
+    if 40 <= len(first_sentence) <= limit:
+        return first_sentence
+    return clean[: limit - 1].rstrip() + "…"
+
+
 def _fallback_research_brief(summary: str, abstract: str) -> dict[str, str]:
-    basis = (summary or abstract or "摘要信息不足，建议打开原文确认。").strip()
+    basis = _compact_summary(summary or abstract or "摘要信息不足，建议打开原文确认。")
     return {
         "why_it_matters": basis,
         "method_core": "模型没有稳定返回结构化方法字段；请优先核查模型/算法框架、输入数据、baseline 和消融实验。",
@@ -259,6 +269,7 @@ Preview: {(self.full_text or "")[:1200]}
                 "research_inspiration": analysis.get("research_inspiration", ""),
             }
             if not any(self.research_brief.values()):
+                self.tldr = _compact_summary(self.tldr or self.abstract)
                 self.research_brief = _fallback_research_brief(self.tldr, self.abstract)
                 analysis = {"tldr": self.tldr, **self.research_brief}
             return analysis

@@ -174,6 +174,35 @@ def test_daily_analysis_fills_fallback_for_unstructured_response(llm_params):
     assert all(paper.research_brief.values())
 
 
+def test_daily_analysis_compacts_long_unstructured_response(llm_params):
+    from types import SimpleNamespace
+
+    long_summary = (
+        "This paper proposes a first useful idea. "
+        "It then continues with a very long abstract-like response that should not flood WeChat. " * 20
+    )
+
+    def create_unstructured(**kwargs):
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=long_summary),
+                )
+            ]
+        )
+
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=create_unstructured)
+        )
+    )
+    paper = make_sample_paper()
+    result = paper.generate_daily_analysis(client, llm_params)
+
+    assert result["tldr"] == "This paper proposes a first useful idea."
+    assert paper.research_brief["why_it_matters"] == result["tldr"]
+
+
 # ---------------------------------------------------------------------------
 # generate_affiliations
 # ---------------------------------------------------------------------------
