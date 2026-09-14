@@ -120,15 +120,26 @@ def _parse_daily_analysis(content: str) -> dict[str, str]:
     return brief
 
 
-def _request_llm(openai_client: OpenAI, llm_params: dict, messages: list[dict]) -> str:
+def _request_llm(openai_client: OpenAI, llm_params: dict, messages: list[dict], force_json: bool = False) -> str:
     api_mode = llm_params.get("api_mode", "chat_completion")
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
 
     if api_mode == "chat_completion":
-        response = openai_client.chat.completions.create(
-            messages=messages,
-            **generation_kwargs,
-        )
+        if force_json:
+            generation_kwargs["response_format"] = {"type": "json_object"}
+        try:
+            response = openai_client.chat.completions.create(
+                messages=messages,
+                **generation_kwargs,
+            )
+        except Exception as exc:
+            if not force_json or "response_format" not in str(exc):
+                raise
+            generation_kwargs.pop("response_format", None)
+            response = openai_client.chat.completions.create(
+                messages=messages,
+                **generation_kwargs,
+            )
         return response.choices[0].message.content
 
     if api_mode == "response":
@@ -245,6 +256,7 @@ Preview: {(self.full_text or "")[:3000]}
                 },
                 {"role": "user", "content": prompt},
             ],
+            force_json=True,
         )
         return _parse_research_brief(content)
 
@@ -296,6 +308,7 @@ Preview: {(self.full_text or "")[:1200]}
                 },
                 {"role": "user", "content": prompt},
             ],
+            force_json=True,
         )
         return _parse_daily_analysis(content)
 

@@ -223,6 +223,68 @@ def test_daily_analysis_compacts_long_unstructured_response(llm_params):
     assert paper.research_brief["why_it_matters"] == result["tldr"]
 
 
+def test_daily_analysis_requests_json_response_format(llm_params):
+    from types import SimpleNamespace
+
+    received_kwargs = {}
+
+    def create_json(**kwargs):
+        received_kwargs.update(kwargs)
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content='{"tldr":"短总结","why_it_matters":"重要","method_core":"方法","evidence":"证据","limitations":"局限","research_inspiration":"启发"}'
+                    ),
+                )
+            ]
+        )
+
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=create_json)
+        )
+    )
+    paper = make_sample_paper()
+
+    result = paper.generate_daily_analysis(client, llm_params)
+
+    assert received_kwargs["response_format"] == {"type": "json_object"}
+    assert result["method_core"] == "方法"
+
+
+def test_daily_analysis_retries_when_json_response_format_unsupported(llm_params):
+    from types import SimpleNamespace
+
+    calls = {"n": 0}
+
+    def create_json(**kwargs):
+        calls["n"] += 1
+        if "response_format" in kwargs:
+            raise RuntimeError("unsupported response_format")
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content='{"tldr":"短总结","why_it_matters":"重要","method_core":"方法","evidence":"证据","limitations":"局限","research_inspiration":"启发"}'
+                    ),
+                )
+            ]
+        )
+
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=create_json)
+        )
+    )
+    paper = make_sample_paper()
+
+    result = paper.generate_daily_analysis(client, llm_params)
+
+    assert calls["n"] == 2
+    assert result["method_core"] == "方法"
+
+
 # ---------------------------------------------------------------------------
 # generate_affiliations
 # ---------------------------------------------------------------------------

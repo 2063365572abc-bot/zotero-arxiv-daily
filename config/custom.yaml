@@ -22,7 +22,6 @@ report:
   output_dir: ${oc.env:REPORT_OUTPUT_DIR,outputs/reports}
 
 daily_radar:
-  weather_city: ${oc.env:WEATHER_CITY,Harbin}
   quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}
 
 llm:

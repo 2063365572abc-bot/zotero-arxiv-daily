@@ -8,7 +8,6 @@ import re
 
 from omegaconf import DictConfig
 import requests
-from loguru import logger
 
 from .protocol import Paper
 
@@ -25,35 +24,6 @@ STOPWORDS = {
     "into", "via", "are", "our", "new", "study", "model", "models", "data", "analysis",
     "paper", "method", "learning", "deep", "single",
 }
-
-WEATHER_CODES = {
-    0: "晴",
-    1: "大部晴朗",
-    2: "局部多云",
-    3: "阴",
-    45: "有雾",
-    48: "雾凇",
-    51: "小毛毛雨",
-    53: "毛毛雨",
-    55: "较强毛毛雨",
-    61: "小雨",
-    63: "中雨",
-    65: "大雨",
-    71: "小雪",
-    73: "中雪",
-    75: "大雪",
-    80: "阵雨",
-    81: "较强阵雨",
-    82: "强阵雨",
-    95: "雷雨",
-}
-
-KNOWN_WEATHER_LOCATIONS = {
-    "harbin": ("哈尔滨", 45.75, 126.65),
-    "哈尔滨": ("哈尔滨", 45.75, 126.65),
-}
-WEATHER_HEADERS = {"User-Agent": "zotero-arxiv-daily/1.0 daily research radar"}
-
 
 framework = """
 <!DOCTYPE HTML>
@@ -108,72 +78,6 @@ def _affiliation_text(p: Paper) -> str:
     if len(p.affiliations) > 5:
         text += ", ..."
     return text
-
-
-def _format_open_meteo_weather(city_name: str, latitude: float, longitude: float) -> str:
-    weather_response = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params={
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
-            "timezone": "auto",
-        },
-        headers=WEATHER_HEADERS,
-        timeout=20,
-    )
-    weather_response.raise_for_status()
-    current = weather_response.json()["current"]
-    condition = WEATHER_CODES.get(int(current.get("weather_code", -1)), "天气状态未知")
-    temperature = round(float(current["temperature_2m"]))
-    feels_like = round(float(current["apparent_temperature"]))
-    humidity = round(float(current["relative_humidity_2m"]))
-    wind = round(float(current["wind_speed_10m"]))
-    return f"{city_name}: {condition}, {temperature}°C, 体感 {feels_like}°C, 湿度 {humidity}%, 风速 {wind} km/h"
-
-
-def _fetch_open_meteo_weather(city: str) -> str:
-    known = KNOWN_WEATHER_LOCATIONS.get(str(city).strip().lower()) or KNOWN_WEATHER_LOCATIONS.get(str(city).strip())
-    if known is not None:
-        city_name, latitude, longitude = known
-        return _format_open_meteo_weather(city_name, latitude, longitude)
-
-    geo_response = requests.get(
-        "https://geocoding-api.open-meteo.com/v1/search",
-        params={"name": city, "count": 1, "language": "zh", "format": "json"},
-        headers=WEATHER_HEADERS,
-        timeout=20,
-    )
-    geo_response.raise_for_status()
-    location = geo_response.json()["results"][0]
-    return _format_open_meteo_weather(
-        location.get("name", city),
-        location["latitude"],
-        location["longitude"],
-    )
-
-
-def _fetch_weather(config: DictConfig | None) -> str:
-    radar = (config or {}).get("daily_radar", {}) if config is not None else {}
-    city = radar.get("weather_city", "Harbin")
-    try:
-        response = requests.get(
-            f"https://wttr.in/{city}",
-            params={"format": "%l: %C, %t, feels like %f, humidity %h, wind %w", "lang": "zh-cn"},
-            headers=WEATHER_HEADERS,
-            timeout=12,
-        )
-        response.raise_for_status()
-        text = response.text.strip()
-        return text if text else f"{city} 天气暂时没有返回"
-    except Exception as exc:
-        logger.warning(f"wttr weather lookup failed for {city}: {exc}")
-
-    try:
-        return _fetch_open_meteo_weather(city)
-    except Exception as exc:
-        logger.warning(f"Open-Meteo weather lookup failed for {city}: {exc}")
-        return f"{city} 天气暂时获取失败，出门前看一眼实时天气。"
 
 
 def _fetch_quote(config: DictConfig | None) -> str:
@@ -234,12 +138,10 @@ def get_stars(score: float):
 
 
 def get_empty_html(config: DictConfig | None = None):
-    weather = _safe(_fetch_weather(config))
     quote = _safe(_fetch_quote(config))
     content = f"""
     <div class="hero">
       <strong>早上好，一多。</strong><br>
-      {weather}<br><br>
       今天这句话送你：{quote}<br><br>
       今天没有筛到足够相关的新论文。也挺好，留一点空白，把昨天没读完的东西收束一下。
     </div>
@@ -248,12 +150,10 @@ def get_empty_html(config: DictConfig | None = None):
 
 
 def get_empty_markdown(config: DictConfig | None = None) -> str:
-    weather = _md_safe(_fetch_weather(config))
     quote = _md_safe(_fetch_quote(config))
     return "\n\n".join(
         [
             "**早上好，一多。**",
-            weather,
             f"今天这句话送你：\n> {quote}",
             "今天没有筛到足够相关的新论文。也挺好，留一点空白，把昨天没读完的东西收束一下。",
         ]
@@ -301,7 +201,6 @@ def render_email(papers: list[Paper], config: DictConfig | None = None) -> str:
     if len(papers) == 0:
         return framework.replace("__CONTENT__", get_empty_html(config))
 
-    weather = _safe(_fetch_weather(config))
     quote = _safe(_fetch_quote(config))
     trend_items = "".join(f"<li>{_safe(item)}</li>" for item in _trend_sentences(papers))
     top_paper = papers[0]
@@ -313,7 +212,6 @@ def render_email(papers: list[Paper], config: DictConfig | None = None) -> str:
         f"""
         <div class="hero">
           <strong>早上好，一多。</strong><br>
-          {weather}<br><br>
           今天这句话送你：{quote}<br><br>
           我今天替你扫了一轮新论文，先把最值得看的内容放在前面。今天筛出 <strong>{len(papers)}</strong> 篇重点论文，建议先看趋势，再挑一篇深读。
         </div>
@@ -358,7 +256,6 @@ def render_markdown(papers: list[Paper], config: DictConfig | None = None) -> st
     if len(papers) == 0:
         return get_empty_markdown(config)
 
-    weather = _md_safe(_fetch_weather(config))
     quote = _md_safe(_fetch_quote(config))
     trends = "\n".join(f"- {_md_safe(item)}" for item in _trend_sentences(papers))
     top_paper = papers[0]
@@ -368,7 +265,6 @@ def render_markdown(papers: list[Paper], config: DictConfig | None = None) -> st
 
     parts = [
         "**早上好，一多。**",
-        weather,
         f"今天这句话送你：\n> {quote}",
         f"我今天替你扫了一轮新论文，先把最值得看的内容放在前面。今天筛出 **{len(papers)}** 篇重点论文，建议先看趋势，再挑一篇深读。",
         f"## 今日趋势\n{trends}",

@@ -6,7 +6,6 @@ from tests.canned_responses import make_sample_paper
 
 
 def test_render_email_with_papers(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     papers = [make_sample_paper(score=7.5, tldr="A great paper.", affiliations=["MIT"])]
     papers[0].research_brief = {
@@ -27,56 +26,12 @@ def test_render_email_with_papers(monkeypatch):
 
 
 def test_render_email_empty_list(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     html = render_email([])
     assert "今天没有筛到足够相关的新论文" in html
 
 
-def test_fetch_weather_falls_back_to_open_meteo(monkeypatch):
-    class Response:
-        def __init__(self, payload=None, text="", fail=False):
-            self._payload = payload
-            self.text = text
-            self.fail = fail
-
-        def raise_for_status(self):
-            if self.fail:
-                raise RuntimeError("down")
-
-        def json(self):
-            return self._payload
-
-    def fake_get(url, **kwargs):
-        if "wttr.in" in url:
-            return Response(fail=True)
-        if "geocoding-api.open-meteo.com" in url:
-            return Response({"results": [{"name": "Harbin", "latitude": 45.75, "longitude": 126.63}]})
-        if "api.open-meteo.com" in url:
-            return Response(
-                {
-                    "current": {
-                        "temperature_2m": 12.4,
-                        "apparent_temperature": 10.2,
-                        "relative_humidity_2m": 61,
-                        "wind_speed_10m": 9.6,
-                        "weather_code": 3,
-                    }
-                }
-            )
-        raise AssertionError(url)
-
-    monkeypatch.setattr(construct_email.requests, "get", fake_get)
-
-    weather = construct_email._fetch_weather(None)
-
-    assert "阴" in weather
-    assert "12°C" in weather
-    assert "体感 10°C" in weather
-
-
 def test_render_markdown_for_wechat(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     papers = [make_sample_paper(score=7.5, tldr="A great paper.", affiliations=["MIT"])]
     papers[0].research_brief = {
@@ -99,7 +54,6 @@ def test_render_markdown_for_wechat(monkeypatch):
 
 
 def test_render_email_author_truncation(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     authors = [f"Author {i}" for i in range(10)]
     paper = make_sample_paper(authors=authors, score=7.0, tldr="ok")
@@ -115,7 +69,6 @@ def test_render_email_author_truncation(monkeypatch):
 
 
 def test_render_email_affiliation_truncation(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     affiliations = [f"Uni {i}" for i in range(8)]
     paper = make_sample_paper(affiliations=affiliations, score=7.0, tldr="ok")
@@ -127,7 +80,6 @@ def test_render_email_affiliation_truncation(monkeypatch):
 
 
 def test_render_email_no_affiliations(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     paper = make_sample_paper(affiliations=None, score=7.0, tldr="ok")
     html = render_email([paper])
@@ -170,7 +122,6 @@ def test_get_block_html_contains_all_fields():
 
 
 def test_get_empty_html(monkeypatch):
-    monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")
     html = get_empty_html()
     assert "今天没有筛到足够相关的新论文" in html
