@@ -35,6 +35,7 @@ jobs:
           EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
           ARXIV_USE_RSS_METADATA: ${{ vars.ARXIV_USE_RSS_METADATA }}
           ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
+          MAX_PAPER_NUM: ${{ vars.MAX_PAPER_NUM }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |
           export DEBUG=true
