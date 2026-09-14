@@ -18,11 +18,12 @@ class BiorxivRetriever(BaseRetriever):
 
     def _retrieve_raw_papers(self) -> list[dict[str, Any]]:
         api_url = f"https://api.biorxiv.org/details/{self.server}/2d"
-        retry_num = 10
-        delay_time = 10
+        retry_num = int(self.retriever_config.get("retry_num", 2))
+        delay_time = int(self.retriever_config.get("retry_delay", 3))
+        timeout = float(self.retriever_config.get("timeout", 15))
         for i in range(retry_num):
             try:
-                response = requests.get(api_url)
+                response = requests.get(api_url, timeout=timeout)
                 response.raise_for_status()
                 break
             except Exception as e:

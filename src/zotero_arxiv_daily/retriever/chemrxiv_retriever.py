@@ -41,15 +41,16 @@ class ChemrxivRetriever(BaseRetriever):
     _tag = re.compile(r"<[^>]+>")
 
     def _get_json(self, params: dict[str, Any]) -> dict[str, Any]:
-        retry_num = 10
-        delay_time = 10
+        retry_num = int(self.retriever_config.get("retry_num", 2))
+        delay_time = int(self.retriever_config.get("retry_delay", 3))
+        timeout = float(self.retriever_config.get("timeout", 15))
         for i in range(retry_num):
             try:
                 response = requests.get(
                     self.api_url,
                     params=params,
                     headers=self.request_headers,
-                    timeout=60,
+                    timeout=timeout,
                 )
                 response.raise_for_status()
                 return response.json()
