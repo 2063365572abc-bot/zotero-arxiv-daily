@@ -113,7 +113,7 @@ def test_research_brief_falls_back_on_error(llm_params):
     paper = make_sample_paper(tldr="Short summary")
     result = paper.generate_research_brief(broken_client, llm_params)
     assert result["why_it_matters"] == "Short summary"
-    assert "未能稳定解析方法核心" in result["method_core"]
+    assert "模型没有稳定返回结构化方法字段" in result["method_core"]
 
 
 @pytest.mark.parametrize("api_mode", ["chat_completion", "response"])
@@ -145,7 +145,33 @@ def test_daily_analysis_fallback_does_not_call_extra_llm(llm_params):
     result = paper.generate_daily_analysis(broken_client, llm_params)
     assert calls["n"] == 1
     assert result["tldr"] == paper.abstract
-    assert "模型分析超时" in paper.research_brief["method_core"]
+    assert "模型没有稳定返回结构化方法字段" in paper.research_brief["method_core"]
+
+
+def test_daily_analysis_fills_fallback_for_unstructured_response(llm_params):
+    from types import SimpleNamespace
+
+    def create_unstructured(**kwargs):
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content="This paper proposes a useful but unstructured summary."),
+                )
+            ]
+        )
+
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=create_unstructured)
+        )
+    )
+    paper = make_sample_paper()
+    result = paper.generate_daily_analysis(client, llm_params)
+
+    assert result["tldr"] == "This paper proposes a useful but unstructured summary."
+    assert paper.research_brief["why_it_matters"] == result["tldr"]
+    assert "模型没有稳定返回结构化方法字段" in paper.research_brief["method_core"]
+    assert all(paper.research_brief.values())
 
 
 # ---------------------------------------------------------------------------

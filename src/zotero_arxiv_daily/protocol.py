@@ -27,6 +27,17 @@ def _parse_research_brief(content: str) -> dict[str, str]:
     return {field: parsed.get(field, "") for field in fields}
 
 
+def _fallback_research_brief(summary: str, abstract: str) -> dict[str, str]:
+    basis = (summary or abstract or "摘要信息不足，建议打开原文确认。").strip()
+    return {
+        "why_it_matters": basis,
+        "method_core": "模型没有稳定返回结构化方法字段；请优先核查模型/算法框架、输入数据、baseline 和消融实验。",
+        "evidence": "模型没有稳定返回结构化实验证据；请打开原文确认数据集、benchmark、指标、代码和可复现资源。",
+        "limitations": "模型没有稳定返回作者局限；先按数据覆盖、跨数据泛化、统计显著性和可复现性审查。",
+        "research_inspiration": "如果这篇与你的研究画像相关，下一步交给一多科研生成 Paper Card 深读，再决定是否导入 Zotero。",
+    }
+
+
 def _parse_daily_analysis(content: str) -> dict[str, str]:
     fields = ["tldr", "why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]
     brief = {field: "" for field in fields}
@@ -185,15 +196,11 @@ Preview: {(self.full_text or "")[:3000]}
     def generate_research_brief(self, openai_client: OpenAI, llm_params: dict) -> dict[str, str]:
         try:
             brief = self._generate_research_brief_with_llm(openai_client, llm_params)
+            if not any(brief.values()):
+                brief = _fallback_research_brief(self.tldr or self.abstract, self.abstract)
         except Exception as e:
             logger.warning(f"Failed to generate research brief of {self.url}: {e}")
-            brief = {
-                "why_it_matters": self.tldr or self.abstract,
-                "method_core": "未能稳定解析方法核心，请打开原文确认。",
-                "evidence": "未能稳定解析实验和数据集，请打开原文确认。",
-                "limitations": "自动分析失败，暂不判断局限。",
-                "research_inspiration": "建议先按标题和摘要判断是否进入深读。",
-            }
+            brief = _fallback_research_brief(self.tldr or self.abstract, self.abstract)
         self.research_brief = brief
         return brief
 
@@ -251,17 +258,14 @@ Preview: {(self.full_text or "")[:1200]}
                 "limitations": analysis.get("limitations", ""),
                 "research_inspiration": analysis.get("research_inspiration", ""),
             }
+            if not any(self.research_brief.values()):
+                self.research_brief = _fallback_research_brief(self.tldr, self.abstract)
+                analysis = {"tldr": self.tldr, **self.research_brief}
             return analysis
         except Exception as e:
             logger.warning(f"Failed to generate daily analysis of {self.url}: {e}")
             self.tldr = self.abstract
-            self.research_brief = {
-                "why_it_matters": self.abstract,
-                "method_core": "模型分析超时，暂时只根据标题和摘要保留。",
-                "evidence": "模型分析超时，请打开原文确认数据集、实验和 benchmark。",
-                "limitations": "模型分析超时，暂不判断局限。",
-                "research_inspiration": "建议先按摘要判断是否进入一多科研 Paper Card 深读。",
-            }
+            self.research_brief = _fallback_research_brief(self.abstract, self.abstract)
             return {"tldr": self.tldr, **self.research_brief}
 
     def _generate_affiliations_with_llm(self, openai_client:OpenAI,llm_params:dict) -> Optional[list[str]]:
