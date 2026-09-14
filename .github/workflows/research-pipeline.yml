@@ -1,0 +1,48 @@
+name: Daily Research Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 07:30 Beijing time (23:30 UTC)
+    - cron: "30 23 * * *"
+
+jobs:
+  build-research-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Run daily research file pipeline
+        env:
+          ZOTERO_ID: ${{ secrets.ZOTERO_ID }}
+          ZOTERO_KEY: ${{ secrets.ZOTERO_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
+          OPENAI_API_TIMEOUT: ${{ vars.OPENAI_API_TIMEOUT }}
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_API_BASE: ${{ vars.DASHSCOPE_API_BASE }}
+          DASHSCOPE_API_TIMEOUT: ${{ vars.DASHSCOPE_API_TIMEOUT }}
+          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
+          ARXIV_USE_RSS_METADATA: ${{ vars.ARXIV_USE_RSS_METADATA }}
+          ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
+          MAX_CANDIDATE_NUM: ${{ vars.MAX_CANDIDATE_NUM }}
+          DAILY_PIPELINE_CANDIDATE_COUNT: ${{ vars.DAILY_PIPELINE_CANDIDATE_COUNT }}
+          DAILY_PIPELINE_SELECTED_COUNT: ${{ vars.DAILY_PIPELINE_SELECTED_COUNT }}
+          CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
+        run: |
+          if [ -n "$CUSTOM_CONFIG" ]; then
+            printf "%b\n" "$CUSTOM_CONFIG" > config/custom.yaml
+          fi
+          uv run src/zotero_arxiv_daily/research_pipeline_main.py
+
+      - name: Upload daily research artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-research-pipeline
+          path: outputs/daily/**
+          if-no-files-found: ignore

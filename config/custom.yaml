@@ -21,6 +21,11 @@ notification:
 report:
   output_dir: ${oc.env:REPORT_OUTPUT_DIR,outputs/reports}
 
+daily_pipeline:
+  output_dir: ${oc.env:DAILY_PIPELINE_OUTPUT_DIR,outputs/daily}
+  candidate_count: ${oc.env:DAILY_PIPELINE_CANDIDATE_COUNT,20}
+  selected_count: ${oc.env:DAILY_PIPELINE_SELECTED_COUNT,3}
+
 daily_radar:
   quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}
 
@@ -79,7 +84,7 @@ reranker:
 executor:
   debug: ${oc.env:DEBUG,null}
   debug_paper_limit: ${oc.env:DEBUG_PAPER_LIMIT,10}
-  max_candidate_num: ${oc.env:MAX_CANDIDATE_NUM,10}
+  max_candidate_num: ${oc.env:MAX_CANDIDATE_NUM,20}
   max_paper_num: ${oc.env:MAX_PAPER_NUM,3}
   source: ['arxiv']
   reranker: api

@@ -27,6 +27,11 @@ email:
 report:
   output_dir: outputs/reports # Local directory for generated digest artifacts.
 
+daily_pipeline:
+  output_dir: outputs/daily # Local directory for full daily research artifacts.
+  candidate_count: 20 # Maximum candidate papers kept before deep selection.
+  selected_count: 3 # Number of papers selected for PDF/Card processing.
+
 daily_radar:
   quote_enabled: true # Whether to fetch a daily quote before falling back to local warm lines. Example: true
 
