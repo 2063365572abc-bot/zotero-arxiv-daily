@@ -13,6 +13,16 @@ from openai import OpenAI
 from tqdm import tqdm
 
 
+def config_bool(value, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
 def normalize_path_patterns(patterns: list[str] | ListConfig | None, config_key: str) -> list[str] | None:
     if patterns is None:
         return None
@@ -123,7 +133,7 @@ class Executor:
             logger.info("No new papers found. No email will be sent.")
             return
         email_content = render_email(reranked_papers)
-        if self.config.get("email", {}).get("enabled", True):
+        if config_bool(self.config.get("email", {}).get("enabled", True), True):
             logger.info("Sending email...")
             send_email(self.config, email_content)
             logger.info("Email sent successfully")
