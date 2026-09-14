@@ -23,6 +23,9 @@ jobs:
           SENDER: ${{ secrets.SENDER }}
           RECEIVER: ${{ secrets.RECEIVER }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          EMAIL_ENABLED: ${{ vars.EMAIL_ENABLED }}
+          WECHAT_PUSH_PROVIDER: ${{ vars.WECHAT_PUSH_PROVIDER }}
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
