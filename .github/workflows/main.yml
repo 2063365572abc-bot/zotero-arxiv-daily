@@ -26,8 +26,10 @@ jobs:
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
+          OPENAI_API_TIMEOUT: ${{ vars.OPENAI_API_TIMEOUT }}
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           DASHSCOPE_API_BASE: ${{ vars.DASHSCOPE_API_BASE }}
+          DASHSCOPE_API_TIMEOUT: ${{ vars.DASHSCOPE_API_TIMEOUT }}
           EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
           ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
