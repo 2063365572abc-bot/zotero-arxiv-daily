@@ -116,6 +116,38 @@ def test_research_brief_falls_back_on_error(llm_params):
     assert "未能稳定解析方法核心" in result["method_core"]
 
 
+@pytest.mark.parametrize("api_mode", ["chat_completion", "response"])
+def test_daily_analysis_sets_tldr_and_structured_brief(llm_params, api_mode):
+    llm_params["api_mode"] = api_mode
+    client = make_stub_openai_client()
+    paper = make_sample_paper()
+    result = paper.generate_daily_analysis(client, llm_params)
+    assert result["tldr"] == "A concise daily summary."
+    assert paper.tldr == "A concise daily summary."
+    assert paper.research_brief["method_core"] == "A graph attention model."
+
+
+def test_daily_analysis_fallback_does_not_call_extra_llm(llm_params):
+    from types import SimpleNamespace
+
+    calls = {"n": 0}
+
+    def fail_once(**kwargs):
+        calls["n"] += 1
+        raise RuntimeError("boom")
+
+    broken_client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=fail_once)
+        )
+    )
+    paper = make_sample_paper()
+    result = paper.generate_daily_analysis(broken_client, llm_params)
+    assert calls["n"] == 1
+    assert result["tldr"] == paper.abstract
+    assert "模型分析超时" in paper.research_brief["method_core"]
+
+
 # ---------------------------------------------------------------------------
 # generate_affiliations
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ _AFFILIATION_MARKER = "You are an assistant who perfectly extracts affiliations"
 _AFFILIATION_RESPONSE = '["TsingHua University","Peking University"]'
 _BRIEF_MARKER = "为什么重要："
 _BRIEF_RESPONSE = (
+    "一句话：A concise daily summary.\n"
     "为什么重要：It is relevant to single-cell modeling.\n"
     "方法核心：A graph attention model.\n"
     "实验证据：Benchmarks on public datasets.\n"

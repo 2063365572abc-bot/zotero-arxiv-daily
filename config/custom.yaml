@@ -30,7 +30,7 @@ llm:
   api_mode: chat_completion
   generation_kwargs:
     model: gpt-5.5
-    max_tokens: 1200
+    max_tokens: 700
   language: Chinese
   research_profile: >
     用户关注 single-cell foundation models、spatial transcriptomics、graph neural networks、
@@ -77,6 +77,6 @@ reranker:
 executor:
   debug: ${oc.env:DEBUG,null}
   debug_paper_limit: ${oc.env:DEBUG_PAPER_LIMIT,10}
-  max_paper_num: ${oc.env:MAX_PAPER_NUM,5}
+  max_paper_num: ${oc.env:MAX_PAPER_NUM,3}
   source: ['arxiv','biorxiv','medrxiv','chemrxiv']
   reranker: api

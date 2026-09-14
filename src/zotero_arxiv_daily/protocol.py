@@ -10,6 +10,7 @@ RawPaperItem = TypeVar('RawPaperItem')
 
 
 BRIEF_LABELS = {
+    "一句话": "tldr",
     "为什么重要": "why_it_matters",
     "方法核心": "method_core",
     "实验证据": "evidence",
@@ -22,6 +23,12 @@ BRIEF_LABELS = {
 
 def _parse_research_brief(content: str) -> dict[str, str]:
     fields = ["why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]
+    parsed = _parse_daily_analysis(content)
+    return {field: parsed.get(field, "") for field in fields}
+
+
+def _parse_daily_analysis(content: str) -> dict[str, str]:
+    fields = ["tldr", "why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]
     brief = {field: "" for field in fields}
     current_field = None
     for raw_line in content.splitlines():
@@ -40,7 +47,7 @@ def _parse_research_brief(content: str) -> dict[str, str]:
             brief[current_field] = (brief[current_field] + " " + line).strip()
 
     if not any(brief.values()):
-        brief["why_it_matters"] = content.strip()
+        brief["tldr"] = content.strip()
 
     return brief
 
@@ -189,6 +196,73 @@ Preview: {(self.full_text or "")[:3000]}
             }
         self.research_brief = brief
         return brief
+
+    def _generate_daily_analysis_with_llm(self, openai_client: OpenAI, llm_params: dict) -> dict[str, str]:
+        lang = llm_params.get("language", "Chinese")
+        user_profile = llm_params.get(
+            "research_profile",
+            "single-cell foundation models, spatial transcriptomics, graph neural networks, multi-omics, and biomedical AI",
+        )
+        prompt = f"""
+You are a warm but rigorous research advisor. Analyze this new preprint for a researcher whose interests are:
+{user_profile}
+
+Write in {lang}. Preserve technical terms, dataset names, model names, and metrics in English when appropriate.
+Do not hype the paper. Judge what it actually contributes.
+
+Return exactly six short lines. Use these labels verbatim:
+一句话：
+为什么重要：
+方法核心：
+实验证据：
+局限风险：
+给你的启发：
+
+Paper:
+Title: {self.title}
+Source: {self.source}
+Authors: {", ".join(self.authors[:8])}
+Abstract: {self.abstract[:2500]}
+Preview: {(self.full_text or "")[:1200]}
+"""
+        enc = tiktoken.encoding_for_model("gpt-4o")
+        prompt = enc.decode(enc.encode(prompt)[:2800])
+        content = _request_llm(
+            openai_client,
+            llm_params,
+            [
+                {
+                    "role": "system",
+                    "content": "You produce source-bounded, practical research analysis with the requested Chinese labels.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+        return _parse_daily_analysis(content)
+
+    def generate_daily_analysis(self, openai_client: OpenAI, llm_params: dict) -> dict[str, str]:
+        try:
+            analysis = self._generate_daily_analysis_with_llm(openai_client, llm_params)
+            self.tldr = analysis.get("tldr") or self.abstract
+            self.research_brief = {
+                "why_it_matters": analysis.get("why_it_matters", ""),
+                "method_core": analysis.get("method_core", ""),
+                "evidence": analysis.get("evidence", ""),
+                "limitations": analysis.get("limitations", ""),
+                "research_inspiration": analysis.get("research_inspiration", ""),
+            }
+            return analysis
+        except Exception as e:
+            logger.warning(f"Failed to generate daily analysis of {self.url}: {e}")
+            self.tldr = self.abstract
+            self.research_brief = {
+                "why_it_matters": self.abstract,
+                "method_core": "模型分析超时，暂时只根据标题和摘要保留。",
+                "evidence": "模型分析超时，请打开原文确认数据集、实验和 benchmark。",
+                "limitations": "模型分析超时，暂不判断局限。",
+                "research_inspiration": "建议先按摘要判断是否进入一多科研 Paper Card 深读。",
+            }
+            return {"tldr": self.tldr, **self.research_brief}
 
     def _generate_affiliations_with_llm(self, openai_client:OpenAI,llm_params:dict) -> Optional[list[str]]:
         if self.full_text is not None:
