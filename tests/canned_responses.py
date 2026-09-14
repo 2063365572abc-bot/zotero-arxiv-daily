@@ -12,14 +12,14 @@ from zotero_arxiv_daily.protocol import CorpusPaper, Paper
 
 _AFFILIATION_MARKER = "You are an assistant who perfectly extracts affiliations"
 _AFFILIATION_RESPONSE = '["TsingHua University","Peking University"]'
-_BRIEF_MARKER = "为什么重要："
+_BRIEF_MARKER = "why_it_matters"
 _BRIEF_RESPONSE = (
-    "一句话：A concise daily summary.\n"
-    "为什么重要：It is relevant to single-cell modeling.\n"
-    "方法核心：A graph attention model.\n"
-    "实验证据：Benchmarks on public datasets.\n"
-    "局限风险：Limited validation.\n"
-    "给你的启发：Try the representation on spatial transcriptomics."
+    '{"tldr":"A concise daily summary.",'
+    '"why_it_matters":"It is relevant to single-cell modeling.",'
+    '"method_core":"A graph attention model.",'
+    '"evidence":"Benchmarks on public datasets.",'
+    '"limitations":"Limited validation.",'
+    '"research_inspiration":"Try the representation on spatial transcriptomics."}'
 )
 _TLDR_RESPONSE = "Hello! How can I assist you today?"
 

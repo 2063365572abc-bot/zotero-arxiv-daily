@@ -25,6 +25,28 @@ STOPWORDS = {
     "paper", "method", "learning", "deep", "single",
 }
 
+WEATHER_CODES = {
+    0: "晴",
+    1: "大部晴朗",
+    2: "局部多云",
+    3: "阴",
+    45: "有雾",
+    48: "雾凇",
+    51: "小毛毛雨",
+    53: "毛毛雨",
+    55: "较强毛毛雨",
+    61: "小雨",
+    63: "中雨",
+    65: "大雨",
+    71: "小雪",
+    73: "中雪",
+    75: "大雪",
+    80: "阵雨",
+    81: "较强阵雨",
+    82: "强阵雨",
+    95: "雷雨",
+}
+
 
 framework = """
 <!DOCTYPE HTML>
@@ -93,6 +115,36 @@ def _fetch_weather(config: DictConfig | None) -> str:
         response.raise_for_status()
         text = response.text.strip()
         return text if text else f"{city} 天气暂时没有返回"
+    except Exception:
+        pass
+
+    try:
+        geo_response = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": city, "count": 1, "language": "zh", "format": "json"},
+            timeout=12,
+        )
+        geo_response.raise_for_status()
+        location = geo_response.json()["results"][0]
+        weather_response = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": location["latitude"],
+                "longitude": location["longitude"],
+                "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
+                "timezone": "auto",
+            },
+            timeout=12,
+        )
+        weather_response.raise_for_status()
+        current = weather_response.json()["current"]
+        condition = WEATHER_CODES.get(int(current.get("weather_code", -1)), "天气状态未知")
+        temperature = round(float(current["temperature_2m"]))
+        feels_like = round(float(current["apparent_temperature"]))
+        humidity = round(float(current["relative_humidity_2m"]))
+        wind = round(float(current["wind_speed_10m"]))
+        city_name = location.get("name", city)
+        return f"{city_name}: {condition}, {temperature}°C, 体感 {feels_like}°C, 湿度 {humidity}%, 风速 {wind} km/h"
     except Exception:
         return f"{city} 天气暂时获取失败，出门前看一眼实时天气。"
 

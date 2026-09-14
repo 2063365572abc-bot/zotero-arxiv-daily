@@ -33,6 +33,48 @@ def test_render_email_empty_list(monkeypatch):
     assert "今天没有筛到足够相关的新论文" in html
 
 
+def test_fetch_weather_falls_back_to_open_meteo(monkeypatch):
+    class Response:
+        def __init__(self, payload=None, text="", fail=False):
+            self._payload = payload
+            self.text = text
+            self.fail = fail
+
+        def raise_for_status(self):
+            if self.fail:
+                raise RuntimeError("down")
+
+        def json(self):
+            return self._payload
+
+    def fake_get(url, **kwargs):
+        if "wttr.in" in url:
+            return Response(fail=True)
+        if "geocoding-api.open-meteo.com" in url:
+            return Response({"results": [{"name": "Harbin", "latitude": 45.75, "longitude": 126.63}]})
+        if "api.open-meteo.com" in url:
+            return Response(
+                {
+                    "current": {
+                        "temperature_2m": 12.4,
+                        "apparent_temperature": 10.2,
+                        "relative_humidity_2m": 61,
+                        "wind_speed_10m": 9.6,
+                        "weather_code": 3,
+                    }
+                }
+            )
+        raise AssertionError(url)
+
+    monkeypatch.setattr(construct_email.requests, "get", fake_get)
+
+    weather = construct_email._fetch_weather(None)
+
+    assert "Harbin: 阴" in weather
+    assert "12°C" in weather
+    assert "体感 10°C" in weather
+
+
 def test_render_markdown_for_wechat(monkeypatch):
     monkeypatch.setattr(construct_email, "_fetch_weather", lambda config=None: "Harbin: Sunny, 19C")
     monkeypatch.setattr(construct_email, "_fetch_quote", lambda config=None: "Keep the thread alive.")

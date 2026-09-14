@@ -2,6 +2,7 @@
 
 import pytest
 
+from zotero_arxiv_daily.protocol import _parse_daily_analysis
 from tests.canned_responses import make_sample_paper, make_stub_openai_client
 
 
@@ -17,6 +18,25 @@ def llm_params():
 # ---------------------------------------------------------------------------
 # generate_tldr
 # ---------------------------------------------------------------------------
+
+
+def test_parse_daily_analysis_json_response():
+    result = _parse_daily_analysis(
+        '{"tldr":"一句话总结","why_it_matters":"重要性","method_core":"方法",'
+        '"evidence":"证据","limitations":"局限","research_inspiration":"启发"}'
+    )
+    assert result["tldr"] == "一句话总结"
+    assert result["method_core"] == "方法"
+    assert result["research_inspiration"] == "启发"
+
+
+def test_parse_daily_analysis_fenced_json_response():
+    result = _parse_daily_analysis(
+        '```json\n{"tldr":"短总结","why_it_matters":"值得看","method_core":"核心方法"}\n```'
+    )
+    assert result["tldr"] == "短总结"
+    assert result["why_it_matters"] == "值得看"
+    assert result["method_core"] == "核心方法"
 
 
 @pytest.mark.parametrize("api_mode", ["chat_completion", "response"])

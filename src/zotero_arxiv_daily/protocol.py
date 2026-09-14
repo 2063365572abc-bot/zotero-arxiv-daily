@@ -21,6 +21,49 @@ BRIEF_LABELS = {
 }
 
 
+def _extract_json_object(content: str) -> dict[str, str] | None:
+    candidates = [content]
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, flags=re.DOTALL | re.IGNORECASE)
+    if fenced:
+        candidates.insert(0, fenced.group(1))
+    loose = re.search(r"\{.*\}", content, flags=re.DOTALL)
+    if loose:
+        candidates.append(loose.group(0))
+
+    key_map = {
+        "tldr": "tldr",
+        "summary": "tldr",
+        "一句话": "tldr",
+        "why_it_matters": "why_it_matters",
+        "为什么重要": "why_it_matters",
+        "method_core": "method_core",
+        "方法核心": "method_core",
+        "evidence": "evidence",
+        "实验证据": "evidence",
+        "实验/证据": "evidence",
+        "limitations": "limitations",
+        "局限风险": "limitations",
+        "局限": "limitations",
+        "research_inspiration": "research_inspiration",
+        "给你的启发": "research_inspiration",
+    }
+    for candidate in candidates:
+        try:
+            raw = json.loads(candidate)
+        except Exception:
+            continue
+        if not isinstance(raw, dict):
+            continue
+        parsed = {field: "" for field in ["tldr", "why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]}
+        for key, value in raw.items():
+            field = key_map.get(str(key).strip())
+            if field is not None and value is not None:
+                parsed[field] = str(value).strip()
+        if any(parsed.values()):
+            return parsed
+    return None
+
+
 def _parse_research_brief(content: str) -> dict[str, str]:
     fields = ["why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]
     parsed = _parse_daily_analysis(content)
@@ -50,6 +93,10 @@ def _fallback_research_brief(summary: str, abstract: str) -> dict[str, str]:
 
 def _parse_daily_analysis(content: str) -> dict[str, str]:
     fields = ["tldr", "why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]
+    json_brief = _extract_json_object(content)
+    if json_brief is not None:
+        return {field: json_brief.get(field, "") for field in fields}
+
     brief = {field: "" for field in fields}
     current_field = None
     for raw_line in content.splitlines():
@@ -174,12 +221,10 @@ You are a warm but rigorous research advisor. Analyze this new preprint for a re
 Write in {lang}. Preserve technical terms, dataset names, model names, and metrics in English when appropriate.
 Do not hype the paper. Judge what it actually contributes.
 
-Return exactly five short lines. Use these labels verbatim:
-为什么重要：
-方法核心：
-实验证据：
-局限风险：
-给你的启发：
+Return only valid JSON. Do not wrap it in Markdown. Use exactly these keys:
+why_it_matters, method_core, evidence, limitations, research_inspiration
+
+Each value must be one concise Chinese sentence. If the abstract lacks evidence, say what to verify in the paper instead of inventing results.
 
 Paper:
 Title: {self.title}
@@ -196,7 +241,7 @@ Preview: {(self.full_text or "")[:3000]}
             [
                 {
                     "role": "system",
-                    "content": "You produce source-bounded, practical research analysis with the requested Chinese labels.",
+                    "content": "You produce source-bounded, practical research analysis and return only valid JSON.",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -227,13 +272,10 @@ You are a warm but rigorous research advisor. Analyze this new preprint for a re
 Write in {lang}. Preserve technical terms, dataset names, model names, and metrics in English when appropriate.
 Do not hype the paper. Judge what it actually contributes.
 
-Return exactly six short lines. Use these labels verbatim:
-一句话：
-为什么重要：
-方法核心：
-实验证据：
-局限风险：
-给你的启发：
+Return only valid JSON. Do not wrap it in Markdown. Use exactly these keys:
+tldr, why_it_matters, method_core, evidence, limitations, research_inspiration
+
+Each value must be one concise Chinese sentence. If the abstract lacks evidence, say what to verify in the paper instead of inventing results.
 
 Paper:
 Title: {self.title}
@@ -250,7 +292,7 @@ Preview: {(self.full_text or "")[:1200]}
             [
                 {
                     "role": "system",
-                    "content": "You produce source-bounded, practical research analysis with the requested Chinese labels.",
+                    "content": "You produce source-bounded, practical research analysis and return only valid JSON.",
                 },
                 {"role": "user", "content": prompt},
             ],
