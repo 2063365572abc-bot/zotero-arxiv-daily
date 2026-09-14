@@ -12,6 +12,14 @@ from zotero_arxiv_daily.protocol import CorpusPaper, Paper
 
 _AFFILIATION_MARKER = "You are an assistant who perfectly extracts affiliations"
 _AFFILIATION_RESPONSE = '["TsingHua University","Peking University"]'
+_BRIEF_MARKER = "为什么重要："
+_BRIEF_RESPONSE = (
+    "为什么重要：It is relevant to single-cell modeling.\n"
+    "方法核心：A graph attention model.\n"
+    "实验证据：Benchmarks on public datasets.\n"
+    "局限风险：Limited validation.\n"
+    "给你的启发：Try the representation on spatial transcriptomics."
+)
 _TLDR_RESPONSE = "Hello! How can I assist you today?"
 
 
@@ -36,12 +44,19 @@ def _stub_chat_create(**kwargs):
     request_str = str(messages)
     if _AFFILIATION_MARKER in request_str:
         return _make_chat_response(_AFFILIATION_RESPONSE)
+    if _BRIEF_MARKER in request_str:
+        return _make_chat_response(_BRIEF_RESPONSE)
     return _make_chat_response(_TLDR_RESPONSE)
 
 
 def _stub_response_create(**kwargs):
     request_str = str(kwargs.get("input", []))
-    content = _AFFILIATION_RESPONSE if _AFFILIATION_MARKER in request_str else _TLDR_RESPONSE
+    if _AFFILIATION_MARKER in request_str:
+        content = _AFFILIATION_RESPONSE
+    elif _BRIEF_MARKER in request_str:
+        content = _BRIEF_RESPONSE
+    else:
+        content = _TLDR_RESPONSE
     return SimpleNamespace(output_text=content)
 
 

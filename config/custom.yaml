@@ -18,15 +18,24 @@ notification:
     pushplus_token: ${oc.env:PUSHPLUS_TOKEN,null}
     wecom_webhook: ${oc.env:WECOM_WEBHOOK,null}
 
+daily_radar:
+  weather_city: ${oc.env:WEATHER_CITY,Harbin}
+  quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}
+
 llm:
   api:
     key: ${oc.env:OPENAI_API_KEY}
     base_url: ${oc.env:OPENAI_API_BASE}
     timeout: ${oc.env:OPENAI_API_TIMEOUT,60}
-  api_mode: response
+  api_mode: chat_completion
   generation_kwargs:
     model: gpt-5.5
+    max_tokens: 1200
   language: Chinese
+  research_profile: >
+    用户关注 single-cell foundation models、spatial transcriptomics、graph neural networks、
+    multi-omics、biomedical AI、perturbation prediction、cell state representation、
+    domain segmentation、cross-modal alignment，以及这些方向如何形成可验证的新科研 idea。
 
 source:
   arxiv:

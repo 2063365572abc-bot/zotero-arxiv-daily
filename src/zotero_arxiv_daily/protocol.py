@@ -9,6 +9,42 @@ import json
 RawPaperItem = TypeVar('RawPaperItem')
 
 
+BRIEF_LABELS = {
+    "为什么重要": "why_it_matters",
+    "方法核心": "method_core",
+    "实验证据": "evidence",
+    "实验/证据": "evidence",
+    "局限风险": "limitations",
+    "局限": "limitations",
+    "给你的启发": "research_inspiration",
+}
+
+
+def _parse_research_brief(content: str) -> dict[str, str]:
+    fields = ["why_it_matters", "method_core", "evidence", "limitations", "research_inspiration"]
+    brief = {field: "" for field in fields}
+    current_field = None
+    for raw_line in content.splitlines():
+        line = raw_line.strip().lstrip("-*0123456789.、) ")
+        if not line:
+            continue
+        matched = False
+        for label, field in BRIEF_LABELS.items():
+            if line.startswith(label):
+                value = line[len(label):].lstrip("：: ").strip()
+                brief[field] = value
+                current_field = field
+                matched = True
+                break
+        if not matched and current_field:
+            brief[current_field] = (brief[current_field] + " " + line).strip()
+
+    if not any(brief.values()):
+        brief["why_it_matters"] = content.strip()
+
+    return brief
+
+
 def _request_llm(openai_client: OpenAI, llm_params: dict, messages: list[dict]) -> str:
     api_mode = llm_params.get("api_mode", "chat_completion")
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
@@ -24,6 +60,7 @@ def _request_llm(openai_client: OpenAI, llm_params: dict, messages: list[dict]) 
         max_tokens = generation_kwargs.pop("max_tokens", None)
         if max_tokens is not None and "max_output_tokens" not in generation_kwargs:
             generation_kwargs["max_output_tokens"] = max_tokens
+        generation_kwargs.setdefault("max_output_tokens", 1200)
         response = openai_client.responses.create(
             input=messages,
             **generation_kwargs,
@@ -48,6 +85,7 @@ class Paper:
     tldr: Optional[str] = None
     affiliations: Optional[list[str]] = None
     score: Optional[float] = None
+    research_brief: Optional[dict[str, str]] = None
 
     def _generate_tldr_with_llm(self, openai_client:OpenAI,llm_params:dict) -> str:
         lang = llm_params.get('language', 'English')
@@ -94,6 +132,63 @@ class Paper:
             tldr = self.abstract
             self.tldr = tldr
             return tldr
+
+    def _generate_research_brief_with_llm(self, openai_client: OpenAI, llm_params: dict) -> dict[str, str]:
+        lang = llm_params.get("language", "Chinese")
+        user_profile = llm_params.get(
+            "research_profile",
+            "single-cell foundation models, spatial transcriptomics, graph neural networks, multi-omics, and biomedical AI",
+        )
+        prompt = f"""
+You are a warm but rigorous research advisor. Analyze this new preprint for a researcher whose interests are:
+{user_profile}
+
+Write in {lang}. Preserve technical terms, dataset names, model names, and metrics in English when appropriate.
+Do not hype the paper. Judge what it actually contributes.
+
+Return exactly five short lines. Use these labels verbatim:
+为什么重要：
+方法核心：
+实验证据：
+局限风险：
+给你的启发：
+
+Paper:
+Title: {self.title}
+Source: {self.source}
+Authors: {", ".join(self.authors[:8])}
+Abstract: {self.abstract}
+Preview: {(self.full_text or "")[:3000]}
+"""
+        enc = tiktoken.encoding_for_model("gpt-4o")
+        prompt = enc.decode(enc.encode(prompt)[:5000])
+        content = _request_llm(
+            openai_client,
+            llm_params,
+            [
+                {
+                    "role": "system",
+                    "content": "You produce source-bounded, practical research analysis with the requested Chinese labels.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+        return _parse_research_brief(content)
+
+    def generate_research_brief(self, openai_client: OpenAI, llm_params: dict) -> dict[str, str]:
+        try:
+            brief = self._generate_research_brief_with_llm(openai_client, llm_params)
+        except Exception as e:
+            logger.warning(f"Failed to generate research brief of {self.url}: {e}")
+            brief = {
+                "why_it_matters": self.tldr or self.abstract,
+                "method_core": "未能稳定解析方法核心，请打开原文确认。",
+                "evidence": "未能稳定解析实验和数据集，请打开原文确认。",
+                "limitations": "自动分析失败，暂不判断局限。",
+                "research_inspiration": "建议先按标题和摘要判断是否进入深读。",
+            }
+        self.research_brief = brief
+        return brief
 
     def _generate_affiliations_with_llm(self, openai_client:OpenAI,llm_params:dict) -> Optional[list[str]]:
         if self.full_text is not None:

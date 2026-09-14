@@ -33,6 +33,8 @@ jobs:
           EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL }}
           ARXIV_USE_RSS_METADATA: ${{ vars.ARXIV_USE_RSS_METADATA }}
           ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
+          WEATHER_CITY: ${{ vars.WEATHER_CITY }}
+          DAILY_QUOTE_ENABLED: ${{ vars.DAILY_QUOTE_ENABLED }}
           MAX_PAPER_NUM: ${{ vars.MAX_PAPER_NUM }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |

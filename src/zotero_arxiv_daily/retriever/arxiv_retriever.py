@@ -11,6 +11,7 @@ import os
 from queue import Empty
 from time import sleep
 from typing import Any, Callable, TypeVar
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from loguru import logger
 import requests
 import re
@@ -51,7 +52,22 @@ def _run_with_hard_timeout(
     paper_title: str,
 ) -> T | None:
     start_methods = multiprocessing.get_all_start_methods()
-    context = multiprocessing.get_context("fork" if "fork" in start_methods else start_methods[0])
+    if "fork" not in start_methods:
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(func, *args)
+        try:
+            return future.result(timeout=timeout)
+        except TimeoutError:
+            future.cancel()
+            logger.warning(f"{operation} timed out for {paper_title} after {timeout} seconds")
+            return None
+        except Exception as exc:
+            logger.warning(f"{operation} failed for {paper_title}: {type(exc).__name__}: {exc}")
+            return None
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+
+    context = multiprocessing.get_context("fork")
     result_queue = context.Queue()
     process = context.Process(target=_run_in_subprocess, args=(result_queue, func, args))
     process.start()
@@ -164,7 +180,7 @@ class ArxivRetriever(BaseRetriever):
         return raw_papers
 
     def convert_to_paper(self, raw_paper: ArxivResult | dict[str, Any]) -> Paper:
-        if not isinstance(raw_paper, ArxivResult):
+        if isinstance(raw_paper, dict) or (hasattr(raw_paper, "get") and not hasattr(raw_paper, "pdf_url")):
             title = raw_paper["title"]
             authors = []
             for author in raw_paper.get("authors", []):

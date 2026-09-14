@@ -86,6 +86,37 @@ def test_invalid_api_mode_falls_back_to_abstract(llm_params):
 
 
 # ---------------------------------------------------------------------------
+# generate_research_brief
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("api_mode", ["chat_completion", "response"])
+def test_research_brief_returns_structured_fields(llm_params, api_mode):
+    llm_params["api_mode"] = api_mode
+    client = make_stub_openai_client()
+    paper = make_sample_paper()
+    result = paper.generate_research_brief(client, llm_params)
+    assert result["why_it_matters"] == "It is relevant to single-cell modeling."
+    assert result["method_core"] == "A graph attention model."
+    assert result["research_inspiration"] == "Try the representation on spatial transcriptomics."
+    assert paper.research_brief == result
+
+
+def test_research_brief_falls_back_on_error(llm_params):
+    from types import SimpleNamespace
+
+    broken_client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=lambda **kw: (_ for _ in ()).throw(RuntimeError("boom")))
+        )
+    )
+    paper = make_sample_paper(tldr="Short summary")
+    result = paper.generate_research_brief(broken_client, llm_params)
+    assert result["why_it_matters"] == "Short summary"
+    assert "未能稳定解析方法核心" in result["method_core"]
+
+
+# ---------------------------------------------------------------------------
 # generate_affiliations
 # ---------------------------------------------------------------------------
 

@@ -24,6 +24,10 @@ email:
   smtp_port: ??? # The port of SMTP server. Example: 465
   sender_password: ??? # The password of the sender account. Note that it's not necessarily the password for logging in the e-mail client, but the authentication code for SMTP service. Ask your email provider for this. Example: abcdefghijklmn
 
+daily_radar:
+  weather_city: Harbin # City used in the warm morning opening. Example: Harbin
+  quote_enabled: true # Whether to fetch a daily quote before falling back to local warm lines. Example: true
+
 llm:
   api:
     key: ??? # API Key of your LLM API. Example: sk-xxx
@@ -35,6 +39,7 @@ llm:
     max_tokens: 16384
     model: ???
   language: English # Preferred language for the TL;DR. Example: English
+  research_profile: "" # Personal research interests used by the structured research brief prompt.
 
 reranker:
   local:

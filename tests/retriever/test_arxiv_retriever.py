@@ -19,6 +19,12 @@ def _raise_runtime_error() -> None:
 
 
 def test_arxiv_retriever(config, mock_feedparser, monkeypatch):
+    from omegaconf import open_dict
+
+    with open_dict(config):
+        config.source.arxiv.include_cross_list = False
+        config.source.arxiv.use_rss_metadata = False
+
     monkeypatch.setattr("zotero_arxiv_daily.retriever.base.sleep", lambda _: None)
 
     # The RSS fixture gives us paper IDs.  After feedparser, the code calls
@@ -61,6 +67,26 @@ def test_arxiv_retriever(config, mock_feedparser, monkeypatch):
 
     assert len(papers) == len(new_entries)
     assert set(p.title for p in papers) == set(e.title for e in new_entries)
+
+
+def test_arxiv_retriever_rss_metadata_fast_path(config, mock_feedparser, monkeypatch):
+    from omegaconf import open_dict
+
+    with open_dict(config):
+        config.source.arxiv.include_cross_list = False
+        config.source.arxiv.use_rss_metadata = True
+
+    monkeypatch.setattr("zotero_arxiv_daily.retriever.base.sleep", lambda _: None)
+    retriever = ArxivRetriever(config)
+    papers = retriever.retrieve_papers()
+
+    new_entries = [
+        e for e in mock_feedparser.entries
+        if e.get("arxiv_announce_type", "new") == "new"
+    ]
+    assert len(papers) == len(new_entries)
+    assert set(p.title for p in papers) == set(e.title for e in new_entries)
+    assert all(p.full_text is None for p in papers)
 
 
 def test_run_with_hard_timeout_returns_value():
