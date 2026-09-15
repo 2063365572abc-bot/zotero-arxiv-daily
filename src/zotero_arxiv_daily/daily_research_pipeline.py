@@ -274,7 +274,7 @@ def _clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", text or "").strip()
 
 
-def _page_texts_for_llm(bundle: dict[str, Any], max_chars: int = 45000) -> tuple[str, list[str]]:
+def _page_texts_for_llm(bundle: dict[str, Any], max_chars: int = 16000) -> tuple[str, list[str]]:
     pages = bundle.get("pages", [])
     if not pages:
         return "", ["source_bundle"]
@@ -304,11 +304,11 @@ def _page_texts_for_llm(bundle: dict[str, Any], max_chars: int = 45000) -> tuple
         if not text:
             continue
         page_no = int(page.get("page") or index + 1)
-        snippet = text[:3200]
+        snippet = text[:1800]
         block = f"[Paper: PDF p. {page_no}]\n{snippet}"
         if total + len(block) > max_chars:
             remaining = max_chars - total
-            if remaining < 800:
+            if remaining < 500:
                 break
             block = block[:remaining]
         chunks.append(block)
@@ -385,13 +385,14 @@ def generate_deep_paper_analysis(
     llm_params: dict[str, Any],
 ) -> dict[str, Any]:
     source_excerpt, refs = _page_texts_for_llm(bundle)
+    logger.info(f"Calling Huoshen LLM for Paper Card: {paper.title}")
     lang = llm_params.get("language", "Chinese")
     user_profile = llm_params.get("research_profile") or (
         "single-cell foundation models, spatial transcriptomics, graph neural networks, "
         "multi-omics, biomedical AI, perturbation prediction, and cell-state representation"
     )
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
-    generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), 6000)
+    generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), 2800)
     card_llm_params = {**llm_params, "generation_kwargs": generation_kwargs}
     section_contract = "\n".join(f"- {section}: JSON key `{key}`" for section, key in CARD_SECTION_MAP.items())
     prompt = f"""
@@ -403,6 +404,7 @@ Every substantive paper-derived claim must include a source pointer like [Paper:
 If a section is not supported by the supplied source excerpt, write "Not assessable from supplied material."
 Author-stated limitations and your own criticism must be separated.
 Research ideas must be hypotheses, not novelty claims, and must include validation plus possible failure modes.
+Keep each section concise: 1 short paragraph or a compact Markdown table.
 
 User research profile:
 {user_profile}
@@ -450,6 +452,7 @@ Supplied PDF excerpts:
     payload = _json_from_llm_content(content)
     sections = _normalise_card_sections(payload.get("sections", {}))
     missing_sections = [section for section, body in sections.items() if "Not assessable from supplied material" in body]
+    logger.info(f"Huoshen LLM Paper Card JSON received: {paper.title}")
     return {
         "status": "llm_enriched",
         "source_coverage": str(payload.get("source_coverage") or "Partial paper"),
@@ -474,6 +477,7 @@ def write_deep_analysis(
     llm_params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if openai_client is None or llm_params is None:
+        logger.warning(f"LLM client is not configured; writing scaffold card for {paper.title}")
         analysis = initial_paper_analysis(paper, bundle)
         analysis["failure_reason"] = "llm_client_not_configured"
         write_json(output_path, analysis)
@@ -632,6 +636,7 @@ def process_selected_paper(
 ) -> Path:
     folder = paper_folder(output_dir, index, record.title)
     folder.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Processing selected paper {index}: {record.title}")
     metadata = asdict(record)
     pdf_path = folder / "original.pdf"
     download_meta = download_pdf(record.pdf_url, pdf_path)
@@ -646,7 +651,8 @@ def process_selected_paper(
     analysis = write_deep_analysis(record, bundle, folder / "paper_analysis.json", openai_client, llm_params)
     generate_paper_card_markdown(record, analysis, folder / "paper-card.md")
     export_markdown_to_pdf(folder / "paper-card.md", folder / "文档分析.pdf")
-    audit_paper_card(folder)
+    report = audit_paper_card(folder)
+    logger.info(f"Finished selected paper {index}: audit_status={report['status']} title={record.title}")
     return folder
 
 

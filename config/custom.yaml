@@ -36,7 +36,7 @@ llm:
     timeout: ${oc.env:OPENAI_API_TIMEOUT,60}
   api_mode: chat_completion
   generation_kwargs:
-    model: gpt-5.5
+    model: ${oc.env:LLM_MODEL,qwen3.8-max}
     max_tokens: 700
   language: Chinese
   research_profile: >

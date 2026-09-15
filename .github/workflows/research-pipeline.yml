@@ -23,6 +23,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
           OPENAI_API_TIMEOUT: ${{ vars.OPENAI_API_TIMEOUT }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           DASHSCOPE_API_BASE: ${{ vars.DASHSCOPE_API_BASE }}
           DASHSCOPE_API_TIMEOUT: ${{ vars.DASHSCOPE_API_TIMEOUT }}
