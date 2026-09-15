@@ -69,7 +69,7 @@ def test_llm_ranking_uses_title_abstract_and_selects_distinct_roles():
         ]
     }
     fake_response = SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload, ensure_ascii=False)))]
+        choices=[SimpleNamespace(message=SimpleNamespace(content="模型判断如下：\n```json\n" + json.dumps(payload["rankings"], ensure_ascii=False) + "\n```"))]
     )
     calls = []
     def create(**kwargs):

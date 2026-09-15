@@ -473,22 +473,35 @@ def _source_text_for_full_card(bundle: dict[str, Any], max_chars: int = 55_000) 
 
 
 def _json_from_llm_content(content: str) -> dict[str, Any]:
-    candidates = [content]
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, flags=re.DOTALL | re.IGNORECASE)
-    if fenced:
-        candidates.insert(0, fenced.group(1))
-    loose = re.search(r"\{.*\}", content, flags=re.DOTALL)
-    if loose:
-        candidates.append(loose.group(0))
+    """Parse common Qwen/OpenAI-compatible JSON response variants."""
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("LLM returned empty content")
 
+    candidates = [content.strip()]
+    for match in re.finditer(r"```(?:json)?\s*(.*?)\s*```", content, flags=re.DOTALL | re.IGNORECASE):
+        candidates.insert(0, match.group(1).strip())
+
+    # Some reasoning models add a short preamble or return an array directly.
+    decoder = json.JSONDecoder()
     for candidate in candidates:
         try:
             parsed = json.loads(candidate)
         except Exception:
-            continue
+            parsed = None
+            for start, char in enumerate(candidate):
+                if char not in "[{":
+                    continue
+                try:
+                    parsed, _ = decoder.raw_decode(candidate[start:])
+                    break
+                except json.JSONDecodeError:
+                    continue
         if isinstance(parsed, dict):
             return parsed
-    raise ValueError("LLM did not return a JSON object")
+        if isinstance(parsed, list):
+            return {"rankings": parsed}
+    preview = re.sub(r"\s+", " ", content).strip()[:300]
+    raise ValueError(f"LLM did not return parseable JSON; preview={preview!r}")
 
 
 def _normalise_card_sections(raw_sections: Any) -> dict[str, str]:
