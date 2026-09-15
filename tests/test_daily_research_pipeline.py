@@ -9,6 +9,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     audit_paper_card,
     export_markdown_to_pdf,
     extract_source_bundle,
+    generate_one_shot_full_card_markdown,
     generate_paper_card_markdown,
     process_selected_paper,
     select_papers_for_deep_read,
@@ -128,6 +129,54 @@ def test_llm_enriched_card_passes_audit(tmp_path):
     analysis = write_deep_analysis(paper, bundle, tmp_path / "paper_analysis.json", fake_client, llm_params)
     markdown = generate_paper_card_markdown(paper, analysis, tmp_path / "paper-card.md")
     assert "Analysis status: llm_enriched" in markdown
+
+    export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
+    report = audit_paper_card(tmp_path)
+    assert report == {"status": "pass", "errors": [], "warnings": []}
+
+
+def test_one_shot_full_card_streaming_passes_audit(tmp_path):
+    pdf_path = tmp_path / "original.pdf"
+    make_pdf(pdf_path)
+    bundle = extract_source_bundle(pdf_path, tmp_path / "source_bundle.json")
+    paper = SelectionRecord(
+        source="arxiv",
+        title="A Streaming Full Card Paper",
+        authors=["A", "B"],
+        abstract="This paper introduces a method for single-cell representation learning.",
+        url="https://arxiv.org/abs/2601.00004",
+        pdf_url="https://arxiv.org/pdf/2601.00004",
+        score=9.0,
+        role="best_match",
+        scoring={"total": 9.0},
+        selection_reason="Highly relevant.",
+    )
+    markdown = "\n\n".join(
+        [
+            "> Source coverage: Full paper\n> Extraction confidence: High\n> Locator mode: page-grounded\n> Primary analytical lens: methods\n> Secondary analytical lens: None\n> Context verification: Paper-only\n> Card completeness: Complete relative to supplied source",
+            *[f"## {section}\n\n[Paper: PDF p. 1] {section} content." for section in CARD_SECTIONS],
+        ]
+    )
+    chunks = [
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=markdown[:100]))]),
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=markdown[100:]))]),
+    ]
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: iter(chunks)))
+    )
+    llm_params = {"generation_kwargs": {"model": "qwen3.8-max", "max_tokens": 1000}, "language": "Chinese"}
+
+    analysis = generate_one_shot_full_card_markdown(
+        paper,
+        bundle,
+        tmp_path / "paper-card.md",
+        fake_client,
+        llm_params,
+        max_input_chars=4000,
+        max_output_tokens=1000,
+    )
+    assert analysis["status"] == "one_shot_full_card"
+    assert (tmp_path / "paper-card.md").read_text(encoding="utf-8") == markdown
 
     export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
     report = audit_paper_card(tmp_path)

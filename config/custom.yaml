@@ -25,6 +25,9 @@ daily_pipeline:
   output_dir: ${oc.env:DAILY_PIPELINE_OUTPUT_DIR,outputs/daily}
   candidate_count: ${oc.env:DAILY_PIPELINE_CANDIDATE_COUNT,20}
   selected_count: ${oc.env:DAILY_PIPELINE_SELECTED_COUNT,3}
+  card_mode: ${oc.env:DAILY_PIPELINE_CARD_MODE,brief}
+  full_card_input_chars: ${oc.env:DAILY_PIPELINE_FULL_CARD_INPUT_CHARS,55000}
+  full_card_output_tokens: ${oc.env:DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS,12000}
 
 daily_radar:
   quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}

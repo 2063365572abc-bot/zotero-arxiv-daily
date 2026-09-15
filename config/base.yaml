@@ -31,6 +31,9 @@ daily_pipeline:
   output_dir: outputs/daily # Local directory for full daily research artifacts.
   candidate_count: 20 # Maximum candidate papers kept before deep selection.
   selected_count: 3 # Number of papers selected for PDF/Card processing.
+  card_mode: brief # Card generation mode. Options: brief or one_shot_full.
+  full_card_input_chars: 55000 # Maximum extracted PDF characters sent to one-shot full-card generation.
+  full_card_output_tokens: 12000 # Maximum output tokens for one-shot full-card generation.
 
 daily_radar:
   quote_enabled: true # Whether to fetch a daily quote before falling back to local warm lines. Example: true
