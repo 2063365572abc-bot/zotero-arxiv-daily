@@ -295,10 +295,17 @@ class ArxivRetriever(BaseRetriever):
                 batch = self._retrieve_recent_category_api(hours, max(max_results, limit))
             except arxiv.HTTPError as exc:
                 if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
-                    logger.warning(f"arXiv category API returned {exc.status}; using RSS fallback for {hours}h.")
-                    batch = self._retrieve_recent_category_rss(hours)
-                else:
-                    raise
+                    logger.warning(
+                        f"arXiv category API returned {exc.status}; using keyword RSS fallback "
+                        f"before category RSS for {hours}h."
+                    )
+                    domain, method, task = self._keyword_groups()
+                    batch = self._retrieve_strict_keyword_rss(domain, method, task, hours)
+                    if len(batch) < max(max_results, limit):
+                        category_batch = self._retrieve_recent_category_rss(hours)
+                        batch.extend(category_batch)
+            else:
+                raise
             add_candidates(batch)
             if len(results) >= limit:
                 logger.info(f"Recent category retrieval produced {len(results[:limit])} candidates within {hours}h.")
@@ -445,7 +452,7 @@ class ArxivRetriever(BaseRetriever):
                 item_id = self._raw_id(entry)
                 if published is None or published < cutoff or not item_id or item_id in seen_ids:
                     continue
-                entry["retrieval_source"] = "rss"
+                entry["retrieval_source"] = "rss_category"
                 matches.append(entry)
                 seen_ids.add(item_id)
         matches.sort(key=lambda item: self._raw_datetime(item) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
@@ -517,7 +524,7 @@ class ArxivRetriever(BaseRetriever):
                 if item_id in seen_ids:
                     continue
                 if self._matches_keyword_groups(entry, domain, method):
-                    entry["retrieval_source"] = "rss"
+                    entry["retrieval_source"] = "rss_keyword"
                     matches.append(entry)
                     seen_ids.add(item_id)
                 if len(matches) >= limit:
