@@ -5,7 +5,7 @@ from .utils import glob_match
 from .retriever import get_retriever_cls
 from .protocol import CorpusPaper
 import random
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import json
 from .reranker import get_reranker_cls
@@ -13,6 +13,8 @@ from .construct_email import render_email, render_markdown
 from .utils import send_email, send_notifications
 from openai import OpenAI
 from tqdm import tqdm
+
+CHINA_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
 
 def config_bool(value, default: bool = False) -> bool:
@@ -43,13 +45,13 @@ def normalize_path_patterns(patterns: list[str] | ListConfig | None, config_key:
 
 def write_daily_report(config: DictConfig, papers, html: str, markdown: str) -> Path:
     report_root = Path(str(config.get("report", {}).get("output_dir", "outputs/reports")))
-    report_dir = report_root / datetime.now().strftime("%Y-%m-%d")
+    report_dir = report_root / datetime.now(CHINA_TZ).strftime("%Y-%m-%d")
     report_dir.mkdir(parents=True, exist_ok=True)
 
     (report_dir / "digest.html").write_text(html, encoding="utf-8")
     (report_dir / "digest.md").write_text(markdown, encoding="utf-8")
     payload = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(CHINA_TZ).isoformat(timespec="seconds"),
         "paper_count": len(papers),
         "papers": [
             {

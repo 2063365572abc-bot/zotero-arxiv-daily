@@ -19,6 +19,7 @@ pymupdf.layout.activate()
 import pymupdf4llm  # noqa: E402
 
 _TOKEN_RE = re.compile(r'[a-zA-Z0-9]+')
+CHINA_TZ = datetime.timezone(datetime.timedelta(hours=8), name="Asia/Shanghai")
 
 def _tokenize(text: str) -> list[str]:
     return [t.lower() for t in _TOKEN_RE.findall(text)]
@@ -153,7 +154,7 @@ def send_email(config:DictConfig, html:str):
     msg = MIMEText(html, 'html', 'utf-8')
     msg['From'] = _format_addr('Github Action <%s>' % sender)
     msg['To'] = _format_addr('You <%s>' % receiver)
-    today = datetime.datetime.now().strftime('%Y/%m/%d')
+    today = datetime.datetime.now(CHINA_TZ).strftime('%Y/%m/%d')
     msg['Subject'] = Header(f'Daily arXiv {today}', 'utf-8').encode()
 
     try:
@@ -186,7 +187,7 @@ def send_wechat_notification(config: DictConfig, markdown: str) -> None:
     if not provider:
         return
 
-    today = datetime.datetime.now().strftime("%Y/%m/%d")
+    today = datetime.datetime.now(CHINA_TZ).strftime("%Y/%m/%d")
     title = f"Daily Research Radar {today}"
     provider = str(provider).lower()
 

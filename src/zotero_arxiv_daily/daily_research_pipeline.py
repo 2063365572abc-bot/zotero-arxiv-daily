@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 import json
@@ -91,6 +91,8 @@ QUICK_LOOK_CARD_SECTION_PREFIXES = [
     "15 与既有知识的连接",
 ]
 
+CHINA_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
+
 
 @dataclass
 class CandidateRecord:
@@ -131,7 +133,7 @@ class SelectionRecord:
 
 
 def daily_output_dir(root: str | Path = "outputs/daily", date: datetime | None = None) -> Path:
-    date = date or datetime.now()
+    date = date or datetime.now(CHINA_TZ)
     return Path(root) / date.strftime("%Y-%m-%d")
 
 
@@ -1276,7 +1278,7 @@ def build_three_card_digest_prompt(
             )
         blocks.append(block)
 
-    report_date = report_date or datetime.now().strftime("%Y-%m-%d")
+    report_date = report_date or datetime.now(CHINA_TZ).strftime("%Y-%m-%d")
     fetched = raw_fetched_count if raw_fetched_count is not None else "未记录"
     quote_text = quote.strip() if quote and quote.strip() else ""
     quote_block = f"\n> {quote_text}\n" if quote_text else ""
