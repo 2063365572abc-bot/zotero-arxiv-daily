@@ -2242,6 +2242,8 @@ def write_daily_report_markdown(output_dir: str | Path, audit: dict[str, Any], s
             f"- Top20 from candidates: {audit.get('top20_from_candidates')}",
             f"- Top3 from Top20: {audit.get('top3_from_top20')}",
             f"- Candidate/Top20 Zotero uploads: {audit.get('candidate_or_top20_zotero_uploads')}",
+            f"- Retrieval sources: {json.dumps(audit.get('retrieval_sources') or {}, ensure_ascii=False)}",
+            f"- Retrieval fallback sources: {json.dumps(audit.get('retrieval_fallback_sources') or {}, ensure_ascii=False)}",
             f"- Fallbacks: {', '.join(audit.get('fallbacks_used') or []) or 'none'}",
             "",
         ]
@@ -2317,6 +2319,13 @@ def run_full_research_radar_pipeline(
             excluded_arxiv_ids=excluded_arxiv_ids,
             zotero_title_fingerprints=zotero_titles,
         )
+        retrieval_sources = retrieval_source_distribution(candidates)
+        daily_audit["retrieval_sources"] = retrieval_sources
+        daily_audit["retrieval_fallback_sources"] = {
+            source: count
+            for source, count in retrieval_sources.items()
+            if source not in {"api", "unknown"}
+        }
         write_json(output_dir / "excluded_candidates.json", excluded_candidates)
         write_candidates(candidates, output_dir, limit=candidate_count)
         write_embedding_ranking(candidates, output_dir, "candidates_50.json")
