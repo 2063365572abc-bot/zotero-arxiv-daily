@@ -277,7 +277,7 @@ class ArxivRetriever(BaseRetriever):
             try:
                 batch = self._retrieve_recent_topic_api(hours, max(max_results, limit))
             except arxiv.HTTPError as exc:
-                if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
+                if self.config.source.arxiv.get("keyword_fallback_to_rss", True):
                     logger.warning(f"arXiv topic API returned {exc.status}; using HTML topic fallback for {hours}h.")
                     batch = self._retrieve_recent_topic_html(hours, max(max_results, limit))
                 else:
@@ -312,7 +312,7 @@ class ArxivRetriever(BaseRetriever):
             try:
                 batch = self._retrieve_recent_category_api(hours, max(max_results, limit))
             except arxiv.HTTPError as exc:
-                if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
+                if self.config.source.arxiv.get("keyword_fallback_to_rss", True):
                     logger.warning(
                         f"arXiv category API returned {exc.status}; using keyword RSS fallback "
                         f"before category RSS for {hours}h."
