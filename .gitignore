@@ -16,4 +16,5 @@ logs
 models
 test-compose.yml
 outputs
+state/*.sqlite
 config/private.yaml
