@@ -13,6 +13,7 @@ from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from openai import OpenAI
 from pyzotero import zotero
+from pyzotero._upload import Zupload
 import pymupdf
 import requests
 
@@ -2219,6 +2220,19 @@ def _find_zotero_attachment_key(zot: Any, item_key: str, filename: str) -> str |
     return None
 
 
+def _upload_zotero_attachment(zot: Any, path: Path, parent_key: str) -> dict[str, Any]:
+    """Upload a stored file while keeping the API filename separate from its local path."""
+    template = zot.item_template("attachment", linkmode="imported_file")
+    template.update(
+        {
+            "title": path.name,
+            "filename": path.name,
+            "contentType": "application/pdf",
+        }
+    )
+    return Zupload(zot, [template], parentid=parent_key, basedir=path.parent).upload()
+
+
 def upload_selected_paper_to_zotero(
     config: DictConfig,
     record: SelectionRecord,
@@ -2295,7 +2309,7 @@ def upload_selected_paper_to_zotero(
                 attachment_failures.append(f"{path.name}:missing")
                 continue
             try:
-                uploaded = zot.attachment_simple([str(path)], parentid=item_key)
+                uploaded = _upload_zotero_attachment(zot, path, item_key)
                 attachment_key = _zotero_attachment_key(uploaded, path.name)
                 if not attachment_key:
                     bucket_counts = {
