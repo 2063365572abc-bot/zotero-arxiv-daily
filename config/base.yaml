@@ -15,6 +15,7 @@ source:
     retrieval_result_limit: 20 # Maximum high-relevance candidates returned by the retriever. Example: 20
     freshness_hours: 48 # Primary age window for first submissions. Example: 48
     freshness_fallback_hours: 168 # Optional wider window used only when the primary window is sparse. Example: 168
+    freshness_month_hours: 720 # Wider recent window before historical backfill. Example: 720
     retrieval_backfill_hours: 17520 # Maximum age for arXiv web-search backfill when recent results are sparse. Example: 17520
     strict_rss_first: true # Use category RSS before the search API to avoid unnecessary API traffic. Example: true
     strict_html_fallback_enabled: true # Use arXiv's public HTML search when RSS/API cannot fill the candidate quota. Example: true
@@ -44,9 +45,12 @@ daily_pipeline:
   output_dir: outputs/daily # Local directory for full daily research artifacts.
   candidate_count: 20 # Maximum candidate papers kept before deep selection.
   selected_count: 3 # Number of papers selected for PDF/Card processing.
-  llm_rerank_count: 8 # Number of embedding-shortlisted papers sent to the LLM for title/abstract scoring.
+  llm_rerank_count: 20 # Number of title/abstract candidates sent to the LLM for scientific-value scoring.
+  llm_selection_batch_size: 10 # Number of candidates per LLM selection request.
   llm_selection_enabled: true # Whether Qwen performs the second-stage title/abstract selection.
   card_mode: brief # Card generation mode. Options: brief or one_shot_full.
+  selection_only: false # Stop after Qwen title/abstract selection without downloading PDFs or generating cards.
+  retrieval_only: false # Stop after candidate retrieval without model calls.
   full_card_input_chars: 55000 # Maximum extracted PDF characters sent to one-shot full-card generation.
   full_card_output_tokens: 12000 # Maximum output tokens for one-shot full-card generation.
 

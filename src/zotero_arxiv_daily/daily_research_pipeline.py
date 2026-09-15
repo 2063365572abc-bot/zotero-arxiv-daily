@@ -70,7 +70,9 @@ class CandidateRecord:
     raw_score: float | None
     retrieval_source: str = "unknown"
     freshness_bucket: int = 0
+    freshness_label: str = "unknown"
     matched_terms: dict[str, list[str]] | None = None
+    arxiv_id: str | None = None
 
 
 @dataclass
@@ -85,6 +87,7 @@ class SelectionRecord:
     role: str
     scoring: dict[str, Any]
     selection_reason: str
+    arxiv_id: str | None = None
 
 
 def daily_output_dir(root: str | Path = "outputs/daily", date: datetime | None = None) -> Path:
@@ -100,6 +103,7 @@ def write_json(path: str | Path, payload: Any) -> None:
 
 def paper_to_candidate(paper: Paper) -> CandidateRecord:
     return CandidateRecord(
+        arxiv_id=getattr(paper, "arxiv_id", None),
         source=paper.source,
         title=paper.title,
         authors=paper.authors,
@@ -111,6 +115,7 @@ def paper_to_candidate(paper: Paper) -> CandidateRecord:
         raw_score=paper.score,
         retrieval_source=getattr(paper, "retrieval_source", "unknown"),
         freshness_bucket=int(getattr(paper, "freshness_bucket", 0)),
+        freshness_label=getattr(paper, "freshness_label", "unknown"),
         matched_terms=getattr(paper, "matched_terms", None),
     )
 
@@ -181,6 +186,7 @@ def select_papers_for_deep_read(
         selected.append(
             SelectionRecord(
                 source=paper.source,
+                arxiv_id=getattr(paper, "arxiv_id", None),
                 title=paper.title,
                 authors=paper.authors,
                 abstract=paper.abstract,
@@ -191,7 +197,7 @@ def select_papers_for_deep_read(
                 scoring=scoring,
                 selection_reason=(
                     f"Selected as {role}; LLM total={llm_score['total']:.1f}/100. "
-                    f"{llm_score['reason']}"
+                    f"{llm_score['reason']} Risk: {llm_score.get('risk', 'not provided')}"
                     if llm_score is not None
                     else f"Selected as {role}; embedding score={paper.score:.3f}."
                 ),
@@ -210,7 +216,11 @@ def build_llm_selection_prompt(papers: list[Paper], llm_params: dict[str, Any]) 
     for index, paper in enumerate(papers, start=1):
         paper_blocks.append(
             f"PAPER {index}\nTitle: {paper.title}\nAbstract: {paper.abstract}\n"
-            f"Source: {paper.source}\nURL: {paper.url}"
+            f"Source: {paper.source}\nURL: {paper.url}\n"
+            f"arXiv ID: {getattr(paper, 'arxiv_id', '')}\n"
+            f"Published: {getattr(paper, 'published_date', '')}\n"
+            f"Freshness: {getattr(paper, 'freshness_label', 'unknown')}\n"
+            f"Matched terms: {json.dumps(getattr(paper, 'matched_terms', {}) or {}, ensure_ascii=False)}"
         )
     return f"""
 你是用户的科研选题筛选助手。你的任务不是判断论文标题是否热门，而是从候选论文中找出最适合用户投入阅读时间的内容。
@@ -227,8 +237,11 @@ def build_llm_selection_prompt(papers: list[Paper], llm_params: dict[str, Any]) 
 - trend_value：作为当前研究趋势信号的价值
 - resource_value：摘要或元数据中明确出现的数据、代码、模型或资源价值
 
+必须给每一篇候选都返回一个 rankings 条目，paper_index 必须覆盖 1 到候选论文总数。
+reason 和 risk 各不超过 60 个中文字符，避免输出过长导致 JSON 被截断。
+
 请只返回 JSON，格式必须是：
-{{"rankings":[{{"paper_index":1,"relevance_to_user":0,"method_novelty":0,"evidence_quality":0,"transferability":0,"trend_value":0,"resource_value":0,"best_role":"best_match|method_inspiration|trend_signal","reason":"中文理由","risk":"中文风险"}}]}}
+{{"trend_summary":"中文总结今天候选池体现出的研究趋势，必须说明新鲜度限制","rejected_summary":"中文总结主要被降权/不选的论文类型","rankings":[{{"paper_index":1,"relevance_to_user":0,"method_novelty":0,"evidence_quality":0,"transferability":0,"trend_value":0,"resource_value":0,"best_role":"best_match|method_inspiration|trend_signal","reason":"中文理由","risk":"中文风险"}}]}}
 
 候选论文：
 {chr(10).join(paper_blocks)}
@@ -239,9 +252,10 @@ def rank_candidates_with_llm(
     papers: list[Paper],
     openai_client: OpenAI,
     llm_params: dict[str, Any],
-) -> tuple[list[Paper], dict[str, dict[str, Any]]]:
+    include_summary: bool = False,
+) -> tuple[list[Paper], dict[str, dict[str, Any]]] | tuple[list[Paper], dict[str, dict[str, Any]], dict[str, str]]:
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
-    generation_kwargs["max_tokens"] = min(max(int(generation_kwargs.get("max_tokens") or 0), 1200), 3000)
+    generation_kwargs["max_tokens"] = min(max(int(generation_kwargs.get("max_tokens") or 0), 3000), 6000)
     params = {**llm_params, "generation_kwargs": generation_kwargs}
     content = _request_llm(
         openai_client,
@@ -287,16 +301,87 @@ def rank_candidates_with_llm(
     ranked = sorted(papers, key=lambda paper: scores[paper.title]["total"], reverse=True)
     for paper in ranked:
         paper.score = scores[paper.title]["total"]
+    summary = {
+        "trend_summary": str(payload.get("trend_summary") or ""),
+        "rejected_summary": str(payload.get("rejected_summary") or ""),
+    }
+    if include_summary:
+        return ranked, scores, summary
     return ranked, scores
 
 
-def write_llm_ranking(papers: list[Paper], scores: dict[str, dict[str, Any]], output_dir: str | Path) -> Path:
+def write_llm_ranking(
+    papers: list[Paper],
+    scores: dict[str, dict[str, Any]],
+    output_dir: str | Path,
+    summary: dict[str, str] | None = None,
+) -> Path:
     payload = []
     for rank, paper in enumerate(papers, start=1):
-        payload.append({"rank": rank, "title": paper.title, "url": paper.url, **scores[paper.title]})
+        payload.append(
+            {
+                "rank": rank,
+                "arxiv_id": getattr(paper, "arxiv_id", None),
+                "title": paper.title,
+                "url": paper.url,
+                "published_date": getattr(paper, "published_date", None),
+                "freshness_label": getattr(paper, "freshness_label", "unknown"),
+                "matched_terms": getattr(paper, "matched_terms", None),
+                **scores[paper.title],
+            }
+        )
     path = Path(output_dir) / "llm_ranking.json"
-    write_json(path, payload)
+    write_json(path, {"summary": summary or {}, "rankings": payload})
     return path
+
+
+def rank_candidates_with_llm_batched(
+    papers: list[Paper],
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+    batch_size: int = 10,
+) -> tuple[list[Paper], dict[str, dict[str, Any]], dict[str, str], int]:
+    if not papers:
+        return [], {}, {"trend_summary": "", "rejected_summary": ""}, 0
+    batch_size = max(1, int(batch_size or 10))
+    if len(papers) <= batch_size:
+        ranked, scores, summary = rank_candidates_with_llm(
+            papers,
+            openai_client,
+            llm_params,
+            include_summary=True,
+        )
+        return ranked, scores, summary, 1
+
+    all_scores: dict[str, dict[str, Any]] = {}
+    trend_parts: list[str] = []
+    rejected_parts: list[str] = []
+    calls = 0
+    for start in range(0, len(papers), batch_size):
+        batch = papers[start : start + batch_size]
+        _, batch_scores, batch_summary = rank_candidates_with_llm(
+            batch,
+            openai_client,
+            llm_params,
+            include_summary=True,
+        )
+        calls += 1
+        all_scores.update(batch_scores)
+        if batch_summary.get("trend_summary"):
+            trend_parts.append(batch_summary["trend_summary"])
+        if batch_summary.get("rejected_summary"):
+            rejected_parts.append(batch_summary["rejected_summary"])
+
+    if len(all_scores) < len(papers):
+        raise ValueError(f"LLM batched selection returned {len(all_scores)} of {len(papers)} candidates")
+    ranked = sorted(papers, key=lambda paper: all_scores[paper.title]["total"], reverse=True)
+    for paper in ranked:
+        paper.score = all_scores[paper.title]["total"]
+    summary = {
+        "trend_summary": "；".join(trend_parts),
+        "rejected_summary": "；".join(rejected_parts),
+    }
+    return ranked, all_scores, summary, calls
 
 
 def write_selected_papers(selected: list[SelectionRecord], output_dir: str | Path) -> Path:
@@ -950,6 +1035,33 @@ def write_daily_index(output_dir: str | Path) -> Path:
     return path
 
 
+def freshness_distribution(papers: list[Paper]) -> dict[str, int]:
+    labels = ["latest_48h", "recent_7d", "recent_30d", "backfill", "unknown"]
+    counts = {label: 0 for label in labels}
+    for paper in papers:
+        label = str(getattr(paper, "freshness_label", "unknown") or "unknown")
+        counts[label] = counts.get(label, 0) + 1
+    return counts
+
+
+def retrieval_source_distribution(papers: list[Paper]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for paper in papers:
+        source = str(getattr(paper, "retrieval_source", "unknown") or "unknown")
+        counts[source] = counts.get(source, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def retrieve_daily_candidates(executor: Executor, candidate_count: int) -> list[Paper]:
+    all_papers: list[Paper] = []
+    for source, retriever in executor.retrievers.items():
+        logger.info(f"Retrieving {source} papers for daily pipeline...")
+        papers = retriever.retrieve_papers()
+        logger.info(f"Retrieved {len(papers)} {source} papers")
+        all_papers.extend(papers)
+    return all_papers[:candidate_count]
+
+
 def process_selected_paper(
     record: SelectionRecord,
     output_dir: str | Path,
@@ -1022,8 +1134,10 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     candidate_count = _config_int(config, "daily_pipeline", "candidate_count", 20)
     selected_count = _config_int(config, "daily_pipeline", "selected_count", 3)
     llm_rerank_count = _config_int(config, "daily_pipeline", "llm_rerank_count", 8)
+    llm_selection_batch_size = _config_int(config, "daily_pipeline", "llm_selection_batch_size", 10)
     llm_selection_enabled = _config_bool(config, "daily_pipeline", "llm_selection_enabled", True)
     retrieval_only = _config_bool(config, "daily_pipeline", "retrieval_only", False)
+    selection_only = _config_bool(config, "daily_pipeline", "selection_only", False)
     card_mode = _config_get(config, "daily_pipeline", "card_mode", "brief")
     full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 55_000)
     full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 12_000)
@@ -1032,13 +1146,7 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
 
     executor = Executor(config)
     if retrieval_only:
-        all_papers: list[Paper] = []
-        for source, retriever in executor.retrievers.items():
-            logger.info(f"Retrieving {source} papers in retrieval-only mode...")
-            papers = retriever.retrieve_papers()
-            logger.info(f"Retrieved {len(papers)} {source} papers")
-            all_papers.extend(papers)
-        candidates = all_papers[:candidate_count]
+        candidates = retrieve_daily_candidates(executor, candidate_count)
         write_candidates(candidates, output_dir, limit=candidate_count)
         write_selected_papers([], output_dir)
         write_json(output_dir / "retrieval-manifest.json", {
@@ -1048,14 +1156,58 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
             "pdf_downloads": 0,
             "candidate_count": len(candidates),
             "retrieval_limit": candidate_count,
-            "retrieval_sources": {
-                source: sum(1 for paper in candidates if getattr(paper, "retrieval_source", "unknown") == source)
-                for source in sorted({getattr(paper, "retrieval_source", "unknown") for paper in candidates})
-            },
-            "freshness_buckets": {
-                "recent_window": sum(1 for paper in candidates if getattr(paper, "freshness_bucket", 0) == 1),
-                "backfill": sum(1 for paper in candidates if getattr(paper, "freshness_bucket", 0) == 0),
-            },
+            "retrieval_sources": retrieval_source_distribution(candidates),
+            "freshness_buckets": freshness_distribution(candidates),
+        })
+        write_daily_index(output_dir)
+        return output_dir
+
+    if selection_only:
+        candidates = retrieve_daily_candidates(executor, candidate_count)
+        write_candidates(candidates, output_dir, limit=candidate_count)
+        llm_params = OmegaConf.to_container(config.llm, resolve=True) if hasattr(config, "llm") else None
+        llm_scores: dict[str, dict[str, Any]] = {}
+        llm_summary: dict[str, str] = {}
+        llm_model_calls = 0
+        reranked = candidates
+        if candidates and llm_selection_enabled and executor.openai_client is not None and llm_params is not None:
+            llm_pool = candidates[: min(llm_rerank_count, len(candidates))]
+            logger.info(f"Sending {len(llm_pool)} title/abstract candidates to Qwen for selection-only scoring...")
+            try:
+                reranked, llm_scores, llm_summary, llm_model_calls = rank_candidates_with_llm_batched(
+                    llm_pool,
+                    executor.openai_client,
+                    llm_params,
+                    batch_size=llm_selection_batch_size,
+                )
+                write_llm_ranking(reranked, llm_scores, output_dir, summary=llm_summary)
+            except Exception as exc:
+                logger.warning(f"LLM candidate scoring failed; using deterministic retrieval ranking: {type(exc).__name__}: {exc}")
+                write_json(output_dir / "llm_ranking.json", {
+                    "status": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "fallback": "deterministic_retrieval_ranking",
+                })
+        else:
+            write_json(output_dir / "llm_ranking.json", {
+                "status": "disabled_or_unconfigured",
+                "fallback": "deterministic_retrieval_ranking",
+            })
+        selected = select_papers_for_deep_read(reranked, count=selected_count, llm_scores=llm_scores)
+        write_selected_papers(selected, output_dir)
+        write_json(output_dir / "selection-manifest.json", {
+            "status": "selection_only",
+            "model_calls": llm_model_calls,
+            "embedding_calls": 0,
+            "pdf_downloads": 0,
+            "candidate_count": len(candidates),
+            "selected_count": len(selected),
+            "llm_pool_count": min(llm_rerank_count, len(candidates)),
+            "llm_selection_batch_size": llm_selection_batch_size,
+            "retrieval_sources": retrieval_source_distribution(candidates),
+            "freshness_buckets": freshness_distribution(candidates),
+            "trend_summary": llm_summary.get("trend_summary", ""),
+            "rejected_summary": llm_summary.get("rejected_summary", ""),
         })
         write_daily_index(output_dir)
         return output_dir
@@ -1064,14 +1216,7 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     if not corpus:
         raise RuntimeError("No Zotero corpus papers found; cannot personalize candidate selection.")
 
-    all_papers: list[Paper] = []
-    for source, retriever in executor.retrievers.items():
-        logger.info(f"Retrieving {source} papers for daily file pipeline...")
-        papers = retriever.retrieve_papers()
-        logger.info(f"Retrieved {len(papers)} {source} papers")
-        all_papers.extend(papers)
-
-    candidates = all_papers[:candidate_count]
+    candidates = retrieve_daily_candidates(executor, candidate_count)
     write_candidates(candidates, output_dir, limit=candidate_count)
     if not candidates:
         write_selected_papers([], output_dir)
@@ -1081,12 +1226,18 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     llm_params = OmegaConf.to_container(config.llm, resolve=True) if hasattr(config, "llm") else None
     reranked = executor.reranker.rerank(candidates, corpus)
     llm_scores: dict[str, dict[str, Any]] = {}
+    llm_summary: dict[str, str] = {}
     if llm_selection_enabled and executor.openai_client is not None and llm_params is not None:
         llm_pool = reranked[: min(llm_rerank_count, len(reranked))]
         logger.info(f"Sending {len(llm_pool)} title/abstract candidates to Qwen for scientific-value scoring...")
         try:
-            reranked, llm_scores = rank_candidates_with_llm(llm_pool, executor.openai_client, llm_params)
-            write_llm_ranking(reranked, llm_scores, output_dir)
+            reranked, llm_scores, llm_summary, _ = rank_candidates_with_llm_batched(
+                llm_pool,
+                executor.openai_client,
+                llm_params,
+                batch_size=llm_selection_batch_size,
+            )
+            write_llm_ranking(reranked, llm_scores, output_dir, summary=llm_summary)
         except Exception as exc:
             logger.warning(f"LLM candidate scoring failed; using embedding ranking: {type(exc).__name__}: {exc}")
             write_json(output_dir / "llm_ranking.json", {

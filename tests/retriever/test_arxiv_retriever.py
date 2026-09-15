@@ -195,7 +195,8 @@ def test_arxiv_retriever_strict_groups_query_and_ranks(config, monkeypatch):
     assert papers[0].published_date == published.isoformat()
     assert papers[0].matched_terms["domain"] == ["spatial transcriptomics"]
     assert papers[0].matched_terms["method"] == ["deep learning"]
-    assert papers[0].score == 12
+    assert papers[0].score == 14
+    assert papers[0].freshness_label == "latest_48h"
 
 
 def test_arxiv_retriever_strict_groups_rss_fallback_filters_date_and_terms(config, monkeypatch):
@@ -260,10 +261,11 @@ def test_arxiv_retriever_strict_groups_rss_fallback_filters_date_and_terms(confi
     retriever = ArxivRetriever(config)
     papers = retriever.retrieve_papers()
 
-    assert len(papers) == 1
+    assert len(papers) == 2
     assert papers[0].title == "Spatial Transcriptomics with Graph Learning"
     assert papers[0].source == "arxiv"
     assert papers[0].categories == []
+    assert [paper.freshness_label for paper in papers] == ["latest_48h", "recent_30d"]
 
 
 def test_arxiv_retriever_html_fallback_parses_recent_matching_result(config, monkeypatch):

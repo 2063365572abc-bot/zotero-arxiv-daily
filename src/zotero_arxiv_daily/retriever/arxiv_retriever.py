@@ -171,7 +171,7 @@ class ArxivRetriever(BaseRetriever):
             paper.score = self._deterministic_retrieval_score(paper)
         papers.sort(
             key=lambda paper: (
-                getattr(paper, "freshness_bucket", 1),
+                getattr(paper, "freshness_bucket", 0),
                 paper.score if paper.score is not None else -1,
                 getattr(paper, "published_date", ""),
             ),
@@ -259,6 +259,7 @@ class ArxivRetriever(BaseRetriever):
         max_results = int(self.config.source.arxiv.get("keyword_query_max_results") or 100)
         primary_hours = int(self.config.source.arxiv.get("freshness_hours") or 48)
         fallback_hours = int(self.config.source.arxiv.get("freshness_fallback_hours") or 168)
+        monthly_hours = int(self.config.source.arxiv.get("freshness_month_hours") or 720)
         results: list[ArxivResult | dict[str, Any]] = []
         seen_ids: set[str] = set()
 
@@ -273,7 +274,7 @@ class ArxivRetriever(BaseRetriever):
                     results.append(item)
 
         if self.config.source.arxiv.get("strict_rss_first", True):
-            for hours in (primary_hours, fallback_hours):
+            for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
                 add_matches(self._retrieve_strict_keyword_rss(domain, method, task, hours))
                 if len(results) >= limit:
                     return results[:limit]
@@ -289,7 +290,11 @@ class ArxivRetriever(BaseRetriever):
         # the API window for this run, preventing a 429 from turning into a burst
         # of retries. RSS and HTML already provide the title/abstract metadata.
         client = arxiv.Client(num_retries=1, delay_seconds=3, page_size=max_results)
-        api_hours = (primary_hours, fallback_hours) if not self.config.source.arxiv.get("strict_rss_first", True) else (fallback_hours,)
+        api_hours = (
+            self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours)
+            if not self.config.source.arxiv.get("strict_rss_first", True)
+            else (monthly_hours,)
+        )
         for hours in api_hours:
             query = self._build_grouped_keyword_query(domain, method, task, hours)
             logger.info(f"Retrieving strict arXiv keyword query: {query}")
@@ -311,6 +316,14 @@ class ArxivRetriever(BaseRetriever):
                 break
         logger.info(f"Strict arXiv retrieval produced {len(results)} domain+method candidates.")
         return results[:limit]
+
+    @staticmethod
+    def _ordered_freshness_windows(*hours_values: int) -> tuple[int, ...]:
+        ordered: list[int] = []
+        for hours in hours_values:
+            if hours > 0 and hours not in ordered:
+                ordered.append(hours)
+        return tuple(ordered)
 
     def _retrieve_keyword_rss_fallback(self, keywords: list[str], max_results: int) -> list[dict[str, Any]]:
         categories = self.config.source.arxiv.category
@@ -564,20 +577,39 @@ class ArxivRetriever(BaseRetriever):
         domain, method, task = self._keyword_groups()
         title = paper.title.lower()
         abstract = paper.abstract.lower()
+        combined = f"{title}\n{abstract}"
         score = 0.0
         score += 6 if any(term.lower() in title for term in domain) else 3
         score += 4 if any(term.lower() in title for term in method) else 2
-        score += 2 if any(term.lower() in f"{title}\n{abstract}" for term in task) else 0
+        score += 2 if any(term.lower() in combined for term in task) else 0
+        score += getattr(paper, "freshness_bucket", 0) * 0.5
         return score
+
+    def _freshness_metadata(self, published: datetime | None) -> tuple[int, str]:
+        if published is None:
+            return 0, "unknown"
+        now = datetime.now(timezone.utc)
+        age_hours = (now - published).total_seconds() / 3600
+        primary_hours = int(self.config.source.arxiv.get("freshness_hours") or 48)
+        fallback_hours = int(self.config.source.arxiv.get("freshness_fallback_hours") or 168)
+        monthly_hours = int(self.config.source.arxiv.get("freshness_month_hours") or 720)
+        if age_hours <= primary_hours:
+            return 4, "latest_48h"
+        if age_hours <= fallback_hours:
+            return 3, "recent_7d"
+        if age_hours <= monthly_hours:
+            return 2, "recent_30d"
+        return 1, "backfill"
 
     def _attach_metadata(self, paper: Paper, raw_paper: ArxivResult | dict[str, Any]) -> None:
         published = self._raw_datetime(raw_paper)
+        paper.arxiv_id = self._raw_id(raw_paper)
         paper.published_date = published.isoformat() if published else None
         updated = self._raw_datetime(raw_paper, "updated") or published
         paper.updated_date = updated.isoformat() if updated else None
         paper.categories = [str(category) for category in (raw_paper.get("tags", []) if isinstance(raw_paper, dict) else getattr(raw_paper, "categories", []))]
         paper.retrieval_freshness_hours = int(self.config.source.arxiv.get("freshness_hours") or 48)
-        paper.freshness_bucket = 1 if published and published >= datetime.now(timezone.utc) - timedelta(hours=paper.retrieval_freshness_hours) else 0
+        paper.freshness_bucket, paper.freshness_label = self._freshness_metadata(published)
         paper.matched_terms = {
             "domain": [term for term in self._keyword_groups()[0] if term.lower() in f"{paper.title}\n{paper.abstract}".lower()],
             "method": [term for term in self._keyword_groups()[1] if term.lower() in f"{paper.title}\n{paper.abstract}".lower()],

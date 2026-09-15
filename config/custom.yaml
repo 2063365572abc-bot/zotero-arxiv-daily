@@ -25,9 +25,11 @@ daily_pipeline:
   output_dir: ${oc.env:DAILY_PIPELINE_OUTPUT_DIR,outputs/daily}
   candidate_count: ${oc.env:DAILY_PIPELINE_CANDIDATE_COUNT,20}
   selected_count: ${oc.env:DAILY_PIPELINE_SELECTED_COUNT,3}
-  llm_rerank_count: ${oc.env:DAILY_PIPELINE_LLM_RERANK_COUNT,8}
+  llm_rerank_count: ${oc.env:DAILY_PIPELINE_LLM_RERANK_COUNT,20}
+  llm_selection_batch_size: ${oc.env:DAILY_PIPELINE_LLM_SELECTION_BATCH_SIZE,10}
   llm_selection_enabled: ${oc.env:DAILY_PIPELINE_LLM_SELECTION_ENABLED,true}
   retrieval_only: ${oc.env:DAILY_PIPELINE_RETRIEVAL_ONLY,false}
+  selection_only: ${oc.env:DAILY_PIPELINE_SELECTION_ONLY,false}
   card_mode: ${oc.env:DAILY_PIPELINE_CARD_MODE,brief}
   full_card_input_chars: ${oc.env:DAILY_PIPELINE_FULL_CARD_INPUT_CHARS,55000}
   full_card_output_tokens: ${oc.env:DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS,12000}
@@ -63,6 +65,7 @@ source:
     retrieval_result_limit: ${oc.env:ARXIV_RETRIEVAL_RESULT_LIMIT,20}
     freshness_hours: ${oc.env:ARXIV_FRESHNESS_HOURS,48}
     freshness_fallback_hours: ${oc.env:ARXIV_FRESHNESS_FALLBACK_HOURS,168}
+    freshness_month_hours: ${oc.env:ARXIV_FRESHNESS_MONTH_HOURS,720}
     retrieval_backfill_hours: ${oc.env:ARXIV_RETRIEVAL_BACKFILL_HOURS,17520}
     strict_rss_first: ${oc.env:ARXIV_STRICT_RSS_FIRST,true}
     strict_html_fallback_enabled: ${oc.env:ARXIV_STRICT_HTML_FALLBACK_ENABLED,true}
