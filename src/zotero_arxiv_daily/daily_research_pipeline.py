@@ -2014,16 +2014,18 @@ def filter_previously_promoted_candidates(
     *,
     excluded_arxiv_ids: set[str],
     zotero_title_fingerprints: set[str],
+    retry_arxiv_ids: set[str] | None = None,
 ) -> tuple[list[Paper], list[dict[str, str]]]:
     filtered: list[Paper] = []
     excluded: list[dict[str, str]] = []
+    retry_arxiv_ids = retry_arxiv_ids or set()
     for paper in candidates:
         arxiv_id = str(getattr(paper, "arxiv_id", "") or "")
         title_fingerprint = _title_fingerprint(paper.title)
         if arxiv_id and arxiv_id in excluded_arxiv_ids:
             excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "previously_selected_or_uploaded"})
             continue
-        if title_fingerprint and title_fingerprint in zotero_title_fingerprints:
+        if title_fingerprint and title_fingerprint in zotero_title_fingerprints and arxiv_id not in retry_arxiv_ids:
             excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "already_in_zotero_by_title"})
             continue
         filtered.append(paper)
@@ -2403,11 +2405,13 @@ def run_full_research_radar_pipeline(
         raw_candidates = retrieve_daily_candidates(executor, candidate_count)
         state.upsert_arxiv_papers(raw_candidates)
         excluded_arxiv_ids = state.previously_selected_or_uploaded_arxiv_ids(before_date=run_date)
+        retry_arxiv_ids = state.incomplete_zotero_upload_arxiv_ids(before_date=run_date)
         zotero_titles = state.zotero_title_fingerprints()
         candidates, excluded_candidates = filter_previously_promoted_candidates(
             raw_candidates,
             excluded_arxiv_ids=excluded_arxiv_ids,
             zotero_title_fingerprints=zotero_titles,
+            retry_arxiv_ids=retry_arxiv_ids,
         )
         retrieval_sources = retrieval_source_distribution(candidates)
         daily_audit["retrieval_sources"] = retrieval_sources

@@ -292,6 +292,33 @@ class ResearchRadarState:
                 promoted.add(str(row["arxiv_id"]))
         return promoted
 
+    def incomplete_zotero_upload_arxiv_ids(self, before_date: str | None = None) -> set[str]:
+        """Return papers whose latest Zotero promotion was not fully uploaded."""
+        query = "SELECT arxiv_id, run_date, upload_json FROM zotero_uploads"
+        params: tuple[str, ...] = ()
+        if before_date is not None:
+            query += " WHERE run_date < ?"
+            params = (before_date,)
+        rows = self.conn.execute(query, params).fetchall()
+        latest: dict[str, tuple[str, str]] = {}
+        for row in rows:
+            arxiv_id = str(row["arxiv_id"] or "")
+            if not arxiv_id:
+                continue
+            current = latest.get(arxiv_id)
+            run_date = str(row["run_date"] or "")
+            if current is None or run_date >= current[0]:
+                latest[arxiv_id] = (run_date, str(row["upload_json"] or "{}"))
+        incomplete: set[str] = set()
+        for arxiv_id, (_, upload_json) in latest.items():
+            try:
+                status = json.loads(upload_json).get("status")
+            except json.JSONDecodeError:
+                status = None
+            if status != "uploaded":
+                incomplete.add(arxiv_id)
+        return incomplete
+
     def zotero_title_fingerprints(self) -> set[str]:
         rows = self.conn.execute("SELECT title FROM zotero_items").fetchall()
         return {_title_fingerprint(str(row["title"])) for row in rows if row["title"]}
