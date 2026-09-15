@@ -528,13 +528,28 @@ def rank_candidates_with_llm_batched(
     calls = 0
     for start in range(0, len(papers), batch_size):
         batch = papers[start : start + batch_size]
-        _, batch_scores, batch_summary = rank_candidates_with_llm(
-            batch,
-            openai_client,
-            llm_params,
-            include_summary=True,
-        )
-        calls += 1
+        try:
+            _, batch_scores, batch_summary = rank_candidates_with_llm(
+                batch,
+                openai_client,
+                llm_params,
+                include_summary=True,
+            )
+            calls += 1
+        except ValueError as exc:
+            # Qwen can occasionally omit one JSON row despite a valid response.
+            # Retry that batch once; a second incomplete response still fails
+            # closed so an unscored paper can never enter Top3 by accident.
+            if "LLM selection returned" not in str(exc):
+                raise
+            logger.warning(f"Retrying incomplete LLM selection batch: {exc}")
+            _, batch_scores, batch_summary = rank_candidates_with_llm(
+                batch,
+                openai_client,
+                llm_params,
+                include_summary=True,
+            )
+            calls += 2
         all_scores.update(batch_scores)
         if batch_summary.get("trend_summary"):
             trend_parts.append(batch_summary["trend_summary"])
