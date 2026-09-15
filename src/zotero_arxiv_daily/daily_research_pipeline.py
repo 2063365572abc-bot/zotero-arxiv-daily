@@ -207,13 +207,16 @@ DIRECT_RESEARCH_ANCHORS = [
     "scRNA",
     "spatial transcript",
     "spatial omics",
+    "spatial gene expression",
     "transcriptomic",
-    "transcriptomics",
+    "multi-omic",
     "multi-omics",
     "multiomics",
     "cell state",
+    "cell atlas",
     "cell foundation",
-    "perturbation",
+    "cellular neighborhood",
+    "cell-cell communication",
 ]
 
 
@@ -237,15 +240,17 @@ def _require_relevant_top3(
         for paper in papers
         if float(llm_scores.get(paper.title, {}).get("relevance_to_user", 0)) >= 5.0
     ]
+    direct_eligible = [paper for paper in eligible if _direct_research_anchor_score(paper) >= 1]
+    direct_strong = [paper for paper in strong if _direct_research_anchor_score(paper) >= 1]
     required_strong = min(2, count)
-    if len(eligible) < count or len(strong) < required_strong:
+    if len(direct_eligible) < count or len(direct_strong) < required_strong:
         raise RuntimeError(
             "insufficient_relevant_candidates: "
-            f"Qwen found {len(strong)} strong candidates (>=5) and {len(eligible)} usable candidates (>=4); "
-            f"required {required_strong} strong and {count} usable candidates; "
+            f"Qwen found {len(direct_strong)} direct strong candidates (>=5) and {len(direct_eligible)} direct usable candidates (>=4); "
+            f"required {required_strong} direct strong and {count} direct usable candidates; "
             "refusing to deep-read or upload weakly related papers"
         )
-    return eligible
+    return direct_eligible
 
 
 def select_papers_for_deep_read(

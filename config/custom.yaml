@@ -65,7 +65,7 @@ source:
       "q-bio.GN","q-bio.QM","q-bio.CB","q-bio.TO","cs.LG","cs.CV","cs.AI","stat.ML"
     ]
     keywords: ${oc.decode:${oc.env:ARXIV_KEYWORDS,null}}
-    domain_keywords: ${oc.decode:${oc.env:ARXIV_DOMAIN_KEYWORDS,["spatial transcriptomics","spatially resolved transcriptomics","spatial omics","spatial gene expression","spatial transcriptomic","spatial molecular","spatial multi-omics","spatial proteomics"]}}
+    domain_keywords: ${oc.decode:${oc.env:ARXIV_DOMAIN_KEYWORDS,["spatial transcriptomics","spatially resolved transcriptomics","spatial omics","spatial gene expression","spatial transcriptomic","spatial multi-omics","spatial proteomics","single-cell transcriptomics","single-cell foundation model","single-cell multi-omics"]}}
     method_keywords: ${oc.decode:${oc.env:ARXIV_METHOD_KEYWORDS,["machine learning","deep learning","representation learning","foundation model","graph neural network","graph transformer","self-supervised learning","contrastive learning","transformer","neural network","embedding","generative model","diffusion model","variational autoencoder"]}}
     task_keywords: ${oc.decode:${oc.env:ARXIV_TASK_KEYWORDS,["spatial domain","cellular neighborhood","cell-cell communication","spatially variable genes","deconvolution","cell type annotation","tissue architecture","spatial multi-omics"]}}
     keyword_query_max_results: ${oc.env:ARXIV_KEYWORD_QUERY_MAX_RESULTS,100}

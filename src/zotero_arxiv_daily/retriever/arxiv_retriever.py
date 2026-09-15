@@ -270,9 +270,9 @@ class ArxivRetriever(BaseRetriever):
                     seen_ids.add(item_id)
                 results.append(item)
 
-        # Recall is topic-first, not domain+method hard filtering. A topic OR
-        # query keeps the pool biologically useful while leaving method/value
-        # decisions to embedding and the LLM in later pipeline stages.
+        # Recall is topic-first, not domain+method hard filtering. The topic
+        # query deliberately has no category clause: relevant spatial-omics
+        # papers can be cross-listed under math, statistics, or vision.
         for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
             try:
                 batch = self._retrieve_recent_topic_api(hours, max(max_results, limit))
@@ -354,15 +354,11 @@ class ArxivRetriever(BaseRetriever):
             term for term in preferred_topics
             if any(term.lower() == configured.lower() for configured in configured_topics)
         ] or configured_topics[:4]
-        categories = self.config.source.arxiv.category or []
-        category_query = " OR ".join(f"cat:{category}" for category in categories)
         cutoff = datetime.now(timezone.utc) - timedelta(hours=freshness_hours)
         matches: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
         for topic in topics:
             query = f'"{topic.replace(chr(34), chr(92) + chr(34))}"'
-            if category_query:
-                query = f"{query} AND ({category_query})"
             try:
                 response = requests.get(
                     "https://arxiv.org/search/",
@@ -428,7 +424,10 @@ class ArxivRetriever(BaseRetriever):
         domain, _, task = self._keyword_groups()
         configured = [str(value).strip() for value in (self.config.source.arxiv.get("keywords") or []) if str(value).strip()]
         terms: list[str] = []
-        for term in [*configured, *domain, *task]:
+        # Task terms such as "deconvolution" and "spatial domain" are useful
+        # metadata signals, but are too ambiguous for the primary arXiv recall
+        # query. Keep the primary query anchored to explicit biology topics.
+        for term in [*configured, *domain]:
             if term and term.lower() not in {item.lower() for item in terms}:
                 terms.append(term)
         if not terms:
@@ -841,10 +840,6 @@ class ArxivRetriever(BaseRetriever):
         topic_query = "(" + " OR ".join(
             f'all:"{term.replace(chr(34), chr(92) + chr(34))}"' for term in topics
         ) + ")"
-        categories = self.config.source.arxiv.category or []
-        if categories:
-            category_query = "(" + " OR ".join(f"cat:{category}" for category in categories) + ")"
-            topic_query = f"{topic_query} AND {category_query}"
         now = datetime.now(timezone.utc)
         start = (now - timedelta(hours=freshness_hours)).strftime("%Y%m%d%H%M")
         end = (now + timedelta(minutes=5)).strftime("%Y%m%d%H%M")

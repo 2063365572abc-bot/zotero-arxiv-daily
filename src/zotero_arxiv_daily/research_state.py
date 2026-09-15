@@ -479,6 +479,28 @@ def _paper_type_boost(paper: Paper) -> float:
     return 1.0 if any(signal in text for signal in signals) else 0.0
 
 
+DIRECT_RESEARCH_ANCHORS = (
+    "single-cell",
+    "single cell",
+    "scrna",
+    "spatial transcript",
+    "spatial omic",
+    "spatial gene expression",
+    "multi-omic",
+    "multiomic",
+    "cell state",
+    "cell atlas",
+    "cell foundation",
+    "cellular neighborhood",
+    "cell-cell communication",
+)
+
+
+def _direct_research_anchor_score(paper: Paper) -> float:
+    text = f"{paper.title}\n{paper.abstract}".lower()
+    return 1.0 if any(anchor in text for anchor in DIRECT_RESEARCH_ANCHORS) else 0.0
+
+
 def embedding_rerank_candidates(
     papers: list[Paper],
     corpus: list[CorpusPaper],
@@ -507,16 +529,18 @@ def embedding_rerank_candidates(
         breakdown = {
             "zotero_topk_similarity": weighted_similarity,
             "recent_profile_similarity": recent_similarity,
+            "direct_research_anchor_score": _direct_research_anchor_score(paper),
             "domain_keyword_score": _keyword_score(matched_terms, "domain"),
             "method_keyword_score": _keyword_score(matched_terms, "method"),
             "freshness_score": _freshness_score(freshness_label),
             "paper_type_boost": _paper_type_boost(paper),
         }
         final_score = (
-            0.45 * breakdown["zotero_topk_similarity"]
-            + 0.20 * breakdown["recent_profile_similarity"]
-            + 0.15 * breakdown["domain_keyword_score"]
-            + 0.10 * breakdown["method_keyword_score"]
+            0.35 * breakdown["zotero_topk_similarity"]
+            + 0.15 * breakdown["recent_profile_similarity"]
+            + 0.25 * breakdown["direct_research_anchor_score"]
+            + 0.10 * breakdown["domain_keyword_score"]
+            + 0.05 * breakdown["method_keyword_score"]
             + 0.05 * breakdown["freshness_score"]
             + 0.05 * breakdown["paper_type_boost"]
         )

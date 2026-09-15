@@ -193,7 +193,7 @@ def test_arxiv_retriever_strict_groups_query_and_ranks(config, monkeypatch):
     assert len(papers) == 1
     assert papers[0].title == "Spatial Transcriptomics with Deep Learning"
     query = captured["queries"][0]
-    assert "cat:q-bio.GN" in query
+    assert "cat:q-bio.GN" not in query
     assert "submittedDate:[" in query
     assert 'all:"spatial transcriptomics"' in query
     assert "deep learning" not in query
