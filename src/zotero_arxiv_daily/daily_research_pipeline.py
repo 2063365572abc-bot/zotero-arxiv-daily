@@ -9,32 +9,52 @@ import re
 from typing import Any
 
 from loguru import logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
+from openai import OpenAI
 import pymupdf
 import requests
 
 from .executor import Executor
-from .protocol import Paper
+from .protocol import Paper, _request_llm
 
 
 CARD_SECTIONS = [
-    "01 文献定位",
-    "02 研究问题",
-    "03 背景路线",
-    "04 领域痛点",
-    "05 核心 insight",
-    "06 方法结构",
-    "07 关键公式/建模假设",
-    "08 实验设计",
-    "09 证据链：实验 -> 结论",
-    "10 主要结论",
-    "11 边界和局限",
+    "01 基本信息",
+    "02 一句话总结",
+    "03 研究问题",
+    "04 研究背景与发展路径",
+    "05 论文识别的核心痛点",
+    "06 核心思想",
+    "07 方法总览",
+    "08 核心模块拆解",
+    "09 关键公式与符号",
+    "10 实验设计与证据链",
+    "11 对结论的正确理解",
     "12 作者明确承认的限制",
-    "13 我的批判性分析",
-    "14 对你研究方向的连接",
-    "15 相关知识连接",
-    "16 可验证的新 idea",
+    "13 批判性分析",
+    "14 学到的知识",
+    "15 与既有知识的连接",
+    "16 研究想法",
 ]
+
+CARD_SECTION_MAP = {
+    "01 基本信息": "basic_information",
+    "02 一句话总结": "one_sentence_summary",
+    "03 研究问题": "research_question",
+    "04 研究背景与发展路径": "background_path",
+    "05 论文识别的核心痛点": "pain_points",
+    "06 核心思想": "core_idea",
+    "07 方法总览": "method_overview",
+    "08 核心模块拆解": "module_breakdown",
+    "09 关键公式与符号": "formulas_and_symbols",
+    "10 实验设计与证据链": "experiment_evidence_chain",
+    "11 对结论的正确理解": "conclusion_boundaries",
+    "12 作者明确承认的限制": "author_limitations",
+    "13 批判性分析": "critical_analysis",
+    "14 学到的知识": "learned_knowledge",
+    "15 与既有知识的连接": "knowledge_connections",
+    "16 研究想法": "research_ideas",
+}
 
 
 @dataclass
@@ -250,6 +270,88 @@ def _first_non_empty_page(bundle: dict[str, Any]) -> int | None:
     return None
 
 
+def _clean_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip()
+
+
+def _page_texts_for_llm(bundle: dict[str, Any], max_chars: int = 45000) -> tuple[str, list[str]]:
+    pages = bundle.get("pages", [])
+    if not pages:
+        return "", ["source_bundle"]
+
+    keyword_pattern = re.compile(
+        r"\b(abstract|introduction|background|method|methods|approach|model|experiment|"
+        r"experiments|evaluation|result|results|discussion|limitation|limitations|conclusion|"
+        r"figure|table|equation|ablation|dataset|benchmark)\b",
+        flags=re.IGNORECASE,
+    )
+    selected_indices: list[int] = []
+    selected_indices.extend(range(min(4, len(pages))))
+    selected_indices.extend(index for index, page in enumerate(pages) if keyword_pattern.search(page.get("text", "")[:1200]))
+    if len(pages) > 4:
+        selected_indices.extend(range(max(0, len(pages) - 3), len(pages)))
+
+    seen: set[int] = set()
+    chunks: list[str] = []
+    refs: list[str] = []
+    total = 0
+    for index in selected_indices:
+        if index in seen or index < 0 or index >= len(pages):
+            continue
+        seen.add(index)
+        page = pages[index]
+        text = _clean_text(page.get("text", ""))
+        if not text:
+            continue
+        page_no = int(page.get("page") or index + 1)
+        snippet = text[:3200]
+        block = f"[Paper: PDF p. {page_no}]\n{snippet}"
+        if total + len(block) > max_chars:
+            remaining = max_chars - total
+            if remaining < 800:
+                break
+            block = block[:remaining]
+        chunks.append(block)
+        refs.append(f"[Paper: PDF p. {page_no}]")
+        total += len(block)
+        if total >= max_chars:
+            break
+    return "\n\n".join(chunks), refs or ["source_bundle"]
+
+
+def _json_from_llm_content(content: str) -> dict[str, Any]:
+    candidates = [content]
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, flags=re.DOTALL | re.IGNORECASE)
+    if fenced:
+        candidates.insert(0, fenced.group(1))
+    loose = re.search(r"\{.*\}", content, flags=re.DOTALL)
+    if loose:
+        candidates.append(loose.group(0))
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except Exception:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    raise ValueError("LLM did not return a JSON object")
+
+
+def _normalise_card_sections(raw_sections: Any) -> dict[str, str]:
+    if not isinstance(raw_sections, dict):
+        raw_sections = {}
+    sections: dict[str, str] = {}
+    for section, key in CARD_SECTION_MAP.items():
+        value = raw_sections.get(section)
+        if value is None:
+            value = raw_sections.get(key)
+        if value is None:
+            value = "Not assessable from supplied material."
+        sections[section] = str(value).strip() or "Not assessable from supplied material."
+    return sections
+
+
 def initial_paper_analysis(paper: SelectionRecord, bundle: dict[str, Any]) -> dict[str, Any]:
     page_ref = _first_non_empty_page(bundle)
     ref_text = f"p.{page_ref}" if page_ref is not None else "source_bundle"
@@ -276,29 +378,163 @@ def write_initial_analysis(paper: SelectionRecord, bundle: dict[str, Any], outpu
     return analysis
 
 
+def generate_deep_paper_analysis(
+    paper: SelectionRecord,
+    bundle: dict[str, Any],
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+) -> dict[str, Any]:
+    source_excerpt, refs = _page_texts_for_llm(bundle)
+    lang = llm_params.get("language", "Chinese")
+    user_profile = llm_params.get("research_profile") or (
+        "single-cell foundation models, spatial transcriptomics, graph neural networks, "
+        "multi-omics, biomedical AI, perturbation prediction, and cell-state representation"
+    )
+    generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
+    generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), 6000)
+    card_llm_params = {**llm_params, "generation_kwargs": generation_kwargs}
+    section_contract = "\n".join(f"- {section}: JSON key `{key}`" for section, key in CARD_SECTION_MAP.items())
+    prompt = f"""
+You are implementing the user's 一多科研 Paper Card workflow.
+
+Write in {lang}. Preserve English technical terms, model names, datasets, metrics, and equations.
+Be rigorous and source-grounded. Do not hype the paper. Do not invent evidence.
+Every substantive paper-derived claim must include a source pointer like [Paper: PDF p. 3].
+If a section is not supported by the supplied source excerpt, write "Not assessable from supplied material."
+Author-stated limitations and your own criticism must be separated.
+Research ideas must be hypotheses, not novelty claims, and must include validation plus possible failure modes.
+
+User research profile:
+{user_profile}
+
+Return only valid JSON with this shape:
+{{
+  "source_coverage": "Full paper or Partial paper",
+  "extraction_confidence": "High or Mixed or Low",
+  "locator_mode": "page-grounded",
+  "primary_lens": "methods/discovery/resource/clinical/materials/review",
+  "secondary_lens": "None or one lens",
+  "context_verification": "Paper-only",
+  "card_completeness": "Complete relative to supplied source or Partial",
+  "sections": {{
+{section_contract}
+  }},
+  "quality_notes": ["short notes"]
+}}
+
+Paper metadata:
+Title: {paper.title}
+Source: {paper.source}
+URL: {paper.url}
+PDF URL: {paper.pdf_url or "missing"}
+Authors: {", ".join(paper.authors[:12])}
+Abstract: {paper.abstract}
+Selection role: {paper.role}
+Selection reason: {paper.selection_reason}
+
+Supplied PDF excerpts:
+{source_excerpt}
+"""
+    content = _request_llm(
+        openai_client,
+        card_llm_params,
+        [
+            {
+                "role": "system",
+                "content": "You generate source-grounded scientific Paper Cards and return only valid JSON.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        force_json=True,
+    )
+    payload = _json_from_llm_content(content)
+    sections = _normalise_card_sections(payload.get("sections", {}))
+    missing_sections = [section for section, body in sections.items() if "Not assessable from supplied material" in body]
+    return {
+        "status": "llm_enriched",
+        "source_coverage": str(payload.get("source_coverage") or "Partial paper"),
+        "extraction_confidence": str(payload.get("extraction_confidence") or "Mixed"),
+        "locator_mode": "page-grounded",
+        "primary_lens": str(payload.get("primary_lens") or "methods"),
+        "secondary_lens": str(payload.get("secondary_lens") or "None"),
+        "context_verification": str(payload.get("context_verification") or "Paper-only"),
+        "card_completeness": str(payload.get("card_completeness") or "Partial"),
+        "sections": sections,
+        "page_refs": refs[:12],
+        "quality_notes": payload.get("quality_notes") if isinstance(payload.get("quality_notes"), list) else [],
+        "warnings": [f"not_assessable_section:{section}" for section in missing_sections],
+    }
+
+
+def write_deep_analysis(
+    paper: SelectionRecord,
+    bundle: dict[str, Any],
+    output_path: str | Path,
+    openai_client: OpenAI | None = None,
+    llm_params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if openai_client is None or llm_params is None:
+        analysis = initial_paper_analysis(paper, bundle)
+        analysis["failure_reason"] = "llm_client_not_configured"
+        write_json(output_path, analysis)
+        return analysis
+
+    try:
+        analysis = generate_deep_paper_analysis(paper, bundle, openai_client, llm_params)
+    except Exception as exc:
+        logger.warning(f"Failed to generate Huoshen Paper Card analysis for {paper.title}: {exc}")
+        analysis = initial_paper_analysis(paper, bundle)
+        analysis["status"] = "llm_enrichment_failed"
+        analysis["failure_reason"] = str(exc)
+    write_json(output_path, analysis)
+    return analysis
+
+
 def generate_paper_card_markdown(paper: SelectionRecord, analysis: dict[str, Any], output_path: str | Path) -> str:
     refs = ", ".join(str(ref) for ref in analysis.get("page_refs", [])) or "source_bundle"
-    section_values = {
-        "01 文献定位": analysis.get("bibliographic_position", ""),
-        "02 研究问题": analysis.get("research_question", ""),
-        "03 背景路线": analysis.get("background_route", ""),
-        "04 领域痛点": analysis.get("pain_point", ""),
-        "05 核心 insight": analysis.get("core_insight", ""),
-        "06 方法结构": analysis.get("method_logic", ""),
-        "07 关键公式/建模假设": "Not fully assessable before formula-aware extraction.",
-        "08 实验设计": analysis.get("experiments", ""),
-        "09 证据链：实验 -> 结论": analysis.get("evidence_chain", ""),
-        "10 主要结论": analysis.get("core_insight", ""),
-        "11 边界和局限": analysis.get("limitations", ""),
-        "12 作者明确承认的限制": "Not fully assessable before full card synthesis.",
-        "13 我的批判性分析": "This scaffold must be replaced or enriched by Huoshen chunk-grounded analysis before final use.",
-        "14 对你研究方向的连接": analysis.get("connection_to_user_research", ""),
-        "15 相关知识连接": "Not fully assessable before external context check.",
-        "16 可验证的新 idea": "\n".join(f"- {idea}" for idea in analysis.get("testable_ideas", [])) or "Not assessable from supplied material.",
-    }
-    lines = [f"# {paper.title}", "", f"- Source: {paper.source}", f"- URL: {paper.url}", f"- PDF: {paper.pdf_url or 'missing'}", ""]
+    if isinstance(analysis.get("sections"), dict):
+        section_values = _normalise_card_sections(analysis["sections"])
+    else:
+        section_values = {
+            "01 基本信息": analysis.get("bibliographic_position", ""),
+            "02 一句话总结": analysis.get("core_insight", ""),
+            "03 研究问题": analysis.get("research_question", ""),
+            "04 研究背景与发展路径": analysis.get("background_route", ""),
+            "05 论文识别的核心痛点": analysis.get("pain_point", ""),
+            "06 核心思想": analysis.get("core_insight", ""),
+            "07 方法总览": analysis.get("method_logic", ""),
+            "08 核心模块拆解": "Not fully assessable before Huoshen chunk synthesis.",
+            "09 关键公式与符号": "Not fully assessable before formula-aware extraction.",
+            "10 实验设计与证据链": analysis.get("evidence_chain", ""),
+            "11 对结论的正确理解": analysis.get("core_insight", ""),
+            "12 作者明确承认的限制": "Not fully assessable before full card synthesis.",
+            "13 批判性分析": "This scaffold must be replaced or enriched by Huoshen chunk-grounded analysis before final use.",
+            "14 学到的知识": analysis.get("connection_to_user_research", ""),
+            "15 与既有知识的连接": "Not fully assessable before external context check.",
+            "16 研究想法": "\n".join(f"- {idea}" for idea in analysis.get("testable_ideas", [])) or "Not assessable from supplied material.",
+        }
+    lines = [
+        f"# {paper.title}",
+        "",
+        f"> Source coverage: {analysis.get('source_coverage', 'Partial paper')}",
+        f"> Extraction confidence: {analysis.get('extraction_confidence', 'Mixed')}",
+        f"> Locator mode: {analysis.get('locator_mode', 'page-grounded')}",
+        f"> Primary analytical lens: {analysis.get('primary_lens', 'methods')}",
+        f"> Secondary analytical lens: {analysis.get('secondary_lens', 'None')}",
+        f"> Context verification: {analysis.get('context_verification', 'Paper-only')}",
+        f"> Card completeness: {analysis.get('card_completeness', 'Partial')}",
+        "",
+        f"- Source: {paper.source}",
+        f"- URL: {paper.url}",
+        f"- PDF: {paper.pdf_url or 'missing'}",
+        f"- Analysis status: {analysis.get('status', 'unknown')}",
+        "",
+    ]
     for section in CARD_SECTIONS:
-        lines.extend([f"## {section}", "", section_values.get(section, "Not assessable from supplied material."), "", f"Source refs: {refs}", ""])
+        body = section_values.get(section, "Not assessable from supplied material.")
+        if "[Paper:" not in body and "Not assessable" not in body:
+            body = f"{body}\n\nSource refs: {refs}"
+        lines.extend([f"## {section}", "", body, ""])
     markdown = "\n".join(lines)
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_path).write_text(markdown, encoding="utf-8")
@@ -325,10 +561,13 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
         for section in CARD_SECTIONS:
             if f"## {section}" not in card:
                 errors.append(f"missing_section:{section}")
-        if card.count("Source refs:") < 5:
+        source_pointer_count = card.count("Source refs:") + card.count("[Paper:")
+        if source_pointer_count < 5:
             warnings.append("fewer_than_5_source_refs")
         if "scaffold must be replaced" in card:
             warnings.append("scaffold_card_needs_llm_enrichment")
+        if "llm_enrichment_failed" in card or "llm_client_not_configured" in card:
+            warnings.append("llm_enrichment_not_completed")
 
     status = "failed" if errors else ("warning" if warnings else "pass")
     report = {"status": status, "errors": errors, "warnings": warnings}
@@ -341,17 +580,14 @@ def export_markdown_to_pdf(markdown_path: str | Path, pdf_path: str | Path) -> N
     pdf_path = Path(pdf_path)
     text = markdown_path.read_text(encoding="utf-8")
     doc = pymupdf.open()
-    page = doc.new_page(width=595, height=842)
     margin = 50
     rect = pymupdf.Rect(margin, margin, 545, 792)
-    overflow = page.insert_textbox(rect, text[:3500], fontsize=10, fontname="helv", align=0)
-    remaining = text[3500:]
-    while remaining or overflow < 0:
+    remaining = text
+    while remaining:
         page = doc.new_page(width=595, height=842)
-        chunk = remaining[:3500] if remaining else ""
-        page.insert_textbox(rect, chunk, fontsize=10, fontname="helv", align=0)
-        remaining = remaining[3500:]
-        overflow = 0
+        chunk = remaining[:2400]
+        page.insert_textbox(rect, chunk, fontsize=9.5, fontname="china-s", align=0)
+        remaining = remaining[2400:]
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(pdf_path)
 
@@ -387,7 +623,13 @@ def write_daily_index(output_dir: str | Path) -> Path:
     return path
 
 
-def process_selected_paper(record: SelectionRecord, output_dir: str | Path, index: int) -> Path:
+def process_selected_paper(
+    record: SelectionRecord,
+    output_dir: str | Path,
+    index: int,
+    openai_client: OpenAI | None = None,
+    llm_params: dict[str, Any] | None = None,
+) -> Path:
     folder = paper_folder(output_dir, index, record.title)
     folder.mkdir(parents=True, exist_ok=True)
     metadata = asdict(record)
@@ -401,7 +643,7 @@ def process_selected_paper(record: SelectionRecord, output_dir: str | Path, inde
         return folder
 
     bundle = extract_source_bundle(pdf_path, folder / "source_bundle.json")
-    analysis = write_initial_analysis(record, bundle, folder / "paper_analysis.json")
+    analysis = write_deep_analysis(record, bundle, folder / "paper_analysis.json", openai_client, llm_params)
     generate_paper_card_markdown(record, analysis, folder / "paper-card.md")
     export_markdown_to_pdf(folder / "paper-card.md", folder / "文档分析.pdf")
     audit_paper_card(folder)
@@ -451,7 +693,8 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     reranked = executor.reranker.rerank(candidates, corpus)
     selected = select_papers_for_deep_read(reranked, count=selected_count)
     write_selected_papers(selected, output_dir)
+    llm_params = OmegaConf.to_container(config.llm, resolve=True) if hasattr(config, "llm") else None
     for index, record in enumerate(selected, start=1):
-        process_selected_paper(record, output_dir, index)
+        process_selected_paper(record, output_dir, index, executor.openai_client, llm_params)
     write_daily_index(output_dir)
     return output_dir

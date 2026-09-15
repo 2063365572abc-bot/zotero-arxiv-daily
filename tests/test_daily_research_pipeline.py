@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 
 import pymupdf
 
@@ -12,6 +13,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     process_selected_paper,
     select_papers_for_deep_read,
     validate_pdf,
+    write_deep_analysis,
     write_candidates,
     write_daily_index,
     write_initial_analysis,
@@ -85,6 +87,51 @@ def test_pdf_bundle_card_audit_and_export(tmp_path):
     report = audit_paper_card(tmp_path)
     assert report["status"] == "warning"
     assert "scaffold_card_needs_llm_enrichment" in report["warnings"]
+
+
+def test_llm_enriched_card_passes_audit(tmp_path):
+    pdf_path = tmp_path / "original.pdf"
+    make_pdf(pdf_path)
+    bundle = extract_source_bundle(pdf_path, tmp_path / "source_bundle.json")
+    paper = SelectionRecord(
+        source="arxiv",
+        title="A Real LLM Paper",
+        authors=["A", "B"],
+        abstract="This paper introduces a method for single-cell representation learning.",
+        url="https://arxiv.org/abs/2601.00003",
+        pdf_url="https://arxiv.org/pdf/2601.00003",
+        score=9.0,
+        role="best_match",
+        scoring={"total": 9.0},
+        selection_reason="Highly relevant.",
+    )
+    sections = {key: f"[Paper: PDF p. 1] {key} content." for key in CARD_SECTIONS}
+    payload = {
+        "source_coverage": "Full paper",
+        "extraction_confidence": "High",
+        "locator_mode": "page-grounded",
+        "primary_lens": "methods",
+        "secondary_lens": "None",
+        "context_verification": "Paper-only",
+        "card_completeness": "Complete relative to supplied source",
+        "sections": sections,
+        "quality_notes": [],
+    }
+    fake_response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload, ensure_ascii=False)))]
+    )
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: fake_response))
+    )
+    llm_params = {"api_mode": "chat_completion", "generation_kwargs": {"model": "gpt-5.5", "max_tokens": 700}, "language": "Chinese"}
+
+    analysis = write_deep_analysis(paper, bundle, tmp_path / "paper_analysis.json", fake_client, llm_params)
+    markdown = generate_paper_card_markdown(paper, analysis, tmp_path / "paper-card.md")
+    assert "Analysis status: llm_enriched" in markdown
+
+    export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
+    report = audit_paper_card(tmp_path)
+    assert report == {"status": "pass", "errors": [], "warnings": []}
 
 
 def test_process_selected_paper_records_download_failure(tmp_path, monkeypatch):
