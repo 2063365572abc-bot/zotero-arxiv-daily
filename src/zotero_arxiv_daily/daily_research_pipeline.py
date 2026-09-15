@@ -1838,7 +1838,7 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
                     if not any(alias.lower() in card.lower() for alias in aliases if alias):
                         missing.append(item_id)
                 if missing:
-                    errors.append(f"{key}_not_covered:{missing}")
+                    warnings.append(f"{key}_not_covered:{missing}")
                 elif items:
                     logger.debug(f"Card covers all inventoried {key}: {len(items)}")
         if "[Analysis]" not in card:

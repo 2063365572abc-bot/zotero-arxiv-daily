@@ -283,6 +283,47 @@ def test_one_shot_full_card_streaming_passes_audit(tmp_path):
     assert report["errors"] == []
 
 
+def test_card_inventory_coverage_gaps_are_warnings_not_blockers(tmp_path):
+    pdf_path = tmp_path / "original.pdf"
+    make_pdf(pdf_path)
+    source_bundle = {
+        "page_count": 2,
+        "extraction": {"total_characters": 2000},
+        "evidence_inventory": {
+            "figures": [{"id": "Figure 1"}, {"id": "Figure 8"}],
+            "tables": [],
+            "equations": [{"id": "Equation 1"}, {"id": "Equation 23"}],
+        },
+    }
+    (tmp_path / "source_bundle.json").write_text(json.dumps(source_bundle), encoding="utf-8")
+    markdown = "\n\n".join(
+        [
+            "> Source coverage: Full paper\n"
+            "> Extraction confidence: High\n"
+            "> Locator mode: page-grounded\n"
+            "> Primary analytical lens: methods\n"
+            "> Secondary analytical lens: None\n"
+            "> Context verification: Paper-only\n"
+            "> Card completeness: Complete relative to supplied source",
+            *[
+                f"## {section}\n\n"
+                + ("[Analysis] " if section == "13 批判性分析" else "")
+                + ("[Hypothesis] " if section == "16 研究想法" else "")
+                + "[Paper: PDF p. 1] Figure 1 and Equation 1 are central evidence."
+                for section in CARD_SECTIONS
+            ],
+        ]
+    )
+    (tmp_path / "paper-card.md").write_text(markdown, encoding="utf-8")
+
+    report = audit_paper_card(tmp_path)
+
+    assert report["status"] == "warning"
+    assert report["errors"] == []
+    assert any("figures_not_covered" in warning for warning in report["warnings"])
+    assert any("equations_not_covered" in warning for warning in report["warnings"])
+
+
 def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
     papers = [
         SelectionRecord(
