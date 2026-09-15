@@ -2153,12 +2153,47 @@ def _zotero_collection_key(zot: Any, path_parts: list[str]) -> str | None:
                     ),
                     None,
                 )
-                key = match.get("key") if match else None
+                key = _zotero_object_key(match)
             parent_key = key
             collections = zot.everything(zot.collections())
         else:
-            parent_key = match.get("key")
+            parent_key = _zotero_object_key(match)
     return parent_key
+
+
+def _zotero_object_key(value: Any) -> str | None:
+    """Read a Zotero object key across pyzotero/API response shapes."""
+    if not isinstance(value, dict):
+        return None
+    return value.get("key") or (value.get("data") or {}).get("key")
+
+
+def _zotero_attachment_key(response: Any, filename: str) -> str | None:
+    """Extract an attachment key from pyzotero's list-based upload response."""
+    if not isinstance(response, dict):
+        return None
+    for bucket in ("success", "unchanged", "successful"):
+        entries = response.get(bucket) or []
+        if isinstance(entries, dict):
+            entries = list(entries.values())
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if isinstance(entry, dict):
+                entry_filename = Path(str(entry.get("filename") or entry.get("title") or "")).name
+                if entry_filename == filename or entry.get("key"):
+                    return str(entry["key"]) if entry.get("key") else None
+    return None
+
+
+def _find_zotero_attachment_key(zot: Any, item_key: str, filename: str) -> str | None:
+    """Verify an uploaded child attachment exists under the parent item."""
+    children = zot.everything(zot.children(item_key))
+    for child in children or []:
+        data = child.get("data") or {} if isinstance(child, dict) else {}
+        if data.get("title") == filename or Path(str(data.get("filename") or "")).name == filename:
+            return _zotero_object_key(child)
+    return None
 
 
 def upload_selected_paper_to_zotero(
@@ -2220,7 +2255,12 @@ def upload_selected_paper_to_zotero(
         collection_key = _zotero_collection_key(zot, ["一多科研", "单细胞转录组"])
         if collection_key:
             try:
-                zot.addto_collection(collection_key, {"items": [item_key]})
+                item = zot.everything(zot.item(item_key))
+                if isinstance(item, list):
+                    item = item[0] if item else None
+                if not isinstance(item, dict):
+                    raise RuntimeError(f"Zotero item lookup returned no object for {item_key}")
+                zot.addto_collection(collection_key, item)
             except Exception as exc:
                 logger.warning(f"Failed to assign Zotero collection for {record.title}: {exc}")
 
@@ -2235,8 +2275,13 @@ def upload_selected_paper_to_zotero(
                 continue
             try:
                 uploaded = zot.attachment_simple([str(path)], parentid=item_key)
-                if isinstance(uploaded, dict):
-                    result[key_name] = (uploaded.get("success") or {}).get("0") or (uploaded.get("successful") or {}).get("0")
+                attachment_key = _zotero_attachment_key(uploaded, path.name)
+                if not attachment_key:
+                    attachment_key = _find_zotero_attachment_key(zot, item_key, path.name)
+                if not attachment_key:
+                    attachment_failures.append(f"{path.name}:remote_attachment_not_found")
+                else:
+                    result[key_name] = attachment_key
             except Exception as exc:
                 attachment_failures.append(f"{path.name}:{type(exc).__name__}: {exc}")
         result["status"] = "uploaded" if not attachment_failures else "partial"

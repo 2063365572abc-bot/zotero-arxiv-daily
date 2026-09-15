@@ -27,6 +27,19 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     write_initial_analysis,
     write_selected_papers,
 )
+
+
+def test_zotero_attachment_response_extracts_key_from_success_list():
+    from zotero_arxiv_daily.daily_research_pipeline import _zotero_attachment_key
+
+    response = {"success": [{"key": "ABCD1234", "filename": "C:/tmp/original.pdf"}]}
+    assert _zotero_attachment_key(response, "original.pdf") == "ABCD1234"
+
+
+def test_zotero_object_key_supports_nested_data():
+    from zotero_arxiv_daily.daily_research_pipeline import _zotero_object_key
+
+    assert _zotero_object_key({"data": {"key": "COLL1234"}}) == "COLL1234"
 from tests.canned_responses import make_sample_paper
 
 

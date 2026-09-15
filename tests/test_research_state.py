@@ -118,15 +118,19 @@ def test_state_returns_previously_promoted_ids_and_zotero_titles(tmp_path):
     )
     state.conn.execute(
         "INSERT INTO zotero_uploads(run_date, arxiv_id, upload_json) VALUES(?,?,?)",
-        ("2026-09-13", "2601.00002", "{}"),
+        ("2026-09-13", "2601.00002", '{"status":"uploaded"}'),
     )
     state.conn.execute(
         "INSERT INTO daily_selections(run_date, arxiv_id, selection_json) VALUES(?,?,?)",
         ("2026-09-15", "2601.00003", "{}"),
     )
+    state.conn.execute(
+        "INSERT INTO zotero_uploads(run_date, arxiv_id, upload_json) VALUES(?,?,?)",
+        ("2026-09-14", "2601.00004", '{"status":"failed"}'),
+    )
     corpus = [CorpusPaper("Already In Zotero", "abstract", datetime(2026, 1, 1), ["一多科研"])]
     state.upsert_zotero_items(corpus, "text-embedding-v4")
 
-    assert state.previously_selected_or_uploaded_arxiv_ids(before_date="2026-09-15") == {"2601.00001", "2601.00002"}
+    assert state.previously_selected_or_uploaded_arxiv_ids(before_date="2026-09-15") == {"2601.00002"}
     assert "already in zotero" in state.zotero_title_fingerprints()
     state.close()

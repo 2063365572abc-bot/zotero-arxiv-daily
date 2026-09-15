@@ -275,16 +275,22 @@ class ResearchRadarState:
         }
 
     def previously_selected_or_uploaded_arxiv_ids(self, before_date: str | None = None) -> set[str]:
-        """Return arXiv IDs that have already been promoted beyond the candidate pool."""
-        selected_query = "SELECT arxiv_id FROM daily_selections"
-        upload_query = "SELECT arxiv_id FROM zotero_uploads"
+        """Return arXiv IDs successfully promoted beyond the candidate pool."""
+        upload_query = "SELECT arxiv_id, upload_json FROM zotero_uploads"
         params: tuple[str, ...] = ()
         if before_date is not None:
-            selected_query += " WHERE run_date < ?"
             upload_query += " WHERE run_date < ?"
             params = (before_date,)
-        rows = self.conn.execute(f"{selected_query} UNION {upload_query}", params * 2).fetchall()
-        return {str(row["arxiv_id"]) for row in rows if row["arxiv_id"]}
+        rows = self.conn.execute(upload_query, params).fetchall()
+        promoted: set[str] = set()
+        for row in rows:
+            try:
+                upload = json.loads(row["upload_json"] or "{}")
+            except json.JSONDecodeError:
+                continue
+            if upload.get("status") == "uploaded" and row["arxiv_id"]:
+                promoted.add(str(row["arxiv_id"]))
+        return promoted
 
     def zotero_title_fingerprints(self) -> set[str]:
         rows = self.conn.execute("SELECT title FROM zotero_items").fetchall()
