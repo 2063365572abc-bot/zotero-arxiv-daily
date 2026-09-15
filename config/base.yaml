@@ -34,6 +34,8 @@ daily_pipeline:
   output_dir: outputs/daily # Local directory for full daily research artifacts.
   candidate_count: 20 # Maximum candidate papers kept before deep selection.
   selected_count: 3 # Number of papers selected for PDF/Card processing.
+  llm_rerank_count: 8 # Number of embedding-shortlisted papers sent to the LLM for title/abstract scoring.
+  llm_selection_enabled: true # Whether Qwen performs the second-stage title/abstract selection.
   card_mode: brief # Card generation mode. Options: brief or one_shot_full.
   full_card_input_chars: 55000 # Maximum extracted PDF characters sent to one-shot full-card generation.
   full_card_output_tokens: 12000 # Maximum output tokens for one-shot full-card generation.

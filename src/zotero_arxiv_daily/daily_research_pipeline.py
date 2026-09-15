@@ -116,8 +116,20 @@ def write_candidates(papers: list[Paper], output_dir: str | Path, limit: int = 2
     return path
 
 
-def _selection_scoring(paper: Paper, role: str) -> dict[str, Any]:
+def _selection_scoring(paper: Paper, role: str, llm_score: dict[str, Any] | None = None) -> dict[str, Any]:
     base_score = float(paper.score or 0.0)
+    if llm_score:
+        return {
+            "relevance": llm_score["relevance_to_user"],
+            "method_novelty": llm_score["method_novelty"],
+            "evidence_quality": llm_score["evidence_quality"],
+            "transferability": llm_score["transferability"],
+            "resource_value": llm_score["resource_value"],
+            "trend_value": llm_score["trend_value"],
+            "total": llm_score["total"],
+            "role": role,
+            "needs_llm_scoring": False,
+        }
     return {
         "relevance": min(30, round(base_score * 3, 2)),
         "method_novelty": None,
@@ -131,13 +143,35 @@ def _selection_scoring(paper: Paper, role: str) -> dict[str, Any]:
     }
 
 
-def select_papers_for_deep_read(papers: list[Paper], count: int = 3) -> list[SelectionRecord]:
+def select_papers_for_deep_read(
+    papers: list[Paper],
+    count: int = 3,
+    llm_scores: dict[str, dict[str, Any]] | None = None,
+) -> list[SelectionRecord]:
     roles = ["best_match", "method_inspiration", "trend_signal"]
     ranked = sorted(papers, key=lambda paper: paper.score if paper.score is not None else -1, reverse=True)
+    if llm_scores:
+        remaining = list(ranked)
+        role_fields = {
+            "best_match": "relevance_to_user",
+            "method_inspiration": "method_novelty",
+            "trend_signal": "trend_value",
+        }
+        role_selected: list[Paper] = []
+        for role in roles[:count]:
+            available = [paper for paper in remaining if paper.title in llm_scores]
+            if not available:
+                break
+            field = role_fields[role]
+            chosen = max(available, key=lambda paper: llm_scores[paper.title][field])
+            role_selected.append(chosen)
+            remaining.remove(chosen)
+        ranked = role_selected + [paper for paper in ranked if paper not in role_selected]
     selected = []
     for index, paper in enumerate(ranked[:count]):
         role = roles[index] if index < len(roles) else "best_match"
-        scoring = _selection_scoring(paper, role)
+        llm_score = (llm_scores or {}).get(paper.title)
+        scoring = _selection_scoring(paper, role, llm_score)
         selected.append(
             SelectionRecord(
                 source=paper.source,
@@ -150,13 +184,113 @@ def select_papers_for_deep_read(papers: list[Paper], count: int = 3) -> list[Sel
                 role=role,
                 scoring=scoring,
                 selection_reason=(
-                    f"Selected as {role}; embedding score={paper.score:.3f}."
-                    if paper.score is not None
-                    else f"Selected as {role}; LLM scoring still required."
+                    f"Selected as {role}; LLM total={llm_score['total']:.1f}/100. "
+                    f"{llm_score['reason']}"
+                    if llm_score is not None
+                    else f"Selected as {role}; embedding score={paper.score:.3f}."
                 ),
             )
         )
     return selected
+
+
+def build_llm_selection_prompt(papers: list[Paper], llm_params: dict[str, Any]) -> str:
+    profile = llm_params.get("research_profile") or (
+        "single-cell foundation models, spatial transcriptomics, graph neural networks, "
+        "multi-omics, biomedical AI, perturbation prediction, cell-state representation, "
+        "and cross-modal alignment"
+    )
+    paper_blocks = []
+    for index, paper in enumerate(papers, start=1):
+        paper_blocks.append(
+            f"PAPER {index}\nTitle: {paper.title}\nAbstract: {paper.abstract}\n"
+            f"Source: {paper.source}\nURL: {paper.url}"
+        )
+    return f"""
+你是用户的科研选题筛选助手。你的任务不是判断论文标题是否热门，而是从候选论文中找出最适合用户投入阅读时间的内容。
+
+用户研究画像：
+{profile}
+
+只允许依据下面提供的标题、摘要和元数据评分。不要假设你看过论文 PDF，不要补写摘要中不存在的实验结果。
+请为每篇论文给出 0-10 分的：
+- relevance_to_user：与用户当前研究的直接相关性
+- method_novelty：方法、任务或建模范式的新颖性
+- evidence_quality：摘要中可见的证据强度；信息不足时降低分数
+- transferability：迁移到用户研究问题的可能性
+- trend_value：作为当前研究趋势信号的价值
+- resource_value：摘要或元数据中明确出现的数据、代码、模型或资源价值
+
+请只返回 JSON，格式必须是：
+{{"rankings":[{{"paper_index":1,"relevance_to_user":0,"method_novelty":0,"evidence_quality":0,"transferability":0,"trend_value":0,"resource_value":0,"best_role":"best_match|method_inspiration|trend_signal","reason":"中文理由","risk":"中文风险"}}]}}
+
+候选论文：
+{chr(10).join(paper_blocks)}
+""".strip()
+
+
+def rank_candidates_with_llm(
+    papers: list[Paper],
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+) -> tuple[list[Paper], dict[str, dict[str, Any]]]:
+    generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
+    generation_kwargs["max_tokens"] = min(max(int(generation_kwargs.get("max_tokens") or 0), 1200), 3000)
+    params = {**llm_params, "generation_kwargs": generation_kwargs}
+    content = _request_llm(
+        openai_client,
+        params,
+        [
+            {"role": "system", "content": "你是严谨的科研文献筛选器，只返回合法 JSON。"},
+            {"role": "user", "content": build_llm_selection_prompt(papers, llm_params)},
+        ],
+        force_json=True,
+    )
+    payload = _json_from_llm_content(content)
+    raw_rankings = payload.get("rankings")
+    if not isinstance(raw_rankings, list):
+        raise ValueError("LLM selection response has no rankings list")
+
+    weights = {
+        "relevance_to_user": 30,
+        "method_novelty": 20,
+        "evidence_quality": 20,
+        "transferability": 15,
+        "trend_value": 10,
+        "resource_value": 5,
+    }
+    scores: dict[str, dict[str, Any]] = {}
+    for item in raw_rankings:
+        if not isinstance(item, dict):
+            continue
+        try:
+            paper = papers[int(item["paper_index"]) - 1]
+        except (KeyError, IndexError, TypeError, ValueError):
+            continue
+        values = {field: max(0.0, min(10.0, float(item.get(field, 0)))) for field in weights}
+        total = sum(values[field] * weight / 10 for field, weight in weights.items())
+        scores[paper.title] = {
+            **values,
+            "total": round(total, 2),
+            "best_role": str(item.get("best_role") or "best_match"),
+            "reason": str(item.get("reason") or "未提供筛选理由"),
+            "risk": str(item.get("risk") or "未提供风险说明"),
+        }
+    if len(scores) < len(papers):
+        raise ValueError(f"LLM selection returned {len(scores)} of {len(papers)} candidates")
+    ranked = sorted(papers, key=lambda paper: scores[paper.title]["total"], reverse=True)
+    for paper in ranked:
+        paper.score = scores[paper.title]["total"]
+    return ranked, scores
+
+
+def write_llm_ranking(papers: list[Paper], scores: dict[str, dict[str, Any]], output_dir: str | Path) -> Path:
+    payload = []
+    for rank, paper in enumerate(papers, start=1):
+        payload.append({"rank": rank, "title": paper.title, "url": paper.url, **scores[paper.title]})
+    path = Path(output_dir) / "llm_ranking.json"
+    write_json(path, payload)
+    return path
 
 
 def write_selected_papers(selected: list[SelectionRecord], output_dir: str | Path) -> Path:
@@ -855,10 +989,21 @@ def _config_int(config: DictConfig, section: str, key: str, default: int) -> int
     return int(value)
 
 
+def _config_bool(config: DictConfig, section: str, key: str, default: bool) -> bool:
+    value = _config_get(config, section, key, default)
+    if isinstance(value, bool):
+        return value
+    if value in (None, "", "null"):
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def run_daily_file_pipeline(config: DictConfig) -> Path:
     output_root = _config_get(config, "daily_pipeline", "output_dir", "outputs/daily")
     candidate_count = _config_int(config, "daily_pipeline", "candidate_count", 20)
     selected_count = _config_int(config, "daily_pipeline", "selected_count", 3)
+    llm_rerank_count = _config_int(config, "daily_pipeline", "llm_rerank_count", 8)
+    llm_selection_enabled = _config_bool(config, "daily_pipeline", "llm_selection_enabled", True)
     card_mode = _config_get(config, "daily_pipeline", "card_mode", "brief")
     full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 55_000)
     full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 12_000)
@@ -884,10 +1029,29 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
         write_daily_index(output_dir)
         return output_dir
 
-    reranked = executor.reranker.rerank(candidates, corpus)
-    selected = select_papers_for_deep_read(reranked, count=selected_count)
-    write_selected_papers(selected, output_dir)
     llm_params = OmegaConf.to_container(config.llm, resolve=True) if hasattr(config, "llm") else None
+    reranked = executor.reranker.rerank(candidates, corpus)
+    llm_scores: dict[str, dict[str, Any]] = {}
+    if llm_selection_enabled and executor.openai_client is not None and llm_params is not None:
+        llm_pool = reranked[: min(llm_rerank_count, len(reranked))]
+        logger.info(f"Sending {len(llm_pool)} title/abstract candidates to Qwen for scientific-value scoring...")
+        try:
+            reranked, llm_scores = rank_candidates_with_llm(llm_pool, executor.openai_client, llm_params)
+            write_llm_ranking(reranked, llm_scores, output_dir)
+        except Exception as exc:
+            logger.warning(f"LLM candidate scoring failed; using embedding ranking: {type(exc).__name__}: {exc}")
+            write_json(output_dir / "llm_ranking.json", {
+                "status": "failed",
+                "error": f"{type(exc).__name__}: {exc}",
+                "fallback": "embedding_ranking",
+            })
+    else:
+        write_json(output_dir / "llm_ranking.json", {
+            "status": "disabled_or_unconfigured",
+            "fallback": "embedding_ranking",
+        })
+    selected = select_papers_for_deep_read(reranked, count=selected_count, llm_scores=llm_scores)
+    write_selected_papers(selected, output_dir)
     for index, record in enumerate(selected, start=1):
         process_selected_paper(
             record,

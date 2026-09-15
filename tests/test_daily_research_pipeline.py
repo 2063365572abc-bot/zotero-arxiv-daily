@@ -11,6 +11,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     extract_source_bundle,
     generate_one_shot_full_card_markdown,
     generate_paper_card_markdown,
+    rank_candidates_with_llm,
     process_selected_paper,
     select_papers_for_deep_read,
     validate_pdf,
@@ -52,6 +53,45 @@ def test_write_candidates_and_selected_papers(tmp_path):
     assert len(candidates) == 3
     assert [item["role"] for item in selected_payload] == ["best_match", "method_inspiration", "trend_signal"]
     assert selected_payload[0]["title"] == "Paper A"
+
+
+def test_llm_ranking_uses_title_abstract_and_selects_distinct_roles():
+    papers = [
+        make_sample_paper(title="Best Match", abstract="single-cell foundation model", score=9.0),
+        make_sample_paper(title="Method", abstract="new graph method", score=8.0),
+        make_sample_paper(title="Trend", abstract="spatial trend", score=7.0),
+    ]
+    payload = {
+        "rankings": [
+            {"paper_index": 1, "relevance_to_user": 10, "method_novelty": 4, "evidence_quality": 8, "transferability": 9, "trend_value": 4, "resource_value": 5, "reason": "最贴合研究画像", "risk": "摘要证据有限"},
+            {"paper_index": 2, "relevance_to_user": 5, "method_novelty": 10, "evidence_quality": 7, "transferability": 8, "trend_value": 6, "resource_value": 8, "reason": "方法启发强", "risk": "需核查实验"},
+            {"paper_index": 3, "relevance_to_user": 6, "method_novelty": 7, "evidence_quality": 6, "transferability": 5, "trend_value": 10, "resource_value": 3, "reason": "代表趋势", "risk": "主题较宽"},
+        ]
+    }
+    fake_response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload, ensure_ascii=False)))]
+    )
+    calls = []
+    def create(**kwargs):
+        calls.append(kwargs)
+        return fake_response
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+    ranked, scores = rank_candidates_with_llm(
+        papers,
+        fake_client,
+        {"generation_kwargs": {"model": "qwen3.8-max", "max_tokens": 1500}, "research_profile": "single-cell"},
+    )
+    prompt = calls[0]["messages"][1]["content"]
+    assert "Title: Best Match" in prompt
+    assert "Abstract: single-cell foundation model" in prompt
+    assert "全文摘录" not in prompt
+    assert ranked[0].title == "Best Match"
+    assert scores["Best Match"]["total"] == 74.0
+
+    selected = select_papers_for_deep_read(ranked, count=3, llm_scores=scores)
+    assert [paper.title for paper in selected] == ["Best Match", "Method", "Trend"]
+    assert [paper.role for paper in selected] == ["best_match", "method_inspiration", "trend_signal"]
 
 
 def test_pdf_bundle_card_audit_and_export(tmp_path):
