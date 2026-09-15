@@ -229,12 +229,19 @@ def _require_relevant_top3(
     eligible = [
         paper
         for paper in papers
+        if float(llm_scores.get(paper.title, {}).get("relevance_to_user", 0)) >= 4.0
+    ]
+    strong = [
+        paper
+        for paper in papers
         if float(llm_scores.get(paper.title, {}).get("relevance_to_user", 0)) >= 5.0
     ]
-    if len(eligible) < count:
+    required_strong = min(2, count)
+    if len(eligible) < count or len(strong) < required_strong:
         raise RuntimeError(
             "insufficient_relevant_candidates: "
-            f"Qwen found {len(eligible)}/{count} candidates with relevance_to_user >= 5; "
+            f"Qwen found {len(strong)} strong candidates (>=5) and {len(eligible)} usable candidates (>=4); "
+            f"required {required_strong} strong and {count} usable candidates; "
             "refusing to deep-read or upload weakly related papers"
         )
     return eligible
