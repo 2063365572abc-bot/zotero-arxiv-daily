@@ -2192,11 +2192,14 @@ def _zotero_attachment_key(response: Any, filename: str) -> str | None:
 
 def _find_zotero_attachment_key(zot: Any, item_key: str, filename: str) -> str | None:
     """Verify an uploaded child attachment exists under the parent item."""
-    children = zot.children(item_key)
-    for child in children or []:
-        data = (child.get("data") or {}) if isinstance(child, dict) else {}
-        if data.get("title") == filename or Path(str(data.get("filename") or "")).name == filename:
-            return _zotero_object_key(child)
+    for attempt in range(4):
+        children = zot.children(item_key)
+        for child in children or []:
+            data = (child.get("data") or {}) if isinstance(child, dict) else {}
+            if data.get("title") == filename or Path(str(data.get("filename") or "")).name == filename:
+                return _zotero_object_key(child)
+        if attempt < 3:
+            time.sleep(2)
     return None
 
 
