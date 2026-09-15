@@ -330,7 +330,7 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
             source="arxiv", title=f"Paper {index}", authors=["A"], abstract="Abstract",
             url=f"https://arxiv.org/abs/2601.0000{index}",
             pdf_url=f"https://arxiv.org/pdf/2601.0000{index}",
-            published_date="2026-09-14",
+            published_date="2026-09-14T12:00:00+08:00" if index == 1 else "2026-09-14",
             score=1.0,
             role="best_match", scoring={}, selection_reason="test", arxiv_id=f"2601.0000{index}",
         )

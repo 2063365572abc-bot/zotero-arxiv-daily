@@ -1257,12 +1257,13 @@ def build_three_card_digest_prompt(
     total = 0
     for index, (paper, card) in enumerate(zip(papers, card_markdowns), start=1):
         card_pdf_link = (card_pdf_links or [""] * len(papers))[index - 1]
+        published_date = _published_date_label(getattr(paper, "published_date", None)) or "unknown"
         block = (
             f"\n===== PAPER QUICK LOOK {index} =====\n"
             f"Title: {paper.title}\n"
             f"arXiv ID: {paper.arxiv_id or 'unknown'}\n"
             f"URL: {paper.url}\n"
-            f"Published metadata: {getattr(paper, 'published_date', None) or 'unknown'}\n"
+            f"Published date: {published_date}\n"
             f"Original PDF URL: {paper.pdf_url or paper.url}\n"
             f"Card PDF link: {card_pdf_link or 'not provided'}\n"
             f"Selection role: {paper.role}\n"
@@ -1413,10 +1414,11 @@ def audit_three_card_digest(
             warnings.append(f"digest_missing_url:{paper.arxiv_id or paper.title}")
         if not paper.published_date:
             errors.append(f"digest_record_missing_published_date:{paper.arxiv_id or paper.title}")
-        if paper.published_date and paper.published_date not in markdown:
+        published_date = _published_date_label(paper.published_date)
+        if published_date and published_date not in markdown:
             errors.append(f"digest_missing_published_date:{paper.arxiv_id or paper.title}")
-        if paper.published_date and paper.source:
-            expected_source_line = f"{paper.published_date} · {_source_label(paper.source)}"
+        if published_date and paper.source:
+            expected_source_line = f"{published_date} · {_source_label(paper.source)}"
             if expected_source_line not in markdown:
                 errors.append(f"digest_missing_published_source:{paper.arxiv_id or paper.title}")
         if paper.pdf_url and paper.pdf_url not in markdown:
@@ -1477,13 +1479,27 @@ def _source_label(source: str | None) -> str:
     return source
 
 
+def _published_date_label(value: str | None) -> str:
+    if not value:
+        return ""
+    value = str(value).strip()
+    if not value:
+        return ""
+    if len(value) >= 10 and re.match(r"^\d{4}-\d{2}-\d{2}", value):
+        return value[:10]
+    return value
+
+
 def _ensure_digest_source_labels(markdown: str, papers: list[SelectionRecord]) -> str:
     updated = markdown
     for index, paper in enumerate(papers):
         if not paper.published_date or not paper.source:
             continue
+        published_date = _published_date_label(paper.published_date)
+        if not published_date:
+            continue
         label = _source_label(paper.source)
-        expected = f"{paper.published_date} · {label}"
+        expected = f"{published_date} · {label}"
         title_start = updated.find(paper.title)
         if title_start < 0:
             continue
@@ -1493,9 +1509,9 @@ def _ensure_digest_source_labels(markdown: str, papers: list[SelectionRecord]) -
         ]
         title_end = min(next_starts) if next_starts else len(updated)
         segment = updated[title_start:title_end]
-        if expected in segment or paper.published_date not in segment:
+        if expected in segment or published_date not in segment:
             continue
-        patched = segment.replace(paper.published_date, expected, 1)
+        patched = segment.replace(published_date, expected, 1)
         updated = updated[:title_start] + patched + updated[title_end:]
     return updated
 
