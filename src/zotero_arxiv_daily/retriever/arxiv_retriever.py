@@ -15,6 +15,9 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from loguru import logger
 import requests
 import re
+from datetime import datetime, timedelta, timezone
+from urllib.parse import quote_plus
+from lxml import html as lxml_html
 
 T = TypeVar("T")
 
@@ -130,7 +133,56 @@ class ArxivRetriever(BaseRetriever):
         if self.config.source.arxiv.category is None and not self.config.source.arxiv.get("keywords"):
             raise ValueError("category must be specified for arxiv.")
 
+    def _keyword_groups(self) -> tuple[list[str], list[str], list[str]]:
+        domain = list(self.config.source.arxiv.get("domain_keywords") or [])
+        method = list(self.config.source.arxiv.get("method_keywords") or [])
+        task = list(self.config.source.arxiv.get("task_keywords") or [])
+        return (
+            [str(value).strip() for value in domain if str(value).strip()],
+            [str(value).strip() for value in method if str(value).strip()],
+            [str(value).strip() for value in task if str(value).strip()],
+        )
+
+    def _uses_strict_keyword_groups(self) -> bool:
+        domain, method, _ = self._keyword_groups()
+        return bool(domain and method)
+
+    def retrieve_papers(self) -> list[Paper]:
+        """Convert and deterministically rank the strict keyword candidate pool."""
+        raw_papers = self._retrieve_raw_papers()
+        papers = []
+        for raw_paper in raw_papers:
+            try:
+                paper = self.convert_to_paper(raw_paper)
+            except Exception as exc:
+                logger.warning(f"Skipping paper {getattr(raw_paper, 'title', raw_paper)}: {exc}")
+                continue
+            if paper is None:
+                continue
+            self._attach_metadata(paper, raw_paper)
+            papers.append(paper)
+
+        if not self._uses_strict_keyword_groups():
+            if self.max_candidate_num is not None:
+                papers = papers[: self.max_candidate_num]
+            return papers
+
+        for paper in papers:
+            paper.score = self._deterministic_retrieval_score(paper)
+        papers.sort(
+            key=lambda paper: (
+                getattr(paper, "freshness_bucket", 1),
+                paper.score if paper.score is not None else -1,
+                getattr(paper, "published_date", ""),
+            ),
+            reverse=True,
+        )
+        limit = int(self.config.source.arxiv.get("retrieval_result_limit") or 20)
+        return papers[:limit]
+
     def _retrieve_raw_papers(self) -> list[ArxivResult]:
+        if self._uses_strict_keyword_groups():
+            return self._retrieve_strict_keyword_papers()
         keywords = self.config.source.arxiv.get("keywords") or []
         if keywords:
             max_results = int(self.config.source.arxiv.get("keyword_query_max_results") or self.max_candidate_num or 20)
@@ -201,6 +253,65 @@ class ArxivRetriever(BaseRetriever):
 
         return raw_papers
 
+    def _retrieve_strict_keyword_papers(self) -> list[ArxivResult | dict[str, Any]]:
+        domain, method, task = self._keyword_groups()
+        limit = int(self.config.source.arxiv.get("retrieval_result_limit") or 20)
+        max_results = int(self.config.source.arxiv.get("keyword_query_max_results") or 100)
+        primary_hours = int(self.config.source.arxiv.get("freshness_hours") or 48)
+        fallback_hours = int(self.config.source.arxiv.get("freshness_fallback_hours") or 168)
+        results: list[ArxivResult | dict[str, Any]] = []
+        seen_ids: set[str] = set()
+
+        def add_matches(batch: list[ArxivResult | dict[str, Any]]) -> None:
+            for item in batch:
+                item_id = self._raw_id(item)
+                if item_id and item_id in seen_ids:
+                    continue
+                if item_id:
+                    seen_ids.add(item_id)
+                if self._matches_keyword_groups(item, domain, method):
+                    results.append(item)
+
+        if self.config.source.arxiv.get("strict_rss_first", True):
+            for hours in (primary_hours, fallback_hours):
+                add_matches(self._retrieve_strict_keyword_rss(domain, method, task, hours))
+                if len(results) >= limit:
+                    return results[:limit]
+
+        if self.config.source.arxiv.get("strict_html_fallback_enabled", True):
+            backfill_hours = int(self.config.source.arxiv.get("retrieval_backfill_hours") or 720)
+            html_limit = int(self.config.source.arxiv.get("html_fallback_result_limit") or 50)
+            add_matches(self._retrieve_strict_keyword_html(domain, method, task, backfill_hours, html_limit))
+            if len(results) >= limit:
+                return results[:limit]
+
+        # The API is a last resort. A single failed request disables the rest of
+        # the API window for this run, preventing a 429 from turning into a burst
+        # of retries. RSS and HTML already provide the title/abstract metadata.
+        client = arxiv.Client(num_retries=1, delay_seconds=3, page_size=max_results)
+        api_hours = (primary_hours, fallback_hours) if not self.config.source.arxiv.get("strict_rss_first", True) else (fallback_hours,)
+        for hours in api_hours:
+            query = self._build_grouped_keyword_query(domain, method, task, hours)
+            logger.info(f"Retrieving strict arXiv keyword query: {query}")
+            search = arxiv.Search(
+                query=query,
+                max_results=max_results,
+                sort_by=arxiv.SortCriterion.SubmittedDate,
+                sort_order=arxiv.SortOrder.Descending,
+            )
+            try:
+                batch = list(client.results(search))
+            except arxiv.HTTPError as exc:
+                if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
+                    logger.warning(f"arXiv keyword API returned {exc.status}; skipping further API requests for this run.")
+                    break
+                raise
+            add_matches(batch)
+            if len(results) >= limit:
+                break
+        logger.info(f"Strict arXiv retrieval produced {len(results)} domain+method candidates.")
+        return results[:limit]
+
     def _retrieve_keyword_rss_fallback(self, keywords: list[str], max_results: int) -> list[dict[str, Any]]:
         categories = self.config.source.arxiv.category
         if not categories:
@@ -227,6 +338,154 @@ class ArxivRetriever(BaseRetriever):
         logger.info(f"Keyword RSS fallback matched {len(matched_entries)} arXiv papers.")
         return matched_entries
 
+    def _retrieve_strict_keyword_rss(
+        self,
+        domain: list[str],
+        method: list[str],
+        task: list[str],
+        freshness_hours: int,
+    ) -> list[dict[str, Any]]:
+        categories = self.config.source.arxiv.category
+        if not categories:
+            raise ValueError("source.arxiv.category is required for keyword RSS fallback.")
+        limit = int(self.config.source.arxiv.get("keyword_query_max_results") or 100)
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=freshness_hours)
+        include_cross_list = self.config.source.arxiv.get("include_cross_list", False)
+        allowed = {"new", "cross"} if include_cross_list else {"new"}
+        matches = []
+        seen_ids: set[str] = set()
+        for category in categories:
+            feed = feedparser.parse(f"https://rss.arxiv.org/atom/{category}")
+            if "Feed error for query" in feed.feed.title:
+                raise ValueError(f"Invalid ARXIV_QUERY: {category}.")
+            for entry in feed.entries:
+                if entry.get("arxiv_announce_type", "new") not in allowed:
+                    continue
+                published = self._raw_datetime(entry)
+                if published is None or published < cutoff:
+                    continue
+                item_id = self._raw_id(entry)
+                if item_id in seen_ids:
+                    continue
+                if self._matches_keyword_groups(entry, domain, method):
+                    entry["retrieval_source"] = "rss"
+                    matches.append(entry)
+                    seen_ids.add(item_id)
+                if len(matches) >= limit:
+                    return matches
+        logger.info(f"Strict keyword RSS fallback matched {len(matches)} papers in {freshness_hours}h.")
+        return matches
+
+    def _retrieve_strict_keyword_html(
+        self,
+        domain: list[str],
+        method: list[str],
+        task: list[str],
+        freshness_hours: int,
+        max_results: int,
+    ) -> list[dict[str, Any]]:
+        """Use arXiv's human search page as a rate-limit-safe metadata fallback."""
+        categories = self.config.source.arxiv.category or []
+        category_query = " OR ".join(f"cat:{category}" for category in categories)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=freshness_hours)
+        matches: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for domain_term in domain:
+            escaped_term = domain_term.replace('"', '\\"')
+            query = f'"{escaped_term}"'
+            if category_query:
+                query = f"{query} AND ({category_query})"
+            try:
+                response = requests.get(
+                    "https://arxiv.org/search/",
+                    params={
+                        "query": query,
+                        "searchtype": "all",
+                        "abstracts": "show",
+                        "order": "-announced_date_first",
+                        "size": min(max_results, 200),
+                    },
+                    headers={"User-Agent": "zotero-arxiv-daily/1.0 (research metadata retrieval)"},
+                    timeout=DOWNLOAD_TIMEOUT,
+                )
+                response.raise_for_status()
+            except requests.RequestException as exc:
+                logger.warning(f"arXiv HTML search fallback failed for {domain_term}: {type(exc).__name__}: {exc}")
+                continue
+
+            root = lxml_html.fromstring(response.content)
+            result_nodes = root.xpath('//li[contains(concat(" ", normalize-space(@class), " "), " arxiv-result ")]')
+            for node in result_nodes:
+                title = self._html_node_text(node, "title")
+                abstract = self._html_abstract_text(node)
+                abs_url = ""
+                paper_id = ""
+                for link in node.xpath('.//a[@href]'):
+                    found = re.search(r"arxiv\.org/abs/([^/?#]+)", link.get("href", ""))
+                    if found:
+                        paper_id = found.group(1)
+                        abs_url = f"https://arxiv.org/abs/{paper_id}"
+                        break
+                published = self._html_submitted_datetime(node)
+                if not paper_id or paper_id in seen_ids or not title or published is None or published < cutoff:
+                    continue
+                raw = {
+                    "title": title,
+                    "summary": abstract,
+                    "authors": [{"name": name} for name in self._html_authors(node)],
+                    "link": abs_url,
+                    "id": f"oai:arXiv.org:{paper_id}",
+                    "published": published.isoformat(),
+                    "updated": published.isoformat(),
+                    "tags": [],
+                    "arxiv_announce_type": "new",
+                    "retrieval_source": "html",
+                }
+                if self._matches_keyword_groups(raw, domain, method):
+                    matches.append(raw)
+                    seen_ids.add(paper_id)
+                if len(matches) >= max_results:
+                    return matches
+        logger.info(f"Strict keyword HTML fallback matched {len(matches)} papers in {freshness_hours}h.")
+        return matches
+
+    @staticmethod
+    def _html_node_text(node: Any, class_name: str) -> str:
+        nodes = node.xpath(f'.//*[contains(concat(" ", normalize-space(@class), " "), " {class_name} ")]')
+        return re.sub(r"\s+", " ", " ".join(item.text_content() for item in nodes)).strip()
+
+    @classmethod
+    def _html_abstract_text(cls, node: Any) -> str:
+        nodes = node.xpath('.//*[contains(concat(" ", normalize-space(@class), " "), " abstract ")]')
+        if not nodes:
+            return ""
+        full_nodes = nodes[0].xpath('.//*[contains(concat(" ", normalize-space(@class), " "), " abstract-full ")]')
+        source = full_nodes[0] if full_nodes else nodes[0]
+        text = re.sub(r"\s+", " ", source.text_content()).strip()
+        text = re.sub(r"\s+[^\w\s]*\s*(?:More|Less)\s*$", "", text, flags=re.IGNORECASE)
+        return re.sub(r"^Abstract:\s*", "", text, flags=re.IGNORECASE)
+
+    @classmethod
+    def _html_submitted_datetime(cls, node: Any) -> datetime | None:
+        text = re.sub(r"\s+", " ", node.text_content()).strip()
+        match = re.search(r"Submitted\s+(\d{1,2}\s+[A-Za-z]+,\s+\d{4})", text)
+        if not match:
+            return None
+        try:
+            return datetime.strptime(match.group(1), "%d %B, %Y").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _html_authors(node: Any) -> list[str]:
+        names = []
+        for link in node.xpath('.//a[contains(@href, "searchtype=author")]'):
+            name = re.sub(r"\s+", " ", link.text_content()).strip()
+            if name and name not in names:
+                names.append(name)
+        return names
+
     def _build_keyword_query(self, keywords: list[str]) -> str:
         keyword_terms = []
         for keyword in keywords:
@@ -244,6 +503,87 @@ class ArxivRetriever(BaseRetriever):
             category_terms = [f"cat:{category}" for category in categories]
             query = query + " AND (" + " OR ".join(category_terms) + ")"
         return query
+
+    def _build_grouped_keyword_query(
+        self, domain: list[str], method: list[str], task: list[str], freshness_hours: int
+    ) -> str:
+        def field_terms(values: list[str]) -> str:
+            parts = []
+            for value in values:
+                escaped = value.replace('"', '\\"')
+                parts.append(f'(ti:"{escaped}" OR abs:"{escaped}")')
+            return "(" + " OR ".join(parts) + ")"
+
+        query = f"{field_terms(domain)} AND {field_terms(method)}"
+        categories = self.config.source.arxiv.category
+        if categories:
+            query = query + " AND (" + " OR ".join(f"cat:{category}" for category in categories) + ")"
+        now = datetime.now(timezone.utc)
+        start = (now - timedelta(hours=freshness_hours)).strftime("%Y%m%d%H%M")
+        end = (now + timedelta(minutes=5)).strftime("%Y%m%d%H%M")
+        return f"{query} AND submittedDate:[{start} TO {end}]"
+
+    @staticmethod
+    def _raw_id(raw_paper: ArxivResult | dict[str, Any]) -> str:
+        if isinstance(raw_paper, dict):
+            return str(raw_paper.get("id", "")).removeprefix("oai:arXiv.org:")
+        return str(getattr(raw_paper, "entry_id", "")).rstrip("/").rsplit("/", 1)[-1]
+
+    @staticmethod
+    def _parse_datetime_value(value: Any) -> datetime | None:
+        if isinstance(value, datetime):
+            return value.astimezone(timezone.utc) if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if hasattr(value, "tm_year"):
+            return datetime(value.tm_year, value.tm_mon, value.tm_mday, value.tm_hour, value.tm_min, value.tm_sec, tzinfo=timezone.utc)
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+            except ValueError:
+                return None
+        return None
+
+    @classmethod
+    def _raw_datetime(cls, raw_paper: ArxivResult | dict[str, Any], field: str = "published") -> datetime | None:
+        if isinstance(raw_paper, dict):
+            value = raw_paper.get(f"{field}_parsed") or raw_paper.get(field)
+        else:
+            value = getattr(raw_paper, field, None)
+        return cls._parse_datetime_value(value)
+
+    @staticmethod
+    def _raw_text(raw_paper: ArxivResult | dict[str, Any]) -> str:
+        if isinstance(raw_paper, dict):
+            return f"{raw_paper.get('title', '')}\n{raw_paper.get('summary', '')}".lower()
+        return f"{getattr(raw_paper, 'title', '')}\n{getattr(raw_paper, 'summary', '')}".lower()
+
+    def _matches_keyword_groups(self, raw_paper: ArxivResult | dict[str, Any], domain: list[str], method: list[str]) -> bool:
+        text = self._raw_text(raw_paper)
+        return any(term.lower() in text for term in domain) and any(term.lower() in text for term in method)
+
+    def _deterministic_retrieval_score(self, paper: Paper) -> float:
+        domain, method, task = self._keyword_groups()
+        title = paper.title.lower()
+        abstract = paper.abstract.lower()
+        score = 0.0
+        score += 6 if any(term.lower() in title for term in domain) else 3
+        score += 4 if any(term.lower() in title for term in method) else 2
+        score += 2 if any(term.lower() in f"{title}\n{abstract}" for term in task) else 0
+        return score
+
+    def _attach_metadata(self, paper: Paper, raw_paper: ArxivResult | dict[str, Any]) -> None:
+        published = self._raw_datetime(raw_paper)
+        paper.published_date = published.isoformat() if published else None
+        updated = self._raw_datetime(raw_paper, "updated") or published
+        paper.updated_date = updated.isoformat() if updated else None
+        paper.categories = [str(category) for category in (raw_paper.get("tags", []) if isinstance(raw_paper, dict) else getattr(raw_paper, "categories", []))]
+        paper.retrieval_freshness_hours = int(self.config.source.arxiv.get("freshness_hours") or 48)
+        paper.freshness_bucket = 1 if published and published >= datetime.now(timezone.utc) - timedelta(hours=paper.retrieval_freshness_hours) else 0
+        paper.matched_terms = {
+            "domain": [term for term in self._keyword_groups()[0] if term.lower() in f"{paper.title}\n{paper.abstract}".lower()],
+            "method": [term for term in self._keyword_groups()[1] if term.lower() in f"{paper.title}\n{paper.abstract}".lower()],
+            "task": [term for term in self._keyword_groups()[2] if term.lower() in f"{paper.title}\n{paper.abstract}".lower()],
+        }
+        paper.retrieval_source = raw_paper.get("retrieval_source", "api") if isinstance(raw_paper, dict) else "api"
 
     def convert_to_paper(self, raw_paper: ArxivResult | dict[str, Any]) -> Paper:
         if isinstance(raw_paper, dict) or (hasattr(raw_paper, "get") and not hasattr(raw_paper, "pdf_url")):

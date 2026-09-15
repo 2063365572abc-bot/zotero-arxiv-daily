@@ -68,6 +68,9 @@ class CandidateRecord:
     published_date: str | None
     categories: list[str]
     raw_score: float | None
+    retrieval_source: str = "unknown"
+    freshness_bucket: int = 0
+    matched_terms: dict[str, list[str]] | None = None
 
 
 @dataclass
@@ -103,9 +106,12 @@ def paper_to_candidate(paper: Paper) -> CandidateRecord:
         abstract=paper.abstract,
         url=paper.url,
         pdf_url=paper.pdf_url,
-        published_date=None,
-        categories=[],
+        published_date=getattr(paper, "published_date", None),
+        categories=list(getattr(paper, "categories", []) or []),
         raw_score=paper.score,
+        retrieval_source=getattr(paper, "retrieval_source", "unknown"),
+        freshness_bucket=int(getattr(paper, "freshness_bucket", 0)),
+        matched_terms=getattr(paper, "matched_terms", None),
     )
 
 
@@ -1017,6 +1023,7 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     selected_count = _config_int(config, "daily_pipeline", "selected_count", 3)
     llm_rerank_count = _config_int(config, "daily_pipeline", "llm_rerank_count", 8)
     llm_selection_enabled = _config_bool(config, "daily_pipeline", "llm_selection_enabled", True)
+    retrieval_only = _config_bool(config, "daily_pipeline", "retrieval_only", False)
     card_mode = _config_get(config, "daily_pipeline", "card_mode", "brief")
     full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 55_000)
     full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 12_000)
@@ -1024,6 +1031,35 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     executor = Executor(config)
+    if retrieval_only:
+        all_papers: list[Paper] = []
+        for source, retriever in executor.retrievers.items():
+            logger.info(f"Retrieving {source} papers in retrieval-only mode...")
+            papers = retriever.retrieve_papers()
+            logger.info(f"Retrieved {len(papers)} {source} papers")
+            all_papers.extend(papers)
+        candidates = all_papers[:candidate_count]
+        write_candidates(candidates, output_dir, limit=candidate_count)
+        write_selected_papers([], output_dir)
+        write_json(output_dir / "retrieval-manifest.json", {
+            "status": "retrieval_only",
+            "model_calls": 0,
+            "embedding_calls": 0,
+            "pdf_downloads": 0,
+            "candidate_count": len(candidates),
+            "retrieval_limit": candidate_count,
+            "retrieval_sources": {
+                source: sum(1 for paper in candidates if getattr(paper, "retrieval_source", "unknown") == source)
+                for source in sorted({getattr(paper, "retrieval_source", "unknown") for paper in candidates})
+            },
+            "freshness_buckets": {
+                "recent_window": sum(1 for paper in candidates if getattr(paper, "freshness_bucket", 0) == 1),
+                "backfill": sum(1 for paper in candidates if getattr(paper, "freshness_bucket", 0) == 0),
+            },
+        })
+        write_daily_index(output_dir)
+        return output_dir
+
     corpus = executor.filter_corpus(executor.fetch_zotero_corpus())
     if not corpus:
         raise RuntimeError("No Zotero corpus papers found; cannot personalize candidate selection.")

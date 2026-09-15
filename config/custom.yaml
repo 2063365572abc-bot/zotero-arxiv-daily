@@ -27,6 +27,7 @@ daily_pipeline:
   selected_count: ${oc.env:DAILY_PIPELINE_SELECTED_COUNT,3}
   llm_rerank_count: ${oc.env:DAILY_PIPELINE_LLM_RERANK_COUNT,8}
   llm_selection_enabled: ${oc.env:DAILY_PIPELINE_LLM_SELECTION_ENABLED,true}
+  retrieval_only: ${oc.env:DAILY_PIPELINE_RETRIEVAL_ONLY,false}
   card_mode: ${oc.env:DAILY_PIPELINE_CARD_MODE,brief}
   full_card_input_chars: ${oc.env:DAILY_PIPELINE_FULL_CARD_INPUT_CHARS,55000}
   full_card_output_tokens: ${oc.env:DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS,12000}
@@ -52,14 +53,22 @@ llm:
 source:
   arxiv:
     category: [
-      "cs.AI","cs.CL","cs.CV","cs.LG","cs.NE",
-      "stat.ML","stat.AP",
-      "q-bio.BM","q-bio.CB","q-bio.GN","q-bio.MN","q-bio.NC","q-bio.OT","q-bio.PE","q-bio.QM","q-bio.SC","q-bio.TO"
+      "q-bio.GN","q-bio.QM","q-bio.CB","q-bio.TO","cs.LG","cs.CV","cs.AI"
     ]
     keywords: ${oc.decode:${oc.env:ARXIV_KEYWORDS,null}}
-    keyword_query_max_results: ${oc.env:ARXIV_KEYWORD_QUERY_MAX_RESULTS,20}
+    domain_keywords: ${oc.decode:${oc.env:ARXIV_DOMAIN_KEYWORDS,null}}
+    method_keywords: ${oc.decode:${oc.env:ARXIV_METHOD_KEYWORDS,null}}
+    task_keywords: ${oc.decode:${oc.env:ARXIV_TASK_KEYWORDS,null}}
+    keyword_query_max_results: ${oc.env:ARXIV_KEYWORD_QUERY_MAX_RESULTS,100}
+    retrieval_result_limit: ${oc.env:ARXIV_RETRIEVAL_RESULT_LIMIT,20}
+    freshness_hours: ${oc.env:ARXIV_FRESHNESS_HOURS,48}
+    freshness_fallback_hours: ${oc.env:ARXIV_FRESHNESS_FALLBACK_HOURS,168}
+    retrieval_backfill_hours: ${oc.env:ARXIV_RETRIEVAL_BACKFILL_HOURS,17520}
+    strict_rss_first: ${oc.env:ARXIV_STRICT_RSS_FIRST,true}
+    strict_html_fallback_enabled: ${oc.env:ARXIV_STRICT_HTML_FALLBACK_ENABLED,true}
+    html_fallback_result_limit: ${oc.env:ARXIV_HTML_FALLBACK_RESULT_LIMIT,50}
     keyword_fallback_to_rss: ${oc.env:ARXIV_KEYWORD_FALLBACK_TO_RSS,true}
-    include_cross_list: true
+    include_cross_list: ${oc.env:ARXIV_INCLUDE_CROSS_LIST,false}
     use_rss_metadata: ${oc.env:ARXIV_USE_RSS_METADATA,true}
     extract_full_text: ${oc.env:ARXIV_EXTRACT_FULL_TEXT,false}
   biorxiv:
