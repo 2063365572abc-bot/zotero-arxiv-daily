@@ -2584,6 +2584,10 @@ def run_full_research_radar_pipeline(
             state.conn.commit()
         write_json(output_dir / "zotero_uploads.json", zotero_uploads)
 
+        zotero_upload_success_count = sum(1 for item in zotero_uploads if item.get("status") == "uploaded")
+        zotero_upload_partial_count = sum(1 for item in zotero_uploads if item.get("status") == "partial")
+        zotero_upload_failure_count = sum(1 for item in zotero_uploads if item.get("status") == "failed")
+
         pdf_success_count = 0
         card_success_count = 0
         for folder in paper_folders:
@@ -2600,7 +2604,7 @@ def run_full_research_radar_pipeline(
 
         daily_audit.update(
             {
-                "status": "complete",
+                "status": "complete" if zotero_upload_success_count == len(selected) else "failed",
                 "raw_arxiv_count": len(raw_candidates),
                 "candidate_50_count": len(candidates),
                 "excluded_previously_promoted_count": len(excluded_candidates),
@@ -2628,8 +2632,9 @@ def run_full_research_radar_pipeline(
                 "top3_from_top20": all(record.arxiv_id in {getattr(paper, "arxiv_id", None) for paper in top20} for record in selected),
                 "pdf_success_count": pdf_success_count,
                 "card_success_count": card_success_count,
-                "zotero_upload_success_count": sum(1 for item in zotero_uploads if item.get("status") == "uploaded"),
-                "zotero_upload_partial_count": sum(1 for item in zotero_uploads if item.get("status") == "partial"),
+                "zotero_upload_success_count": zotero_upload_success_count,
+                "zotero_upload_partial_count": zotero_upload_partial_count,
+                "zotero_upload_failure_count": zotero_upload_failure_count,
             }
         )
         state.conn.execute(
@@ -2644,6 +2649,12 @@ def run_full_research_radar_pipeline(
         write_json(output_dir / "daily_audit.json", daily_audit)
         write_daily_report_markdown(output_dir, daily_audit, selected)
         write_daily_index(output_dir)
+        if zotero_upload_success_count != len(selected):
+            raise RuntimeError(
+                "zotero_upload_incomplete: "
+                f"{zotero_upload_success_count}/{len(selected)} selected papers uploaded; "
+                f"failed={zotero_upload_failure_count}, partial={zotero_upload_partial_count}"
+            )
         return output_dir
     finally:
         state.close()
