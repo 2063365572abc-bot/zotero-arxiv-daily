@@ -127,10 +127,32 @@ def _extract_text_from_tar_worker(source_url: str, paper_id: str, paper_title: s
 class ArxivRetriever(BaseRetriever):
     def __init__(self, config):
         super().__init__(config)
-        if self.config.source.arxiv.category is None:
+        if self.config.source.arxiv.category is None and not self.config.source.arxiv.get("keywords"):
             raise ValueError("category must be specified for arxiv.")
 
     def _retrieve_raw_papers(self) -> list[ArxivResult]:
+        keywords = self.config.source.arxiv.get("keywords") or []
+        if keywords:
+            max_results = int(self.config.source.arxiv.get("keyword_query_max_results") or self.max_candidate_num or 20)
+            client = arxiv.Client(num_retries=1, delay_seconds=3, page_size=max_results)
+            query = self._build_keyword_query(list(keywords))
+            logger.info(f"Retrieving arXiv papers by keyword query: {query}")
+            search = arxiv.Search(
+                query=query,
+                max_results=max_results,
+                sort_by=arxiv.SortCriterion.SubmittedDate,
+                sort_order=arxiv.SortOrder.Descending,
+            )
+            try:
+                return list(client.results(search))
+            except arxiv.HTTPError as exc:
+                if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
+                    logger.warning(
+                        f"arXiv keyword API returned {exc.status}; falling back to category RSS with local keyword filtering."
+                    )
+                    return self._retrieve_keyword_rss_fallback(list(keywords), max_results)
+                raise
+
         client = arxiv.Client(num_retries=10, delay_seconds=10)
         query = '+'.join(self.config.source.arxiv.category)
         include_cross_list = self.config.source.arxiv.get("include_cross_list", False)
@@ -178,6 +200,50 @@ class ArxivRetriever(BaseRetriever):
         bar.close()
 
         return raw_papers
+
+    def _retrieve_keyword_rss_fallback(self, keywords: list[str], max_results: int) -> list[dict[str, Any]]:
+        categories = self.config.source.arxiv.category
+        if not categories:
+            raise ValueError("source.arxiv.category is required for keyword RSS fallback.")
+
+        query = '+'.join(categories)
+        include_cross_list = self.config.source.arxiv.get("include_cross_list", False)
+        feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
+        if 'Feed error for query' in feed.feed.title:
+            raise Exception(f"Invalid ARXIV_QUERY: {query}.")
+
+        allowed_announce_types = {"new", "cross"} if include_cross_list else {"new"}
+        normalized_keywords = [str(keyword).strip().lower() for keyword in keywords if str(keyword).strip()]
+        matched_entries = []
+        for entry in feed.entries:
+            if entry.get("arxiv_announce_type", "new") not in allowed_announce_types:
+                continue
+            searchable_text = f"{entry.get('title', '')}\n{entry.get('summary', '')}".lower()
+            if any(keyword in searchable_text for keyword in normalized_keywords):
+                matched_entries.append(entry)
+            if len(matched_entries) >= max_results:
+                break
+
+        logger.info(f"Keyword RSS fallback matched {len(matched_entries)} arXiv papers.")
+        return matched_entries
+
+    def _build_keyword_query(self, keywords: list[str]) -> str:
+        keyword_terms = []
+        for keyword in keywords:
+            keyword = str(keyword).strip()
+            if not keyword:
+                continue
+            escaped = keyword.replace('"', '\\"')
+            keyword_terms.append(f'all:"{escaped}"')
+        if not keyword_terms:
+            raise ValueError("source.arxiv.keywords must contain at least one non-empty keyword.")
+
+        query = "(" + " OR ".join(keyword_terms) + ")"
+        categories = self.config.source.arxiv.category
+        if categories:
+            category_terms = [f"cat:{category}" for category in categories]
+            query = query + " AND (" + " OR ".join(category_terms) + ")"
+        return query
 
     def convert_to_paper(self, raw_paper: ArxivResult | dict[str, Any]) -> Paper:
         if isinstance(raw_paper, dict) or (hasattr(raw_paper, "get") and not hasattr(raw_paper, "pdf_url")):

@@ -54,6 +54,9 @@ source:
       "stat.ML","stat.AP",
       "q-bio.BM","q-bio.CB","q-bio.GN","q-bio.MN","q-bio.NC","q-bio.OT","q-bio.PE","q-bio.QM","q-bio.SC","q-bio.TO"
     ]
+    keywords: ${oc.decode:${oc.env:ARXIV_KEYWORDS,null}}
+    keyword_query_max_results: ${oc.env:ARXIV_KEYWORD_QUERY_MAX_RESULTS,20}
+    keyword_fallback_to_rss: ${oc.env:ARXIV_KEYWORD_FALLBACK_TO_RSS,true}
     include_cross_list: true
     use_rss_metadata: ${oc.env:ARXIV_USE_RSS_METADATA,true}
     extract_full_text: ${oc.env:ARXIV_EXTRACT_FULL_TEXT,false}

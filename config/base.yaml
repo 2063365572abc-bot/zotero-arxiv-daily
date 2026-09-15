@@ -7,6 +7,9 @@ zotero:
 source:
   arxiv:
     category: null # The categories of target arxiv papers. Find the abbr of your research area from [here](https://arxiv.org/category_taxonomy). Example: ["cs.AI","cs.CV","cs.LG","cs.CL"]
+    keywords: null # Optional keyword phrases for arXiv API search over title/abstract/full metadata. Example: ["single-cell foundation model","spatial transcriptomics"]
+    keyword_query_max_results: 20 # Maximum arXiv API results returned for keyword search before reranking. Example: 20
+    keyword_fallback_to_rss: true # When arXiv search API is rate-limited, pull category RSS and filter by keywords locally. Example: true
     include_cross_list: false # Whether to include arXiv cross-list papers in subscribed categories. Example: true
     use_rss_metadata: true # Whether to use RSS title/abstract metadata instead of slower arXiv API detail calls. Example: true
     extract_full_text: false # Whether to download and extract arXiv source/html/pdf text. This is slower. Example: true
