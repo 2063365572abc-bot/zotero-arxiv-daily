@@ -33,9 +33,11 @@ daily_pipeline:
   llm_selection_enabled: ${oc.env:DAILY_PIPELINE_LLM_SELECTION_ENABLED,true}
   retrieval_only: ${oc.env:DAILY_PIPELINE_RETRIEVAL_ONLY,false}
   selection_only: ${oc.env:DAILY_PIPELINE_SELECTION_ONLY,false}
-  card_mode: ${oc.env:DAILY_PIPELINE_CARD_MODE,brief}
-  full_card_input_chars: ${oc.env:DAILY_PIPELINE_FULL_CARD_INPUT_CHARS,55000}
-  full_card_output_tokens: ${oc.env:DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS,12000}
+  card_mode: ${oc.env:DAILY_PIPELINE_CARD_MODE,one_shot_full}
+  full_card_input_chars: ${oc.env:DAILY_PIPELINE_FULL_CARD_INPUT_CHARS,160000}
+  full_card_output_tokens: ${oc.env:DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS,16000}
+  three_card_digest_input_chars: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_INPUT_CHARS,180000}
+  three_card_digest_output_tokens: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS,5000}
 
 daily_radar:
   quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}
@@ -44,7 +46,7 @@ llm:
   api:
     key: ${oc.env:OPENAI_API_KEY}
     base_url: ${oc.env:OPENAI_API_BASE}
-    timeout: ${oc.env:OPENAI_API_TIMEOUT,60}
+    timeout: ${oc.env:OPENAI_API_TIMEOUT,900}
   api_mode: chat_completion
   generation_kwargs:
     model: ${oc.env:LLM_MODEL,qwen3.8-max}

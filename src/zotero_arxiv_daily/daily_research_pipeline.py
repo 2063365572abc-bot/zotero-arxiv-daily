@@ -101,6 +101,7 @@ class SelectionRecord:
     scoring: dict[str, Any]
     selection_reason: str
     arxiv_id: str | None = None
+    published_date: str | None = None
 
 
 def daily_output_dir(root: str | Path = "outputs/daily", date: datetime | None = None) -> Path:
@@ -209,6 +210,7 @@ def select_papers_for_deep_read(
                 abstract=paper.abstract,
                 url=paper.url,
                 pdf_url=paper.pdf_url,
+                published_date=getattr(paper, "published_date", None),
                 score=paper.score,
                 role=role,
                 scoring=scoring,
@@ -529,25 +531,110 @@ def download_pdf(pdf_url: str | None, output_pdf: str | Path, timeout: int = 60)
     return metadata
 
 
+def _paper_evidence_inventory(pages: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Build a small, page-grounded inventory before asking the model to read."""
+    figures: list[dict[str, Any]] = []
+    tables: list[dict[str, Any]] = []
+    equations: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    caption_re = re.compile(r"^\s*(Figure|Fig\.|Table)\s+(\d+[A-Za-z]?)\s*[:.]?\s*(.*)$", re.I)
+    equation_re = re.compile(r"(?:^|\s)[(（](\d{1,3})[)）]\s*$")
+
+    for page in pages:
+        lines = str(page.get("text") or "").splitlines()
+        for index, line in enumerate(lines):
+            match = caption_re.match(line)
+            if match:
+                kind = "Table" if match.group(1).lower().startswith("table") else "Figure"
+                number = match.group(2)
+                key = (kind, number)
+                if key not in seen:
+                    seen.add(key)
+                    caption_lines = [match.group(3).strip()]
+                    for following in lines[index + 1 : index + 4]:
+                        following = " ".join(following.split())
+                        if not following or caption_re.match(following):
+                            break
+                        caption_lines.append(following)
+                    item = {
+                        "id": f"{kind} {number}",
+                        "caption": " ".join(part for part in caption_lines if part),
+                        "pdf_page": page["page"],
+                    }
+                    (tables if kind == "Table" else figures).append(item)
+            equation_context = " ".join(lines[max(0, index - 3) : index + 1])
+            equation_match = equation_re.search(line)
+            if equation_match and not re.search(r"=|∈|∼|⊙|→|∥|≤|≥|≠|\barg\b", equation_context):
+                equation_match = None
+            if equation_match:
+                number = equation_match.group(1)
+                key = ("Equation", number)
+                if key not in seen:
+                    seen.add(key)
+                    equations.append(
+                        {
+                            "id": f"Equation {number}",
+                            "context": equation_context,
+                            "pdf_page": page["page"],
+                        }
+                    )
+
+    def natural_key(item: dict[str, Any]) -> tuple[int, str]:
+        match = re.search(r"(\d+)([A-Za-z]?)$", str(item.get("id") or ""))
+        return (int(match.group(1)), match.group(2)) if match else (999999, str(item.get("id") or ""))
+
+    return {
+        "figures": sorted(figures, key=natural_key),
+        "tables": sorted(tables, key=natural_key),
+        "equations": sorted(equations, key=natural_key),
+    }
+
+
 def extract_source_bundle(pdf_path: str | Path, output_path: str | Path) -> dict[str, Any]:
     pdf_path = Path(pdf_path)
     doc = pymupdf.open(pdf_path)
     pages = []
     for page_index, page in enumerate(doc, start=1):
+        text = page.get_text("text").strip()
+        blocks = []
+        for block_index, block in enumerate(page.get_text("blocks"), start=1):
+            block_text = str(block[4] or "").strip() if len(block) > 4 else ""
+            if block_text:
+                blocks.append({"block": block_index, "text": block_text})
         pages.append(
             {
                 "page": page_index,
-                "text": page.get_text().strip(),
-                "blocks": [],
+                "pdf_page": page_index,
+                "text": text,
+                "character_count": len(text),
+                "blocks": blocks,
             }
         )
+    evidence_inventory = _paper_evidence_inventory(pages)
+    total_characters = sum(page["character_count"] for page in pages)
+    extraction_confidence = "high" if all(page["character_count"] >= 50 for page in pages) else "mixed"
     bundle = {
+        "schema_version": "1.1",
+        "source_type": "pdf",
         "pdf_sha256": _file_sha256(pdf_path),
+        "source_sha256": _file_sha256(pdf_path),
         "page_count": doc.page_count,
         "pages": pages,
-        "sections": [],
-        "figures": [],
-        "tables": [],
+        "sections": [
+            {"title": line.strip(), "pdf_page": page["page"]}
+            for page in pages
+            for line in page["text"].splitlines()
+            if re.match(r"^\s*(?:\d+(?:\.\d+)*\s+)?[A-Z][A-Za-z0-9 ,/&-]{2,80}\s*$", line.strip())
+        ],
+        "evidence_inventory": evidence_inventory,
+        "figures": evidence_inventory["figures"],
+        "tables": evidence_inventory["tables"],
+        "extraction": {
+            "engine": "PyMuPDF",
+            "total_characters": total_characters,
+            "confidence": extraction_confidence,
+            "visual_pages_rendered": False,
+        },
     }
     write_json(output_path, bundle)
     return bundle
@@ -609,7 +696,9 @@ def _page_texts_for_llm(bundle: dict[str, Any], max_chars: int = 1500) -> tuple[
     return "\n\n".join(chunks), refs or ["source_bundle"]
 
 
-def _source_text_for_full_card(bundle: dict[str, Any], max_chars: int = 55_000) -> str:
+def _source_text_for_full_card(
+    bundle: dict[str, Any], max_chars: int | None = 55_000, require_full_source: bool = False
+) -> str:
     chunks: list[str] = []
     total = 0
     for page in bundle.get("pages", []):
@@ -618,7 +707,11 @@ def _source_text_for_full_card(bundle: dict[str, Any], max_chars: int = 55_000) 
             continue
         page_no = int(page.get("page") or len(chunks) + 1)
         block = f"[Paper: PDF p. {page_no}]\n{text}\n"
-        if total + len(block) > max_chars:
+        if max_chars is not None and total + len(block) > max_chars:
+            if require_full_source:
+                raise ValueError(
+                    f"full_source_exceeds_limit: chars={total + len(block)} limit={max_chars}"
+                )
             remaining = max_chars - total
             if remaining > 1000:
                 chunks.append(block[:remaining])
@@ -674,8 +767,19 @@ def _normalise_card_sections(raw_sections: Any) -> dict[str, str]:
     return sections
 
 
-def build_one_shot_full_card_prompt(paper: SelectionRecord, bundle: dict[str, Any], max_input_chars: int = 55_000) -> str:
-    source_text = _source_text_for_full_card(bundle, max_chars=max_input_chars)
+def build_one_shot_full_card_prompt(
+    paper: SelectionRecord,
+    bundle: dict[str, Any],
+    max_input_chars: int = 160_000,
+    require_full_source: bool = True,
+) -> str:
+    source_text = _source_text_for_full_card(
+        bundle,
+        max_chars=max_input_chars,
+        require_full_source=require_full_source,
+    )
+    inventory = bundle.get("evidence_inventory", {}) or {}
+    inventory_text = json.dumps(inventory, ensure_ascii=False, indent=2)
     return f"""
 你正在执行用户的“一多科研”单篇论文深读流程。请一次性输出一个完整的 Paper Card Markdown。
 
@@ -683,10 +787,12 @@ def build_one_shot_full_card_prompt(paper: SelectionRecord, bundle: dict[str, An
 - 只输出 Markdown，不要解释你将如何做。
 - 中文解释，保留英文技术名词、模型名、数据集名、指标、公式符号。
 - 不要夸大，不要伪造。
-- 每个实质性论文事实都带来源指针，例如 [Paper: PDF p. 1]。
+- 每个实质性论文事实都带来源指针，例如 [Paper: PDF p. 1]；页码必须来自输入文本的页码标记。
 - 你的判断用 [Analysis]，研究想法用 [Hypothesis]。
 - 不足以判断就写 Not assessable from supplied material。
 - 作者明确限制和你的批判性分析分开。
+- 必须完整覆盖输入中的主要 Figure、Table、Equation，并在相关章节中明确提及。
+- 不要凭标题或常识补写作者机构、正式发表信息、代码地址或数据地址；这些信息不在本文证据中时写未核验。
 
 开头必须包含：
 > Source coverage: Full paper / Partial paper
@@ -725,17 +831,21 @@ def build_one_shot_full_card_prompt(paper: SelectionRecord, bundle: dict[str, An
 
 用户研究方向连接：single-cell foundation models、spatial transcriptomics、graph neural networks、multi-omics、biomedical AI、perturbation prediction、cell state representation、cross-modal alignment。没有直接关系时说明“弱连接/方法论连接”。
 
+输入源清单（必须覆盖）：
+{inventory_text}
+
 论文元数据：
 Title: {paper.title}
 Source: {paper.source}
 URL: {paper.url}
 PDF URL: {paper.pdf_url or "missing"}
 Authors: {", ".join(paper.authors[:12])}
+Published: {paper.published_date or "unknown"}
 Abstract: {paper.abstract}
 Selection role: {paper.role}
 Selection reason: {paper.selection_reason}
 
-论文全文摘录，已带 PDF 页码指针：
+论文全文，已逐页带 PDF 页码指针。下面内容是本次请求的完整输入，不得假设未提供的章节：
 {source_text}
 """
 
@@ -746,10 +856,16 @@ def generate_one_shot_full_card_markdown(
     output_path: str | Path,
     openai_client: OpenAI,
     llm_params: dict[str, Any],
-    max_input_chars: int = 55_000,
+    max_input_chars: int = 160_000,
     max_output_tokens: int = 12_000,
+    require_full_source: bool = True,
 ) -> dict[str, Any]:
-    prompt = build_one_shot_full_card_prompt(paper, bundle, max_input_chars=max_input_chars)
+    prompt = build_one_shot_full_card_prompt(
+        paper,
+        bundle,
+        max_input_chars=max_input_chars,
+        require_full_source=require_full_source,
+    )
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
     generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), max_output_tokens)
     generation_kwargs.setdefault("temperature", 0.2)
@@ -789,9 +905,197 @@ def generate_one_shot_full_card_markdown(
         "status": "one_shot_full_card",
         "prompt_chars": len(prompt),
         "card_chars": len(markdown),
+        "source_pages": len(bundle.get("pages", [])),
+        "source_characters": sum(int(page.get("character_count", 0)) for page in bundle.get("pages", [])),
+        "source_fully_included": True,
+        "evidence_inventory": {
+            key: len(value or []) for key, value in (bundle.get("evidence_inventory", {}) or {}).items()
+        },
         "model": generation_kwargs.get("model"),
         "max_input_chars": max_input_chars,
         "max_output_tokens": generation_kwargs["max_tokens"],
+    }
+
+
+def build_three_card_digest_prompt(
+    papers: list[SelectionRecord],
+    card_markdowns: list[str],
+    max_input_chars: int = 180_000,
+    report_date: str | None = None,
+) -> str:
+    if len(papers) != len(card_markdowns):
+        raise ValueError("papers_and_cards_length_mismatch")
+    blocks: list[str] = []
+    total = 0
+    for index, (paper, card) in enumerate(zip(papers, card_markdowns), start=1):
+        block = (
+            f"\n===== CARD {index} =====\n"
+            f"Title: {paper.title}\n"
+            f"arXiv ID: {paper.arxiv_id or 'unknown'}\n"
+            f"URL: {paper.url}\n"
+            f"Published metadata: {getattr(paper, 'published_date', None) or 'unknown'}\n"
+            f"Selection role: {paper.role}\n"
+            f"Selection reason: {paper.selection_reason}\n"
+            f"CARD CONTENT:\n{card}\n"
+        )
+        total += len(block)
+        if total > max_input_chars:
+            raise ValueError(
+                f"three_cards_exceed_limit: chars={total} limit={max_input_chars}"
+            )
+        blocks.append(block)
+
+    report_date = report_date or datetime.now().strftime("%Y-%m-%d")
+    return f"""
+你是“一多科研”每日科研雷达的日报编辑。下面提供了三篇已经完成全文深读的 Paper Card。
+请只根据这三篇 Card 和它们提供的论文元数据，生成一份适合微信阅读的精简 Markdown 日报。
+
+你的任务不是重新发明论文事实，而是完成三篇 Card 的交叉综合：
+1. 提炼三篇共同的研究趋势，并说明它们共同指向的技术演化；
+2. 比较三篇在数据、任务、模型、监督信号、验证方式上的差异；
+3. 判断证据强弱，区分预印本结果、benchmark 提升和真实生物学验证；
+4. 说明每篇论文对用户“空间转录组 + 机器学习”的直接价值、方法启发或仅趋势参考；
+5. 给出优先阅读顺序、最值得复现的方法、最值得检查的数据或实验；
+6. 指出跨论文总结的风险、信息缺口和不能下的结论。
+
+输出硬性要求：
+- 只输出 Markdown，不要输出 HTML、JSON、代码块或分析过程；
+- 不超过 3800 个字符；
+- 标题必须严格使用：`【一多科研日报｜{report_date}】`，不得自行推断、改写或使用其他日期；
+- 必须有“今日趋势”“重点论文”“今日结论”三个部分；
+- 重点论文必须恰好 1、2、3 三篇，标题必须与输入一致；
+- 每篇都要有：作者/来源、发布日期或“未核验”、核心逻辑、值得阅读的原因、局限或风险、原文链接；
+- 没有证据的作者机构、实验室、正式期刊、DOI 不得猜测，写“未核验”；
+- Card 中的论文事实不要改写成更强的结论；
+- 跨论文推断使用“[趋势判断]”，阅读建议使用“[建议]”，风险使用“[风险]”。
+
+推荐格式：
+【一多科研日报｜{report_date}】
+
+来源：arXiv
+筛选链：50篇候选 → embedding Top20 → Qwen Top3
+
+## 今日趋势
+150—250字，必须是三篇 Card 的交叉分析。
+
+## 重点论文
+### 1. 论文标题
+作者/来源：...
+发布日期：...
+核心逻辑：...
+为什么值得看：...
+局限/风险：...
+原文：...
+
+### 2. ...
+### 3. ...
+
+## 今日结论
+优先阅读、方法启发、趋势参考和主要风险。
+
+三篇 Card 内容如下：
+{''.join(blocks)}
+"""
+
+
+def _strip_markdown_fence(text: str) -> str:
+    value = (text or "").strip()
+    match = re.fullmatch(r"```(?:markdown|md)?\s*(.*?)\s*```", value, flags=re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else value
+
+
+def audit_three_card_digest(
+    markdown: str,
+    papers: list[SelectionRecord],
+    report_date: str | None = None,
+) -> dict[str, Any]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not markdown.strip():
+        errors.append("digest_empty")
+    if report_date and f"【一多科研日报｜{report_date}】" not in markdown:
+        errors.append("digest_wrong_or_missing_report_date")
+    if "<html" in markdown.lower() or "<div" in markdown.lower():
+        errors.append("digest_contains_html")
+    for heading in ("今日趋势", "重点论文", "今日结论"):
+        if heading not in markdown:
+            errors.append(f"digest_missing:{heading}")
+    if len(papers) != 3:
+        errors.append("digest_requires_three_papers")
+    for index, paper in enumerate(papers, start=1):
+        if f"### {index}." not in markdown and f"{index}. {paper.title}" not in markdown:
+            errors.append(f"digest_missing_paper_slot:{index}")
+        if paper.title not in markdown:
+            errors.append(f"digest_missing_title:{paper.arxiv_id or paper.title}")
+        if paper.url and paper.url not in markdown:
+            warnings.append(f"digest_missing_url:{paper.arxiv_id or paper.title}")
+    if len(markdown) > 3800:
+        warnings.append("digest_exceeds_wechat_recommended_length")
+    status = "fail" if errors else ("pass_with_warnings" if warnings else "pass")
+    return {
+        "schema_version": "1.0",
+        "status": status,
+        "character_count": len(markdown),
+        "errors": errors,
+        "warnings": warnings,
+    }
+
+
+def generate_three_card_digest_markdown(
+    papers: list[SelectionRecord],
+    card_paths: list[str | Path],
+    output_path: str | Path,
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+    max_input_chars: int = 180_000,
+    max_output_tokens: int = 5_000,
+    report_date: str | None = None,
+) -> dict[str, Any]:
+    card_markdowns = [Path(path).read_text(encoding="utf-8") for path in card_paths]
+    prompt = build_three_card_digest_prompt(
+        papers,
+        card_markdowns,
+        max_input_chars=max_input_chars,
+        report_date=report_date,
+    )
+    generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
+    generation_kwargs.pop("stream", None)
+    generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), max_output_tokens)
+    generation_kwargs["temperature"] = min(float(generation_kwargs.get("temperature", 0.2)), 0.2)
+    content = _request_llm(
+        openai_client,
+        {**llm_params, "generation_kwargs": generation_kwargs},
+        [
+            {
+                "role": "system",
+                "content": "You are a rigorous scientific digest editor. Return only compact Markdown.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+    )
+    markdown = _strip_markdown_fence(content)
+    audit = audit_three_card_digest(markdown, papers, report_date=report_date)
+    write_json(Path(output_path).with_suffix(".json"), {
+        "status": "generated" if audit["status"] != "fail" else "failed_audit",
+        "prompt_chars": len(prompt),
+        "card_count": len(card_paths),
+        "card_chars": [len(card) for card in card_markdowns],
+        "model": generation_kwargs.get("model"),
+        "report_date": report_date,
+        "audit": audit,
+    })
+    if audit["status"] == "fail":
+        raise ValueError(f"three_card_digest_audit_failed: {audit['errors']}")
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(markdown, encoding="utf-8")
+    return {
+        "status": "three_card_digest",
+        "prompt_chars": len(prompt),
+        "digest_chars": len(markdown),
+        "model": generation_kwargs.get("model"),
+        "report_date": report_date,
+        "audit": audit,
     }
 
 
@@ -1011,8 +1315,14 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
     ok, reason = validate_pdf(pdf_path)
     if not ok:
         errors.append(reason or "invalid_pdf")
+    bundle: dict[str, Any] | None = None
     if not bundle_path.exists():
         errors.append("source_bundle_missing")
+    else:
+        try:
+            bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            errors.append(f"source_bundle_invalid:{type(exc).__name__}")
     if not card_path.exists():
         errors.append("paper_card_missing")
     else:
@@ -1020,16 +1330,63 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
         for section in CARD_SECTIONS:
             if f"## {section}" not in card:
                 errors.append(f"missing_section:{section}")
-        source_pointer_count = card.count("Source refs:") + card.count("[Paper:")
-        if source_pointer_count < 5:
-            warnings.append("fewer_than_5_source_refs")
+        source_pointer_count = card.count("[Paper:")
+        if source_pointer_count < 10:
+            warnings.append("fewer_than_10_source_refs")
+        if "Source coverage: Full paper" not in card:
+            warnings.append("card_does_not_claim_full_paper_coverage")
+        if "Extraction confidence: Low" in card:
+            errors.append("low_extraction_confidence")
+        if bundle is not None:
+            page_count = int(bundle.get("page_count") or 0)
+            invalid_pages = [
+                int(match)
+                for match in re.findall(r"\[Paper:\s*PDF p\.\s*(\d+)\]", card)
+                if int(match) < 1 or int(match) > page_count
+            ]
+            if invalid_pages:
+                errors.append(f"page_pointer_out_of_range:{sorted(set(invalid_pages))}")
+            inventory = bundle.get("evidence_inventory", {}) or {}
+            for key, label in (("figures", "figure"), ("tables", "table"), ("equations", "equation")):
+                items = inventory.get(key, []) if isinstance(inventory, dict) else []
+                missing = []
+                for item in items:
+                    item_id = str(item.get("id") or "")
+                    number = re.search(r"(\d+[A-Za-z]?)$", item_id)
+                    aliases = [item_id]
+                    if number:
+                        n = number.group(1)
+                        if label == "figure":
+                            aliases.extend([f"Figure {n}", f"Fig. {n}", f"图{n}", f"图 {n}"])
+                        elif label == "table":
+                            aliases.extend([f"Table {n}", f"表{n}", f"表 {n}"])
+                        else:
+                            aliases.extend([f"Equation {n}", f"Eq. {n}", f"公式{n}", f"公式 {n}"])
+                    if not any(alias.lower() in card.lower() for alias in aliases if alias):
+                        missing.append(item_id)
+                if missing:
+                    errors.append(f"{key}_not_covered:{missing}")
+                elif items:
+                    logger.debug(f"Card covers all inventoried {key}: {len(items)}")
+        if "[Analysis]" not in card:
+            warnings.append("missing_analysis_provenance")
+        if "[Hypothesis]" not in card:
+            warnings.append("missing_hypothesis_provenance")
         if "scaffold must be replaced" in card:
             warnings.append("scaffold_card_needs_llm_enrichment")
         if "llm_enrichment_failed" in card or "llm_client_not_configured" in card:
             warnings.append("llm_enrichment_not_completed")
 
     status = "failed" if errors else ("warning" if warnings else "pass")
-    report = {"status": status, "errors": errors, "warnings": warnings}
+    report = {
+        "status": status,
+        "errors": errors,
+        "warnings": warnings,
+        "card_path": str(card_path),
+        "source_bundle_path": str(bundle_path),
+        "source_page_count": int((bundle or {}).get("page_count") or 0),
+        "source_character_count": int((bundle or {}).get("extraction", {}).get("total_characters") or 0),
+    }
     write_json(folder / "audit-report.json", report)
     return report
 
@@ -1161,8 +1518,8 @@ def process_selected_paper(
     index: int,
     openai_client: OpenAI | None = None,
     llm_params: dict[str, Any] | None = None,
-    card_mode: str = "brief",
-    full_card_input_chars: int = 55_000,
+    card_mode: str = "one_shot_full",
+    full_card_input_chars: int = 160_000,
     full_card_output_tokens: int = 12_000,
 ) -> Path:
     folder = paper_folder(output_dir, index, record.title)
@@ -1179,22 +1536,49 @@ def process_selected_paper(
         return folder
 
     bundle = extract_source_bundle(pdf_path, folder / "source_bundle.json")
+    write_text = _source_text_for_full_card(bundle, max_chars=None, require_full_source=False)
+    (folder / "fulltext.md").write_text(write_text, encoding="utf-8")
     if card_mode == "one_shot_full" and openai_client is not None and llm_params is not None:
-        analysis = generate_one_shot_full_card_markdown(
-            record,
-            bundle,
-            folder / "paper-card.md",
-            openai_client,
-            llm_params,
-            max_input_chars=full_card_input_chars,
-            max_output_tokens=full_card_output_tokens,
-        )
-        write_json(folder / "paper_analysis.json", analysis)
+        try:
+            analysis = generate_one_shot_full_card_markdown(
+                record,
+                bundle,
+                folder / "paper-card.md",
+                openai_client,
+                llm_params,
+                max_input_chars=full_card_input_chars,
+                max_output_tokens=full_card_output_tokens,
+                require_full_source=True,
+            )
+            write_json(folder / "paper_analysis.json", analysis)
+        except Exception as exc:
+            logger.error(f"Full Paper Card generation failed for {record.title}: {exc}")
+            write_json(folder / "paper_analysis.json", {
+                "status": "one_shot_full_card_failed",
+                "failure_reason": f"{type(exc).__name__}: {exc}",
+            })
+            write_json(folder / "audit-report.json", {
+                "status": "failed",
+                "errors": [f"one_shot_full_card_failed:{type(exc).__name__}"],
+                "warnings": [],
+                "failure_reason": str(exc),
+            })
+            return folder
+    elif card_mode == "one_shot_full":
+        report = {
+            "status": "failed",
+            "errors": ["full_card_llm_client_not_configured"],
+            "warnings": [],
+        }
+        write_json(folder / "audit-report.json", report)
+        return folder
     else:
         analysis = write_deep_analysis(record, bundle, folder / "paper_analysis.json", openai_client, llm_params)
         generate_paper_card_markdown(record, analysis, folder / "paper-card.md")
     export_markdown_to_pdf(folder / "paper-card.md", folder / "文档分析.pdf")
     report = audit_paper_card(folder)
+    if card_mode == "one_shot_full" and report["status"] != "pass":
+        logger.error(f"Full Paper Card failed quality gate for {record.title}: {report}")
     logger.info(f"Finished selected paper {index}: audit_status={report['status']} title={record.title}")
     return folder
 
@@ -1388,6 +1772,8 @@ def run_full_research_radar_pipeline(
     card_mode: str,
     full_card_input_chars: int,
     full_card_output_tokens: int,
+    three_card_digest_input_chars: int = 180_000,
+    three_card_digest_output_tokens: int = 5_000,
 ) -> Path:
     run_date = output_dir.name
     state_path = Path(str(_config_get(config, "daily_pipeline", "state_path", "state/research_radar.sqlite")))
@@ -1527,7 +1913,8 @@ def run_full_research_radar_pipeline(
         state.conn.commit()
 
         paper_folders: list[Path] = []
-        zotero_uploads = []
+        card_reports: list[dict[str, Any]] = []
+        deep_card_model_calls = 0
         for index, record in enumerate(selected, start=1):
             folder = process_selected_paper(
                 record,
@@ -1540,6 +1927,63 @@ def run_full_research_radar_pipeline(
                 full_card_output_tokens=full_card_output_tokens,
             )
             paper_folders.append(folder)
+            report_path = folder / "audit-report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else {
+                "status": "failed", "errors": ["audit_report_missing"], "warnings": []
+            }
+            card_reports.append({
+                "arxiv_id": record.arxiv_id,
+                "title": record.title,
+                "folder": str(folder),
+                "audit": report,
+            })
+            analysis_path = folder / "paper_analysis.json"
+            if analysis_path.exists():
+                analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+                if analysis.get("status") == "one_shot_full_card":
+                    deep_card_model_calls += 1
+        write_json(output_dir / "card_quality.json", card_reports)
+
+        card_gate_passed = len(selected) == selected_count and all(
+            item["audit"].get("status") == "pass" for item in card_reports
+        )
+        if not card_gate_passed:
+            daily_audit.update({
+                "status": "card_quality_failed",
+                "raw_arxiv_count": len(raw_candidates),
+                "candidate_50_count": len(candidates),
+                "excluded_previously_promoted_count": len(excluded_candidates),
+                "top20_count": len(top20),
+                "selected_count": len(selected),
+                "deep_card_model_calls": deep_card_model_calls,
+                "card_quality": card_reports,
+                "pdf_success_count": sum(
+                    1 for folder in paper_folders
+                    if (folder / "metadata.json").exists()
+                    and json.loads((folder / "metadata.json").read_text(encoding="utf-8")).get("download_status") == "downloaded"
+                ),
+                "card_success_count": sum(1 for item in card_reports if item["audit"].get("status") == "pass"),
+                "zotero_upload_success_count": 0,
+            })
+            write_json(output_dir / "daily_audit.json", daily_audit)
+            write_daily_report_markdown(output_dir, daily_audit, selected)
+            write_daily_index(output_dir)
+            return output_dir
+
+        digest_meta = generate_three_card_digest_markdown(
+            selected,
+            [Path(item["folder"]) / "paper-card.md" for item in card_reports],
+            output_dir / "wechat-digest.md",
+            executor.openai_client,
+            llm_params,
+            max_input_chars=three_card_digest_input_chars,
+            max_output_tokens=three_card_digest_output_tokens,
+            report_date=run_date,
+        )
+        write_json(output_dir / "trend-analysis.json", digest_meta)
+
+        zotero_uploads = []
+        for record, folder in zip(selected, paper_folders):
             upload = upload_selected_paper_to_zotero(config, record, folder, run_date)
             zotero_uploads.append(upload)
             state.conn.execute(
@@ -1584,6 +2028,10 @@ def run_full_research_radar_pipeline(
                     "embedding_missing_count": 0,
                 },
                 "llm_model_calls": llm_model_calls,
+                "deep_card_model_calls": deep_card_model_calls,
+                "three_card_digest_model_calls": 1,
+                "card_quality": card_reports,
+                "wechat_digest": digest_meta,
                 "freshness_distribution": freshness_distribution(candidates),
                 "top20_from_candidates": all(paper in candidates for paper in top20),
                 "top3_from_top20": all(record.arxiv_id in {getattr(paper, "arxiv_id", None) for paper in top20} for record in selected),
@@ -1644,8 +2092,10 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     retrieval_only = _config_bool(config, "daily_pipeline", "retrieval_only", False)
     selection_only = _config_bool(config, "daily_pipeline", "selection_only", False)
     card_mode = _config_get(config, "daily_pipeline", "card_mode", "brief")
-    full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 55_000)
-    full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 12_000)
+    full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 160_000)
+    full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 16_000)
+    three_card_digest_input_chars = _config_int(config, "daily_pipeline", "three_card_digest_input_chars", 180_000)
+    three_card_digest_output_tokens = _config_int(config, "daily_pipeline", "three_card_digest_output_tokens", 5_000)
     output_dir = daily_output_dir(output_root)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1664,6 +2114,8 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
             card_mode=card_mode,
             full_card_input_chars=full_card_input_chars,
             full_card_output_tokens=full_card_output_tokens,
+            three_card_digest_input_chars=three_card_digest_input_chars,
+            three_card_digest_output_tokens=three_card_digest_output_tokens,
         )
 
     if retrieval_only:

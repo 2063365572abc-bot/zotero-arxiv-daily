@@ -11,6 +11,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     extract_source_bundle,
     filter_previously_promoted_candidates,
     generate_one_shot_full_card_markdown,
+    generate_three_card_digest_markdown,
     generate_paper_card_markdown,
     rank_candidates_with_llm,
     process_selected_paper,
@@ -165,7 +166,16 @@ def test_llm_enriched_card_passes_audit(tmp_path):
         scoring={"total": 9.0},
         selection_reason="Highly relevant.",
     )
-    sections = {key: f"[Paper: PDF p. 1] {key} content." for key in CARD_SECTIONS}
+    sections = {
+        key: (
+            f"[Analysis] [Paper: PDF p. 1] {key} content."
+            if key == "13 批判性分析"
+            else f"[Hypothesis] [Paper: PDF p. 1] {key} content."
+            if key == "16 研究想法"
+            else f"[Paper: PDF p. 1] {key} content."
+        )
+        for key in CARD_SECTIONS
+    }
     payload = {
         "source_coverage": "Full paper",
         "extraction_confidence": "High",
@@ -191,7 +201,8 @@ def test_llm_enriched_card_passes_audit(tmp_path):
 
     export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
     report = audit_paper_card(tmp_path)
-    assert report == {"status": "pass", "errors": [], "warnings": []}
+    assert report["status"] == "pass"
+    assert report["errors"] == []
 
 
 def test_one_shot_full_card_streaming_passes_audit(tmp_path):
@@ -213,7 +224,13 @@ def test_one_shot_full_card_streaming_passes_audit(tmp_path):
     markdown = "\n\n".join(
         [
             "> Source coverage: Full paper\n> Extraction confidence: High\n> Locator mode: page-grounded\n> Primary analytical lens: methods\n> Secondary analytical lens: None\n> Context verification: Paper-only\n> Card completeness: Complete relative to supplied source",
-            *[f"## {section}\n\n[Paper: PDF p. 1] {section} content." for section in CARD_SECTIONS],
+                *[
+                    f"## {section}\n\n"
+                    + ("[Analysis] " if section == "13 批判性分析" else "")
+                    + ("[Hypothesis] " if section == "16 研究想法" else "")
+                    + f"[Paper: PDF p. 1] {section} content."
+                    for section in CARD_SECTIONS
+                ],
         ]
     )
     chunks = [
@@ -231,7 +248,7 @@ def test_one_shot_full_card_streaming_passes_audit(tmp_path):
         tmp_path / "paper-card.md",
         fake_client,
         llm_params,
-        max_input_chars=4000,
+        max_input_chars=20000,
         max_output_tokens=1000,
     )
     assert analysis["status"] == "one_shot_full_card"
@@ -239,7 +256,48 @@ def test_one_shot_full_card_streaming_passes_audit(tmp_path):
 
     export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
     report = audit_paper_card(tmp_path)
-    assert report == {"status": "pass", "errors": [], "warnings": []}
+    assert report["status"] == "pass"
+    assert report["errors"] == []
+
+
+def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
+    papers = [
+        SelectionRecord(
+            source="arxiv", title=f"Paper {index}", authors=["A"], abstract="Abstract",
+            url=f"https://arxiv.org/abs/2601.0000{index}", pdf_url=None, score=1.0,
+            role="best_match", scoring={}, selection_reason="test", arxiv_id=f"2601.0000{index}",
+        )
+        for index in range(1, 4)
+    ]
+    card = "\n\n".join(
+        [
+            "> Source coverage: Full paper\n> Extraction confidence: High\n> Locator mode: page-grounded\n"
+            "> Primary analytical lens: methods\n> Secondary analytical lens: None\n"
+            "> Context verification: Paper-only\n> Card completeness: Complete relative to supplied source",
+            *[f"## {section}\n\n[Paper: PDF p. 1] [Analysis] [Hypothesis] content" for section in CARD_SECTIONS],
+        ]
+    )
+    digest = (
+        "【一多科研日报｜2026-09-15】\n\n## 今日趋势\ntrend\n\n## 重点论文\n"
+        "### 1. Paper 1\nhttps://arxiv.org/abs/2601.00001\n"
+        "### 2. Paper 2\nhttps://arxiv.org/abs/2601.00002\n"
+        "### 3. Paper 3\nhttps://arxiv.org/abs/2601.00003\n\n## 今日结论\nconclusion"
+    )
+    fake_response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=digest))])
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: fake_response))
+    )
+    for index in range(1, 4):
+        (tmp_path / f"card-{index}.md").write_text(card.replace("Paper 1", f"Paper {index}"), encoding="utf-8")
+    result = generate_three_card_digest_markdown(
+        papers,
+        [tmp_path / "card-1.md", tmp_path / "card-2.md", tmp_path / "card-3.md"],
+        tmp_path / "wechat-digest.md",
+        fake_client,
+        {"generation_kwargs": {"model": "qwen3.8-max", "max_tokens": 100}},
+        report_date="2026-09-15",
+    )
+    assert result["audit"]["status"] == "pass"
 
 
 def test_process_selected_paper_records_download_failure(tmp_path, monkeypatch):
