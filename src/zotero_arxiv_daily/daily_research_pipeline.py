@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 import json
+import os
 import re
 import time
 from typing import Any
@@ -2708,10 +2709,16 @@ def run_full_research_radar_pipeline(
                 }
                 write_json(output_dir / "daily-quote.json", quote_meta)
 
-        card_pdf_links = [
-            Path(folder / "文档分析.pdf").relative_to(output_dir).as_posix()
-            for folder in paper_folders
-        ]
+        cloud_artifact_url = os.getenv("DAILY_PIPELINE_ARTIFACT_URL", "").strip()
+        if cloud_artifact_url:
+            # The artifact page is known before upload and remains usable from
+            # WeChat after the workflow finishes; the zip contains each Card PDF.
+            card_pdf_links = [cloud_artifact_url] * len(paper_folders)
+        else:
+            card_pdf_links = [
+                Path(folder / "文档分析.pdf").relative_to(output_dir).as_posix()
+                for folder in paper_folders
+            ]
         digest_meta = generate_three_card_digest_markdown(
             selected,
             quick_look_paths,

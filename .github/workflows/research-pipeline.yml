@@ -38,6 +38,7 @@ jobs:
           ZOTERO_KEY: ${{ secrets.ZOTERO_KEY }}
           WECHAT_PUSH_PROVIDER: ${{ vars.WECHAT_PUSH_PROVIDER }}
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          DAILY_PIPELINE_ARTIFACT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
           OPENAI_API_TIMEOUT: ${{ vars.OPENAI_API_TIMEOUT }}
