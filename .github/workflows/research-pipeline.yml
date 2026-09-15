@@ -3,8 +3,8 @@ name: Daily Research Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # 07:30 Beijing time (23:30 UTC)
-    - cron: "30 23 * * *"
+    # 07:00 Beijing time (23:00 UTC)
+    - cron: "0 23 * * *"
 
 jobs:
   build-research-artifacts:
@@ -15,6 +15,14 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
+
+      - name: Restore research radar state
+        run: |
+          git fetch origin state || true
+          mkdir -p state
+          if git rev-parse --verify origin/state >/dev/null 2>&1; then
+            git checkout origin/state -- state || true
+          fi
 
       - name: Run daily research file pipeline
         env:
@@ -46,7 +54,10 @@ jobs:
           ARXIV_USE_RSS_METADATA: ${{ vars.ARXIV_USE_RSS_METADATA }}
           ARXIV_EXTRACT_FULL_TEXT: ${{ vars.ARXIV_EXTRACT_FULL_TEXT }}
           MAX_CANDIDATE_NUM: ${{ vars.MAX_CANDIDATE_NUM }}
+          DAILY_PIPELINE_MODE: ${{ vars.DAILY_PIPELINE_MODE }}
+          DAILY_PIPELINE_STATE_PATH: ${{ vars.DAILY_PIPELINE_STATE_PATH }}
           DAILY_PIPELINE_CANDIDATE_COUNT: ${{ vars.DAILY_PIPELINE_CANDIDATE_COUNT }}
+          DAILY_PIPELINE_TOP20_COUNT: ${{ vars.DAILY_PIPELINE_TOP20_COUNT }}
           DAILY_PIPELINE_SELECTED_COUNT: ${{ vars.DAILY_PIPELINE_SELECTED_COUNT }}
           DAILY_PIPELINE_LLM_RERANK_COUNT: ${{ vars.DAILY_PIPELINE_LLM_RERANK_COUNT }}
           DAILY_PIPELINE_LLM_SELECTION_BATCH_SIZE: ${{ vars.DAILY_PIPELINE_LLM_SELECTION_BATCH_SIZE }}
@@ -70,3 +81,20 @@ jobs:
           name: daily-research-pipeline
           path: outputs/daily/**
           if-no-files-found: ignore
+
+      - name: Persist research radar state
+        if: always()
+        run: |
+          if [ ! -d state ]; then
+            exit 0
+          fi
+          tmpdir="$(mktemp -d)"
+          cp -R state "$tmpdir/state"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan state-work
+          git rm -rf . >/dev/null 2>&1 || true
+          cp -R "$tmpdir/state" ./state
+          git add state
+          git commit -m "Update research radar state" || exit 0
+          git push origin HEAD:state --force

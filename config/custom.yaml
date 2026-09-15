@@ -23,7 +23,10 @@ report:
 
 daily_pipeline:
   output_dir: ${oc.env:DAILY_PIPELINE_OUTPUT_DIR,outputs/daily}
-  candidate_count: ${oc.env:DAILY_PIPELINE_CANDIDATE_COUNT,20}
+  mode: ${oc.env:DAILY_PIPELINE_MODE,full_research_radar}
+  state_path: ${oc.env:DAILY_PIPELINE_STATE_PATH,state/research_radar.sqlite}
+  candidate_count: ${oc.env:DAILY_PIPELINE_CANDIDATE_COUNT,50}
+  top20_count: ${oc.env:DAILY_PIPELINE_TOP20_COUNT,20}
   selected_count: ${oc.env:DAILY_PIPELINE_SELECTED_COUNT,3}
   llm_rerank_count: ${oc.env:DAILY_PIPELINE_LLM_RERANK_COUNT,20}
   llm_selection_batch_size: ${oc.env:DAILY_PIPELINE_LLM_SELECTION_BATCH_SIZE,10}
@@ -55,14 +58,14 @@ llm:
 source:
   arxiv:
     category: [
-      "q-bio.GN","q-bio.QM","q-bio.CB","q-bio.TO","cs.LG","cs.CV","cs.AI"
+      "q-bio.GN","q-bio.QM","q-bio.CB","q-bio.TO","cs.LG","cs.CV","cs.AI","stat.ML"
     ]
     keywords: ${oc.decode:${oc.env:ARXIV_KEYWORDS,null}}
     domain_keywords: ${oc.decode:${oc.env:ARXIV_DOMAIN_KEYWORDS,null}}
     method_keywords: ${oc.decode:${oc.env:ARXIV_METHOD_KEYWORDS,null}}
     task_keywords: ${oc.decode:${oc.env:ARXIV_TASK_KEYWORDS,null}}
     keyword_query_max_results: ${oc.env:ARXIV_KEYWORD_QUERY_MAX_RESULTS,100}
-    retrieval_result_limit: ${oc.env:ARXIV_RETRIEVAL_RESULT_LIMIT,20}
+    retrieval_result_limit: ${oc.env:ARXIV_RETRIEVAL_RESULT_LIMIT,50}
     freshness_hours: ${oc.env:ARXIV_FRESHNESS_HOURS,48}
     freshness_fallback_hours: ${oc.env:ARXIV_FRESHNESS_FALLBACK_HOURS,168}
     freshness_month_hours: ${oc.env:ARXIV_FRESHNESS_MONTH_HOURS,720}

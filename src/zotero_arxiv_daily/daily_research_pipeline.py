@@ -11,11 +11,19 @@ from typing import Any
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 from openai import OpenAI
+from pyzotero import zotero
 import pymupdf
 import requests
 
 from .executor import Executor
 from .protocol import Paper, _request_llm
+from .research_state import (
+    ResearchRadarState,
+    candidate_embedding_records,
+    corpus_embedding_records,
+    embedding_rerank_candidates,
+    ensure_embeddings,
+)
 
 
 CARD_SECTIONS = [
@@ -73,6 +81,10 @@ class CandidateRecord:
     freshness_label: str = "unknown"
     matched_terms: dict[str, list[str]] | None = None
     arxiv_id: str | None = None
+    embedding_rank: int | None = None
+    embedding_score: float | None = None
+    score_breakdown: dict[str, float] | None = None
+    matched_zotero_items: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -117,6 +129,10 @@ def paper_to_candidate(paper: Paper) -> CandidateRecord:
         freshness_bucket=int(getattr(paper, "freshness_bucket", 0)),
         freshness_label=getattr(paper, "freshness_label", "unknown"),
         matched_terms=getattr(paper, "matched_terms", None),
+        embedding_rank=getattr(paper, "embedding_rank", None),
+        embedding_score=getattr(paper, "embedding_score", None),
+        score_breakdown=getattr(paper, "score_breakdown", None),
+        matched_zotero_items=getattr(paper, "matched_zotero_items", None),
     )
 
 
@@ -220,6 +236,10 @@ def build_llm_selection_prompt(papers: list[Paper], llm_params: dict[str, Any]) 
             f"arXiv ID: {getattr(paper, 'arxiv_id', '')}\n"
             f"Published: {getattr(paper, 'published_date', '')}\n"
             f"Freshness: {getattr(paper, 'freshness_label', 'unknown')}\n"
+            f"Embedding rank: {getattr(paper, 'embedding_rank', '')}\n"
+            f"Embedding score: {getattr(paper, 'embedding_score', '')}\n"
+            f"Score breakdown: {json.dumps(getattr(paper, 'score_breakdown', {}) or {}, ensure_ascii=False)}\n"
+            f"Matched Zotero papers: {json.dumps(getattr(paper, 'matched_zotero_items', [])[:5], ensure_ascii=False)}\n"
             f"Matched terms: {json.dumps(getattr(paper, 'matched_terms', {}) or {}, ensure_ascii=False)}"
         )
     return f"""
@@ -332,6 +352,50 @@ def write_llm_ranking(
         )
     path = Path(output_dir) / "llm_ranking.json"
     write_json(path, {"summary": summary or {}, "rankings": payload})
+    return path
+
+
+def write_embedding_ranking(papers: list[Paper], output_dir: str | Path, filename: str) -> Path:
+    payload = []
+    for rank, paper in enumerate(papers, start=1):
+        payload.append(
+            {
+                "rank": rank,
+                **asdict(paper_to_candidate(paper)),
+            }
+        )
+    path = Path(output_dir) / filename
+    write_json(path, payload)
+    return path
+
+
+def write_llm_selection_audit(
+    selected: list[SelectionRecord],
+    top20: list[Paper],
+    output_dir: str | Path,
+    summary: dict[str, str] | None = None,
+    fallback: str | None = None,
+) -> Path:
+    allowed = {getattr(paper, "arxiv_id", None) for paper in top20}
+    selected_ids = [record.arxiv_id for record in selected]
+    payload = {
+        "selected_count": len(selected),
+        "required_selected_count": 3,
+        "selected_ids": selected_ids,
+        "all_selected_from_top20": all(arxiv_id in allowed for arxiv_id in selected_ids),
+        "freshness_labels": {
+            record.arxiv_id or record.title: next(
+                (getattr(paper, "freshness_label", "unknown") for paper in top20 if getattr(paper, "arxiv_id", None) == record.arxiv_id),
+                "unknown",
+            )
+            for record in selected
+        },
+        "trend_summary": (summary or {}).get("trend_summary", ""),
+        "rejected_summary": (summary or {}).get("rejected_summary", ""),
+        "fallback": fallback,
+    }
+    path = Path(output_dir) / "llm_selection_audit.json"
+    write_json(path, payload)
     return path
 
 
@@ -1106,6 +1170,401 @@ def process_selected_paper(
     return folder
 
 
+def _zotero_collection_key(zot: Any, path_parts: list[str]) -> str | None:
+    collections = zot.everything(zot.collections())
+    parent_key: str | None = None
+    for name in path_parts:
+        match = next(
+            (
+                collection
+                for collection in collections
+                if collection.get("data", {}).get("name") == name
+                and (collection.get("data", {}).get("parentCollection") or None) == parent_key
+            ),
+            None,
+        )
+        if match is None:
+            payload = {"name": name}
+            if parent_key:
+                payload["parentCollection"] = parent_key
+            created = zot.create_collections([payload])
+            key = None
+            if isinstance(created, dict):
+                key = (created.get("success") or {}).get("0") or (created.get("successful") or {}).get("0")
+            if not key:
+                collections = zot.everything(zot.collections())
+                match = next(
+                    (
+                        collection
+                        for collection in collections
+                        if collection.get("data", {}).get("name") == name
+                        and (collection.get("data", {}).get("parentCollection") or None) == parent_key
+                    ),
+                    None,
+                )
+                key = match.get("key") if match else None
+            parent_key = key
+            collections = zot.everything(zot.collections())
+        else:
+            parent_key = match.get("key")
+    return parent_key
+
+
+def upload_selected_paper_to_zotero(
+    config: DictConfig,
+    record: SelectionRecord,
+    folder: str | Path,
+    run_date: str,
+) -> dict[str, Any]:
+    folder = Path(folder)
+    result: dict[str, Any] = {
+        "arxiv_id": record.arxiv_id,
+        "title": record.title,
+        "status": "failed",
+        "item_key": None,
+        "original_pdf_attachment_key": None,
+        "card_pdf_attachment_key": None,
+        "collection_path": "一多科研 / 单细胞转录组",
+        "failure_reason": None,
+        "run_date": run_date,
+    }
+    try:
+        zot = zotero.Zotero(config.zotero.user_id, "user", config.zotero.api_key)
+        existing = zot.everything(zot.items(q=record.title, itemType="conferencePaper || journalArticle || preprint"))
+        item_key = None
+        if existing:
+            item_key = existing[0].get("key")
+        else:
+            template = zot.item_template("preprint")
+            template.update(
+                {
+                    "title": record.title,
+                    "abstractNote": record.abstract,
+                    "url": record.url,
+                    "archive": "arXiv",
+                    "archiveLocation": record.arxiv_id or "",
+                    "extra": (
+                        f"Daily research radar selection: {run_date}\n"
+                        f"Selection reason: {record.selection_reason}\n"
+                        f"PDF: {record.pdf_url or ''}"
+                    ),
+                    "creators": [{"creatorType": "author", "name": author} for author in record.authors[:20]],
+                    "tags": [
+                        {"tag": "daily-arxiv"},
+                        {"tag": "spatial-transcriptomics"},
+                        {"tag": "machine-learning"},
+                        {"tag": "embedding-selected"},
+                        {"tag": "llm-selected"},
+                        {"tag": "card-generated"},
+                    ],
+                }
+            )
+            created = zot.create_items([template])
+            if isinstance(created, dict):
+                item_key = (created.get("success") or {}).get("0") or (created.get("successful") or {}).get("0")
+        if not item_key:
+            raise RuntimeError("Zotero item creation did not return an item key")
+        result["item_key"] = item_key
+
+        collection_key = _zotero_collection_key(zot, ["一多科研", "单细胞转录组"])
+        if collection_key:
+            try:
+                zot.addto_collection(collection_key, {"items": [item_key]})
+            except Exception as exc:
+                logger.warning(f"Failed to assign Zotero collection for {record.title}: {exc}")
+
+        attachments = [
+            (folder / "original.pdf", "original_pdf_attachment_key"),
+            (folder / "文档分析.pdf", "card_pdf_attachment_key"),
+        ]
+        attachment_failures = []
+        for path, key_name in attachments:
+            if not path.exists():
+                attachment_failures.append(f"{path.name}:missing")
+                continue
+            try:
+                uploaded = zot.attachment_simple([str(path)], parentid=item_key)
+                if isinstance(uploaded, dict):
+                    result[key_name] = (uploaded.get("success") or {}).get("0") or (uploaded.get("successful") or {}).get("0")
+            except Exception as exc:
+                attachment_failures.append(f"{path.name}:{type(exc).__name__}: {exc}")
+        result["status"] = "uploaded" if not attachment_failures else "partial"
+        result["failure_reason"] = "; ".join(attachment_failures) if attachment_failures else None
+    except Exception as exc:
+        result["failure_reason"] = f"{type(exc).__name__}: {exc}"
+    return result
+
+
+def write_daily_report_markdown(output_dir: str | Path, audit: dict[str, Any], selected: list[SelectionRecord]) -> Path:
+    output_dir = Path(output_dir)
+    lines = [
+        f"# Daily Research Radar - {output_dir.name}",
+        "",
+        "## Summary",
+        "",
+        f"- Raw candidates: {audit.get('raw_arxiv_count', 0)}",
+        f"- Candidates kept: {audit.get('candidate_50_count', 0)}",
+        f"- Top20 count: {audit.get('top20_count', 0)}",
+        f"- Selected count: {audit.get('selected_count', 0)}",
+        f"- PDF success: {audit.get('pdf_success_count', 0)}",
+        f"- Card success: {audit.get('card_success_count', 0)}",
+        f"- Zotero uploaded: {audit.get('zotero_upload_success_count', 0)}",
+        "",
+        "## Freshness",
+        "",
+    ]
+    for label, count in (audit.get("freshness_distribution") or {}).items():
+        lines.append(f"- {label}: {count}")
+    lines.extend(["", "## Selected Papers", ""])
+    for index, record in enumerate(selected, start=1):
+        lines.extend(
+            [
+                f"### {index}. {record.title}",
+                "",
+                f"- arXiv ID: {record.arxiv_id or 'unknown'}",
+                f"- URL: {record.url}",
+                f"- Score: {record.score}",
+                f"- Role: {record.role}",
+                f"- Reason: {record.selection_reason}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Audit",
+            "",
+            f"- Top20 from candidates: {audit.get('top20_from_candidates')}",
+            f"- Top3 from Top20: {audit.get('top3_from_top20')}",
+            f"- Candidate/Top20 Zotero uploads: {audit.get('candidate_or_top20_zotero_uploads')}",
+            f"- Fallbacks: {', '.join(audit.get('fallbacks_used') or []) or 'none'}",
+            "",
+        ]
+    )
+    path = output_dir / "daily_report.md"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    write_json(output_dir / "daily_report.json", {"audit": audit, "selected": [asdict(record) for record in selected]})
+    return path
+
+
+def run_full_research_radar_pipeline(
+    config: DictConfig,
+    executor: Executor,
+    output_dir: Path,
+    *,
+    candidate_count: int,
+    top20_count: int,
+    selected_count: int,
+    llm_selection_batch_size: int,
+    llm_selection_enabled: bool,
+    card_mode: str,
+    full_card_input_chars: int,
+    full_card_output_tokens: int,
+) -> Path:
+    run_date = output_dir.name
+    state_path = Path(str(_config_get(config, "daily_pipeline", "state_path", "state/research_radar.sqlite")))
+    embedding_model = str(config.reranker.api.get("model") or "text-embedding-v4")
+    embedding_batch_size = int(config.reranker.api.get("batch_size") or 10)
+    llm_params = OmegaConf.to_container(config.llm, resolve=True) if hasattr(config, "llm") else None
+    state = ResearchRadarState(state_path)
+    embedding_client = OpenAI(
+        api_key=config.reranker.api.key,
+        base_url=config.reranker.api.base_url,
+        timeout=float(config.reranker.api.get("timeout", 60)),
+    )
+    daily_audit: dict[str, Any] = {
+        "status": "started",
+        "run_date": run_date,
+        "candidate_target": candidate_count,
+        "top20_target": top20_count,
+        "selected_target": selected_count,
+        "embedding_model": embedding_model,
+        "zotero_upload_attempted_for": "selected_top3_only",
+        "candidate_or_top20_zotero_uploads": 0,
+        "fallbacks_used": [],
+    }
+    try:
+        corpus = executor.filter_corpus(executor.fetch_zotero_corpus())
+        if not corpus:
+            raise RuntimeError("No Zotero corpus papers found; cannot personalize candidate selection.")
+        state.upsert_zotero_items(corpus, embedding_model)
+        corpus_records = corpus_embedding_records(corpus, embedding_model)
+        corpus_vectors, corpus_embed_audit = ensure_embeddings(
+            state,
+            corpus_records,
+            entity_type="zotero",
+            model=embedding_model,
+            openai_client=embedding_client,
+            batch_size=embedding_batch_size,
+        )
+
+        candidates = retrieve_daily_candidates(executor, candidate_count)
+        state.upsert_arxiv_papers(candidates)
+        write_candidates(candidates, output_dir, limit=candidate_count)
+        write_embedding_ranking(candidates, output_dir, "candidates_50.json")
+        if not candidates:
+            write_selected_papers([], output_dir)
+            daily_audit.update({"status": "no_candidates", "raw_arxiv_count": 0})
+            write_json(output_dir / "daily_audit.json", daily_audit)
+            write_daily_index(output_dir)
+            return output_dir
+
+        candidate_records = candidate_embedding_records(candidates, embedding_model)
+        candidate_vectors, candidate_embed_audit = ensure_embeddings(
+            state,
+            candidate_records,
+            entity_type="candidate",
+            model=embedding_model,
+            openai_client=embedding_client,
+            batch_size=embedding_batch_size,
+        )
+        ranked, ranking_records = embedding_rerank_candidates(
+            candidates,
+            corpus,
+            candidate_vectors,
+            corpus_vectors,
+        )
+        top20 = ranked[: min(top20_count, len(ranked))]
+        write_embedding_ranking(ranked, output_dir, "embedding_ranking_50.json")
+        write_embedding_ranking(top20, output_dir, "top20_for_llm.json")
+        for record in ranking_records:
+            state.conn.execute(
+                """
+                INSERT INTO daily_rankings(run_date, arxiv_id, ranking_json)
+                VALUES(?,?,?)
+                ON CONFLICT(run_date, arxiv_id) DO UPDATE SET ranking_json=excluded.ranking_json
+                """,
+                (run_date, record.arxiv_id or record.title, json.dumps(asdict(record), ensure_ascii=False)),
+            )
+        state.conn.commit()
+
+        llm_scores: dict[str, dict[str, Any]] = {}
+        llm_summary: dict[str, str] = {}
+        llm_model_calls = 0
+        reranked_for_selection = top20
+        selection_fallback = None
+        if top20 and llm_selection_enabled and executor.openai_client is not None and llm_params is not None:
+            try:
+                reranked_for_selection, llm_scores, llm_summary, llm_model_calls = rank_candidates_with_llm_batched(
+                    top20,
+                    executor.openai_client,
+                    llm_params,
+                    batch_size=llm_selection_batch_size,
+                )
+                write_llm_ranking(reranked_for_selection, llm_scores, output_dir, summary=llm_summary)
+            except Exception as exc:
+                selection_fallback = f"embedding_top3_after_llm_failure:{type(exc).__name__}: {exc}"
+                daily_audit["fallbacks_used"].append(selection_fallback)
+                logger.warning(f"LLM Top20 selection failed; using embedding Top3: {exc}")
+                write_json(output_dir / "llm_ranking.json", {
+                    "status": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "fallback": "embedding_top3",
+                })
+        else:
+            selection_fallback = "llm_disabled_or_unconfigured"
+            daily_audit["fallbacks_used"].append(selection_fallback)
+            write_json(output_dir / "llm_ranking.json", {
+                "status": "disabled_or_unconfigured",
+                "fallback": "embedding_top3",
+            })
+
+        selected = select_papers_for_deep_read(reranked_for_selection, count=selected_count, llm_scores=llm_scores)
+        write_selected_papers(selected, output_dir)
+        write_llm_selection_audit(selected, top20, output_dir, summary=llm_summary, fallback=selection_fallback)
+        for record in selected:
+            state.conn.execute(
+                """
+                INSERT INTO daily_selections(run_date, arxiv_id, selection_json)
+                VALUES(?,?,?)
+                ON CONFLICT(run_date, arxiv_id) DO UPDATE SET selection_json=excluded.selection_json
+                """,
+                (run_date, record.arxiv_id or record.title, json.dumps(asdict(record), ensure_ascii=False)),
+            )
+        state.conn.commit()
+
+        paper_folders: list[Path] = []
+        zotero_uploads = []
+        for index, record in enumerate(selected, start=1):
+            folder = process_selected_paper(
+                record,
+                output_dir,
+                index,
+                executor.openai_client,
+                llm_params,
+                card_mode=card_mode,
+                full_card_input_chars=full_card_input_chars,
+                full_card_output_tokens=full_card_output_tokens,
+            )
+            paper_folders.append(folder)
+            upload = upload_selected_paper_to_zotero(config, record, folder, run_date)
+            zotero_uploads.append(upload)
+            state.conn.execute(
+                """
+                INSERT INTO zotero_uploads(run_date, arxiv_id, upload_json)
+                VALUES(?,?,?)
+                ON CONFLICT(run_date, arxiv_id) DO UPDATE SET upload_json=excluded.upload_json
+                """,
+                (run_date, record.arxiv_id or record.title, json.dumps(upload, ensure_ascii=False)),
+            )
+            state.conn.commit()
+        write_json(output_dir / "zotero_uploads.json", zotero_uploads)
+
+        pdf_success_count = 0
+        card_success_count = 0
+        for folder in paper_folders:
+            metadata_path = folder / "metadata.json"
+            audit_path = folder / "audit-report.json"
+            if metadata_path.exists():
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                if metadata.get("download_status") == "downloaded":
+                    pdf_success_count += 1
+            if audit_path.exists():
+                audit = json.loads(audit_path.read_text(encoding="utf-8"))
+                if audit.get("status") in {"pass", "warning"}:
+                    card_success_count += 1
+
+        daily_audit.update(
+            {
+                "status": "complete",
+                "raw_arxiv_count": len(candidates),
+                "candidate_50_count": len(candidates),
+                "top20_count": len(top20),
+                "selected_count": len(selected),
+                "embedding_audit": {
+                    **state.embedding_audit(embedding_model),
+                    "zotero_cache_hit_count": corpus_embed_audit["cache_hit_count"],
+                    "zotero_api_create_count": corpus_embed_audit["api_create_count"],
+                    "candidate_cache_hit_count": candidate_embed_audit["cache_hit_count"],
+                    "candidate_api_create_count": candidate_embed_audit["api_create_count"],
+                    "embedding_missing_count": 0,
+                },
+                "llm_model_calls": llm_model_calls,
+                "freshness_distribution": freshness_distribution(candidates),
+                "top20_from_candidates": all(paper in candidates for paper in top20),
+                "top3_from_top20": all(record.arxiv_id in {getattr(paper, "arxiv_id", None) for paper in top20} for record in selected),
+                "pdf_success_count": pdf_success_count,
+                "card_success_count": card_success_count,
+                "zotero_upload_success_count": sum(1 for item in zotero_uploads if item.get("status") == "uploaded"),
+                "zotero_upload_partial_count": sum(1 for item in zotero_uploads if item.get("status") == "partial"),
+            }
+        )
+        state.conn.execute(
+            """
+            INSERT INTO daily_runs(run_date, metadata_json, updated_at)
+            VALUES(?,?,?)
+            ON CONFLICT(run_date) DO UPDATE SET metadata_json=excluded.metadata_json, updated_at=excluded.updated_at
+            """,
+            (run_date, json.dumps(daily_audit, ensure_ascii=False), datetime.now().isoformat()),
+        )
+        state.conn.commit()
+        write_json(output_dir / "daily_audit.json", daily_audit)
+        write_daily_report_markdown(output_dir, daily_audit, selected)
+        write_daily_index(output_dir)
+        return output_dir
+    finally:
+        state.close()
+
+
 def _config_get(config: DictConfig, section: str, key: str, default: Any) -> Any:
     data = config.get(section, {})
     if hasattr(data, "get"):
@@ -1132,6 +1591,7 @@ def _config_bool(config: DictConfig, section: str, key: str, default: bool) -> b
 def run_daily_file_pipeline(config: DictConfig) -> Path:
     output_root = _config_get(config, "daily_pipeline", "output_dir", "outputs/daily")
     candidate_count = _config_int(config, "daily_pipeline", "candidate_count", 20)
+    top20_count = _config_int(config, "daily_pipeline", "top20_count", 20)
     selected_count = _config_int(config, "daily_pipeline", "selected_count", 3)
     llm_rerank_count = _config_int(config, "daily_pipeline", "llm_rerank_count", 8)
     llm_selection_batch_size = _config_int(config, "daily_pipeline", "llm_selection_batch_size", 10)
@@ -1145,6 +1605,22 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     executor = Executor(config)
+    mode = str(_config_get(config, "daily_pipeline", "mode", "full_research_radar"))
+    if mode == "full_research_radar":
+        return run_full_research_radar_pipeline(
+            config,
+            executor,
+            output_dir,
+            candidate_count=candidate_count,
+            top20_count=top20_count,
+            selected_count=selected_count,
+            llm_selection_batch_size=llm_selection_batch_size,
+            llm_selection_enabled=llm_selection_enabled,
+            card_mode=card_mode,
+            full_card_input_chars=full_card_input_chars,
+            full_card_output_tokens=full_card_output_tokens,
+        )
+
     if retrieval_only:
         candidates = retrieve_daily_candidates(executor, candidate_count)
         write_candidates(candidates, output_dir, limit=candidate_count)

@@ -12,7 +12,7 @@ source:
     method_keywords: null # Required machine-learning phrases. Example: ["machine learning", "deep learning", "graph neural network"]
     task_keywords: null # Optional task phrases used for deterministic retrieval scoring. Example: ["spatial domain", "cellular neighborhood"]
     keyword_query_max_results: 100 # Maximum arXiv API results fetched before deterministic retrieval filtering. Example: 100
-    retrieval_result_limit: 20 # Maximum high-relevance candidates returned by the retriever. Example: 20
+    retrieval_result_limit: 50 # Maximum high-relevance candidates returned by the retriever. Example: 50
     freshness_hours: 48 # Primary age window for first submissions. Example: 48
     freshness_fallback_hours: 168 # Optional wider window used only when the primary window is sparse. Example: 168
     freshness_month_hours: 720 # Wider recent window before historical backfill. Example: 720
@@ -43,7 +43,10 @@ report:
 
 daily_pipeline:
   output_dir: outputs/daily # Local directory for full daily research artifacts.
-  candidate_count: 20 # Maximum candidate papers kept before deep selection.
+  mode: full_research_radar # Pipeline mode. Options: full_research_radar, legacy, selection_only fallback flags.
+  state_path: state/research_radar.sqlite # Persistent SQLite state restored by GitHub Actions.
+  candidate_count: 50 # Maximum candidate papers kept before embedding rerank.
+  top20_count: 20 # Number of embedding-ranked papers sent to the LLM.
   selected_count: 3 # Number of papers selected for PDF/Card processing.
   llm_rerank_count: 20 # Number of title/abstract candidates sent to the LLM for scientific-value scoring.
   llm_selection_batch_size: 10 # Number of candidates per LLM selection request.
@@ -80,7 +83,7 @@ reranker:
   api:
     key: null # API Key of your embedding model API. Example: sk-xxx
     base_url: null # API URL of your embedding model API. Example: https://api.openai.com/v1
-    model: null # The model name of the embedding model. Example: text-embedding-3-large
+    model: text-embedding-v4 # The model name of the embedding model. Example: text-embedding-v4
     batch_size: null # The batch size for embedding API requests. Adjust to match your provider's limit. Example: 64
     timeout: 60 # Request timeout in seconds. Example: 60
 
