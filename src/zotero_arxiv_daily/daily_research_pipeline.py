@@ -198,6 +198,27 @@ def _selection_scoring(paper: Paper, role: str, llm_score: dict[str, Any] | None
     }
 
 
+DIRECT_RESEARCH_ANCHORS = [
+    "single-cell",
+    "single cell",
+    "scRNA",
+    "spatial transcript",
+    "spatial omics",
+    "transcriptomic",
+    "transcriptomics",
+    "multi-omics",
+    "multiomics",
+    "cell state",
+    "cell foundation",
+    "perturbation",
+]
+
+
+def _direct_research_anchor_score(paper: Paper) -> int:
+    text = f"{paper.title}\n{paper.abstract}".lower()
+    return sum(1 for term in DIRECT_RESEARCH_ANCHORS if term.lower() in text)
+
+
 def select_papers_for_deep_read(
     papers: list[Paper],
     count: int = 3,
@@ -222,6 +243,20 @@ def select_papers_for_deep_read(
             role_selected.append(chosen)
             remaining.remove(chosen)
         ranked = role_selected + [paper for paper in ranked if paper not in role_selected]
+        direct_pool = [
+            paper for paper in ranked
+            if _direct_research_anchor_score(paper) >= 1
+        ]
+        if len(direct_pool) >= count:
+            ranked = sorted(
+                direct_pool,
+                key=lambda paper: (
+                    llm_scores[paper.title]["total"],
+                    _direct_research_anchor_score(paper),
+                    paper.score if paper.score is not None else -1,
+                ),
+                reverse=True,
+            ) + [paper for paper in ranked if paper not in direct_pool]
     selected = []
     for index, paper in enumerate(ranked[:count]):
         role = roles[index] if index < len(roles) else "best_match"
@@ -285,6 +320,12 @@ def build_llm_selection_prompt(papers: list[Paper], llm_params: dict[str, Any]) 
 - transferability：迁移到用户研究问题的可能性
 - trend_value：作为当前研究趋势信号的价值
 - resource_value：摘要或元数据中明确出现的数据、代码、模型或资源价值
+
+严格降权规则：
+- 如果论文不直接涉及 single-cell、spatial transcriptomics、transcriptomics、multi-omics、cell state、perturbation、biomedical AI 中至少一个主题，relevance_to_user 最高只能给 4 分；
+- 如果只是通用机器学习、时序预测、编译优化、地球观测、表格模型、纯数学/物理方法，method_novelty 可以高，但 best_role 不要给 best_match；
+- 只有在候选池中直接生物/单细胞/空间组学论文不足 3 篇时，才允许选择纯方法启发论文进入 Top3；
+- 单细胞/空间/多组学方向的直接论文优先级高于泛化方法论文。
 
 必须给每一篇候选都返回一个 rankings 条目，paper_index 必须覆盖 1 到候选论文总数。
 reason 和 risk 各不超过 60 个中文字符，避免输出过长导致 JSON 被截断。

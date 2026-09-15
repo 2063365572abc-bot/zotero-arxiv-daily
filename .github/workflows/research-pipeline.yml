@@ -6,6 +6,9 @@ on:
     # 06:30 Beijing time (22:30 UTC, previous day)
     - cron: "30 22 * * *"
 
+permissions:
+  contents: write
+
 jobs:
   build-research-artifacts:
     runs-on: ubuntu-latest
@@ -22,6 +25,10 @@ jobs:
           mkdir -p state
           if git rev-parse --verify origin/state >/dev/null 2>&1; then
             git checkout origin/state -- state || true
+          fi
+          if [ -d state/state ]; then
+            cp -R state/state/. state/
+            rm -rf state/state
           fi
 
       - name: Run daily research file pipeline
@@ -102,6 +109,10 @@ jobs:
           git checkout --orphan state-work
           git rm -rf . >/dev/null 2>&1 || true
           cp -R "$tmpdir/state" ./state
+          if [ -d state/state ]; then
+            cp -R state/state/. state/
+            rm -rf state/state
+          fi
           git add state
           git commit -m "Update research radar state" || exit 0
           git push origin HEAD:state --force

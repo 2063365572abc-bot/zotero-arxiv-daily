@@ -35,7 +35,7 @@ def main(config: DictConfig):
     if digest_path.exists():
         send_wechat_notification(config, digest_path.read_text(encoding="utf-8"))
     else:
-        logger.warning(f"WeChat digest not found; skip notification: {digest_path}")
+        raise RuntimeError(f"WeChat digest not found; cannot send notification: {digest_path}")
 
 
 if __name__ == "__main__":

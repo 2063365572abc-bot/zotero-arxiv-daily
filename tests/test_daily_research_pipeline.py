@@ -118,6 +118,25 @@ def test_llm_ranking_uses_title_abstract_and_selects_distinct_roles():
     assert [paper.role for paper in selected] == ["best_match", "method_inspiration", "trend_signal"]
 
 
+def test_selection_prioritizes_direct_research_anchors_over_generic_methods():
+    papers = [
+        make_sample_paper(title="RAGCell", abstract="retrieval augmented generation for single-cell analysis", score=90.0),
+        make_sample_paper(title="Spatial Omics Model", abstract="spatial transcriptomics representation learning", score=85.0),
+        make_sample_paper(title="Knowledge Single Cell", abstract="knowledge enhanced single-cell foundation model", score=82.0),
+        make_sample_paper(title="Generic Transport", abstract="quantile transport for time series forecasting", score=95.0),
+    ]
+    llm_scores = {
+        "RAGCell": {"relevance_to_user": 9, "method_novelty": 7, "evidence_quality": 7, "transferability": 8, "trend_value": 8, "resource_value": 6, "total": 80, "reason": "single-cell direct", "risk": "limited"},
+        "Spatial Omics Model": {"relevance_to_user": 9, "method_novelty": 8, "evidence_quality": 7, "transferability": 8, "trend_value": 8, "resource_value": 5, "total": 79, "reason": "spatial direct", "risk": "limited"},
+        "Knowledge Single Cell": {"relevance_to_user": 8, "method_novelty": 8, "evidence_quality": 7, "transferability": 7, "trend_value": 8, "resource_value": 5, "total": 77, "reason": "single-cell direct", "risk": "limited"},
+        "Generic Transport": {"relevance_to_user": 4, "method_novelty": 10, "evidence_quality": 8, "transferability": 8, "trend_value": 8, "resource_value": 6, "total": 88, "reason": "generic method", "risk": "domain gap"},
+    }
+
+    selected = select_papers_for_deep_read(papers, count=3, llm_scores=llm_scores)
+
+    assert [paper.title for paper in selected] == ["RAGCell", "Spatial Omics Model", "Knowledge Single Cell"]
+
+
 def test_pdf_bundle_card_audit_and_export(tmp_path):
     pdf_path = tmp_path / "original.pdf"
     make_pdf(pdf_path)
