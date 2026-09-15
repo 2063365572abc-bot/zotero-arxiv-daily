@@ -39,7 +39,7 @@ daily_pipeline:
   quick_look_input_chars: ${oc.env:DAILY_PIPELINE_QUICK_LOOK_INPUT_CHARS,8000}
   quick_look_output_tokens: ${oc.env:DAILY_PIPELINE_QUICK_LOOK_OUTPUT_TOKENS,1200}
   three_card_digest_input_chars: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_INPUT_CHARS,180000}
-  three_card_digest_output_tokens: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS,2400}
+  three_card_digest_output_tokens: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS,3200}
 
 daily_radar:
   quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}

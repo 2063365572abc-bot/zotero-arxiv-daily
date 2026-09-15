@@ -297,11 +297,13 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
     for index in range(1, 4):
         digest += (
             f"# {index:02d}｜Paper {index}\n\n"
-            f"**2026-09-14 · arXiv**\n\n{quick_fields}\n\n"
+            f"**发布时间 · 来源**\n2026-09-14 · arXiv\n\n"
+            f"> **速读判断**：This paper has a clear methodological signal.\n\n"
+            f"{quick_fields}\n\n"
             f"[原文 PDF](https://arxiv.org/pdf/2601.0000{index}) · "
             f"[下载 Paper Card](paper-{index}.pdf)\n\n"
         )
-    digest += "## 今日精读顺序\n01 → 02 → 03\n今日首次从 arXiv 抓取 50 篇候选论文，最终精选 3 篇"
+    digest += "## 今日精读顺序\n01 → 02 → 03。今日首次从 arXiv 抓取 50 篇候选论文，最终精选 3 篇。"
     fake_response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=digest))])
     fake_client = SimpleNamespace(
         chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: fake_response))

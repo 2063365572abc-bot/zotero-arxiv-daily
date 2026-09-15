@@ -1254,8 +1254,9 @@ def build_three_card_digest_prompt(
 - 开头是“一多科研｜每日论文速递”、日期、早上好和今日寄语；
 - “今日主线”必须根据三篇速看动态生成，不能使用固定套话；
 - 明确写出“今日首次从 arXiv 抓取 {fetched} 篇候选论文，最终精选 {len(papers)} 篇”；
-- 三篇论文标题必须使用大号标题；日期放在标题下方的独立信息行；
-- 每篇必须展示：标题与发布时间、作者和机构、研究背景、核心假设或问题、方法逻辑、主要结果、真正贡献、与你研究方向的关系、局限性、是否值得精读；
+- 三篇论文标题必须使用大号标题；日期和来源放在标题下方的独立信息行；
+- 每篇必须先写“速读判断”，用引用块 `>` 写 1—2 句专业判断，说明这篇真正值得看的点；
+- 每篇必须展示：发布时间与来源、作者和机构、研究背景、核心假设或问题、方法逻辑、主要结果、真正贡献、与你研究方向的关系、局限性、是否值得精读；
 - 每个栏目按信息复杂度写 1—3 个短句，避免展开成长清单；单篇正文控制在约 650—900 个中文字符，今日主线控制在约 150—220 个中文字符；
 - 不要复制 Card 的项目符号清单、公式或多条指标；只保留最关键的一条证据；
 - 每篇结尾必须有原文 PDF 下载链接和 Paper Card PDF 下载链接；链接必须使用输入中的值；
@@ -1263,6 +1264,7 @@ def build_three_card_digest_prompt(
 - 语言像专业科研新闻速递：克制、清楚、密度高，不写宣传口号。
 - 全文不得超过 6,500 个中文字符；每篇论文正文控制在 650—900 个中文字符；
 - 每个栏目最多 1 个短段落，不得复制输入中的长列表、公式、多个指标或逐条实验结果；
+- 版式要好看但保持纯 Markdown：使用标题、引用块、粗体字段和分隔线；不要使用 HTML、表格、emoji 或复杂装饰符；
 - “主要结果”最多保留最有代表性的 1—2 个结果，“局限性”最多保留最关键的 1—2 个限制；
 - “真正贡献”和“与你研究方向的关系”必须是压缩后的专业判断，各不超过 2 句。
 
@@ -1286,6 +1288,8 @@ def build_three_card_digest_prompt(
 
 **发布时间 · 来源**
 必须填写该篇 PAPER QUICK LOOK 中的准确日期；没有日期才写“Card未提供”，不得写 unknown。
+
+> **速读判断**：用 1—2 句讲清楚这篇真正值得看的点，语气像专业科研博主的判断，不要复述摘要。
 
 **作者和机构**
 
@@ -1380,6 +1384,8 @@ def audit_three_card_digest(
             link = card_pdf_links[index - 1]
             if link and link not in markdown:
                 errors.append(f"digest_missing_card_pdf_link:{paper.arxiv_id or paper.title}")
+        if markdown.count("**速读判断**") < len(papers):
+            errors.append(f"digest_missing:速读判断:{index}")
         for field in QUICK_LOOK_FIELDS:
             if markdown.count(f"**{field}**") < len(papers):
                 errors.append(f"digest_missing:{field}:{index}")
@@ -1387,6 +1393,11 @@ def audit_three_card_digest(
         expected = f"首次从 arXiv 抓取 {raw_fetched_count} 篇"
         if expected not in markdown:
             errors.append("digest_missing_canonical_raw_fetched_count")
+    reading_order_index = markdown.find("## 今日精读顺序")
+    if reading_order_index >= 0:
+        reading_order = markdown[reading_order_index:].strip()
+        if len(reading_order) < 45 or reading_order[-1] not in "。.!！?？）)":
+            errors.append("digest_incomplete_reading_order")
     if len(markdown) > 6_500:
         errors.append("digest_exceeds_maximum_length")
     status = "fail" if errors else ("pass_with_warnings" if warnings else "pass")
@@ -2196,7 +2207,7 @@ def run_full_research_radar_pipeline(
     quick_look_input_chars: int = 8_000,
     quick_look_output_tokens: int = 1_200,
     three_card_digest_input_chars: int = 180_000,
-    three_card_digest_output_tokens: int = 2_400,
+    three_card_digest_output_tokens: int = 3_200,
     quote_enabled: bool = True,
 ) -> Path:
     run_date = output_dir.name
@@ -2618,7 +2629,7 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     quick_look_input_chars = _config_int(config, "daily_pipeline", "quick_look_input_chars", 8_000)
     quick_look_output_tokens = _config_int(config, "daily_pipeline", "quick_look_output_tokens", 1_200)
     three_card_digest_input_chars = _config_int(config, "daily_pipeline", "three_card_digest_input_chars", 180_000)
-    three_card_digest_output_tokens = _config_int(config, "daily_pipeline", "three_card_digest_output_tokens", 2_400)
+    three_card_digest_output_tokens = _config_int(config, "daily_pipeline", "three_card_digest_output_tokens", 3_200)
     quote_enabled = _config_bool(config, "daily_radar", "quote_enabled", True)
     output_dir = daily_output_dir(output_root)
     output_dir.mkdir(parents=True, exist_ok=True)
