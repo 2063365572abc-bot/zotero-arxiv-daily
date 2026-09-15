@@ -2181,16 +2181,18 @@ def _zotero_attachment_key(response: Any, filename: str) -> str | None:
         for entry in entries:
             if isinstance(entry, dict):
                 entry_filename = Path(str(entry.get("filename") or entry.get("title") or "")).name
-                if entry_filename == filename or entry.get("key"):
-                    return str(entry["key"]) if entry.get("key") else None
+                if entry_filename == filename or _zotero_object_key(entry):
+                    return _zotero_object_key(entry)
+            elif isinstance(entry, str) and entry:
+                return entry
     return None
 
 
 def _find_zotero_attachment_key(zot: Any, item_key: str, filename: str) -> str | None:
     """Verify an uploaded child attachment exists under the parent item."""
-    children = zot.everything(zot.children(item_key))
+    children = zot.children(item_key)
     for child in children or []:
-        data = child.get("data") or {} if isinstance(child, dict) else {}
+        data = (child.get("data") or {}) if isinstance(child, dict) else {}
         if data.get("title") == filename or Path(str(data.get("filename") or "")).name == filename:
             return _zotero_object_key(child)
     return None
@@ -2255,9 +2257,7 @@ def upload_selected_paper_to_zotero(
         collection_key = _zotero_collection_key(zot, ["一多科研", "单细胞转录组"])
         if collection_key:
             try:
-                item = zot.everything(zot.item(item_key))
-                if isinstance(item, list):
-                    item = item[0] if item else None
+                item = zot.item(item_key)
                 if not isinstance(item, dict):
                     raise RuntimeError(f"Zotero item lookup returned no object for {item_key}")
                 zot.addto_collection(collection_key, item)
