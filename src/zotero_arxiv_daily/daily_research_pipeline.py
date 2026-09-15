@@ -77,6 +77,20 @@ QUICK_LOOK_FIELDS = [
     "是否值得精读",
 ]
 
+QUICK_LOOK_CARD_SECTION_PREFIXES = [
+    "01 基本信息",
+    "03 研究问题",
+    "04 研究背景与发展路径",
+    "06 核心思想",
+    "07 方法总览",
+    "08 核心模块拆解",
+    "10 实验设计与证据链",
+    "11 对结论的正确理解",
+    "12 作者明确承认的限制",
+    "13 批判性分析",
+    "15 与既有知识的连接",
+]
+
 
 @dataclass
 class CandidateRecord:
@@ -788,9 +802,13 @@ def _request_llm_with_retry(
     attempts: int = 3,
 ) -> str:
     last_error: Exception | None = None
+    params = dict(llm_params)
+    generation_kwargs = dict(params.get("generation_kwargs", {}))
+    generation_kwargs.setdefault("timeout", 120)
+    params["generation_kwargs"] = generation_kwargs
     for attempt in range(1, attempts + 1):
         try:
-            return _request_llm(openai_client, llm_params, messages, force_json=force_json)
+            return _request_llm(openai_client, params, messages, force_json=force_json)
         except Exception as exc:
             last_error = exc
             status_code = getattr(exc, "status_code", None)
@@ -957,15 +975,54 @@ def generate_one_shot_full_card_markdown(
     }
 
 
+def _card_excerpt_for_quick_look(card_markdown: str, max_chars: int = 8_000) -> str:
+    matches = list(re.finditer(r"(?m)^##\s+(.+?)\s*$", card_markdown))
+    if not matches:
+        if len(card_markdown) <= max_chars:
+            return card_markdown
+        return card_markdown[:max_chars].rstrip() + "\n\n[Card excerpt truncated for quick look]"
+
+    sections: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        heading = match.group(1).strip()
+        start = match.start()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(card_markdown)
+        sections[heading] = card_markdown[start:end].strip()
+
+    blocks: list[str] = []
+    for prefix in QUICK_LOOK_CARD_SECTION_PREFIXES:
+        for heading, body in sections.items():
+            if heading.startswith(prefix):
+                blocks.append(body)
+                break
+    if not blocks:
+        if len(card_markdown) <= max_chars:
+            return card_markdown
+        return card_markdown[:max_chars].rstrip() + "\n\n[Card excerpt truncated for quick look]"
+
+    excerpt = "\n\n".join(blocks)
+    if len(excerpt) <= max_chars:
+        return excerpt
+
+    budget_per_block = max(700, max_chars // max(len(blocks), 1))
+    shortened: list[str] = []
+    for block in blocks:
+        if len(block) <= budget_per_block:
+            shortened.append(block)
+        else:
+            shortened.append(block[:budget_per_block].rstrip() + "\n[Section truncated for quick look]")
+    excerpt = "\n\n".join(shortened)
+    if len(excerpt) <= max_chars:
+        return excerpt
+    return excerpt[:max_chars].rstrip() + "\n\n[Card excerpt truncated for quick look]"
+
+
 def build_paper_quick_look_prompt(
     paper: SelectionRecord,
     card_markdown: str,
-    max_input_chars: int = 60_000,
+    max_input_chars: int = 8_000,
 ) -> str:
-    if len(card_markdown) > max_input_chars:
-        raise ValueError(
-            f"paper_card_exceeds_quick_look_limit: chars={len(card_markdown)} limit={max_input_chars}"
-        )
+    card_excerpt = _card_excerpt_for_quick_look(card_markdown, max_chars=max_input_chars)
     return f"""
 你是“一多科研”的论文速读编辑。下面是一篇已经完成的完整 Paper Card。
 请只把 Card 中已有内容整理成一份适合手机快速阅读的“论文速看”。
@@ -1023,8 +1080,8 @@ def build_paper_quick_look_prompt(
 
 **原文 PDF**：{paper.pdf_url or paper.url}
 
-下面是唯一允许使用的 Card 内容：
-{card_markdown}
+下面是唯一允许使用的 Card 关键章节摘录：
+{card_excerpt}
 """.strip()
 
 
@@ -1062,8 +1119,8 @@ def generate_paper_quick_look_markdown(
     output_path: str | Path,
     openai_client: OpenAI,
     llm_params: dict[str, Any],
-    max_input_chars: int = 60_000,
-    max_output_tokens: int = 1_800,
+    max_input_chars: int = 8_000,
+    max_output_tokens: int = 1_200,
 ) -> dict[str, Any]:
     card_markdown = Path(card_path).read_text(encoding="utf-8")
     prompt = build_paper_quick_look_prompt(paper, card_markdown, max_input_chars=max_input_chars)
@@ -1313,6 +1370,10 @@ def audit_three_card_digest(
             errors.append(f"digest_record_missing_published_date:{paper.arxiv_id or paper.title}")
         if paper.published_date and paper.published_date not in markdown:
             errors.append(f"digest_missing_published_date:{paper.arxiv_id or paper.title}")
+        if paper.published_date and paper.source:
+            expected_source_line = f"{paper.published_date} · {_source_label(paper.source)}"
+            if expected_source_line not in markdown:
+                errors.append(f"digest_missing_published_source:{paper.arxiv_id or paper.title}")
         if paper.pdf_url and paper.pdf_url not in markdown:
             warnings.append(f"digest_missing_original_pdf_url:{paper.arxiv_id or paper.title}")
         if card_pdf_links and index <= len(card_pdf_links):
@@ -1336,6 +1397,55 @@ def audit_three_card_digest(
         "errors": errors,
         "warnings": warnings,
     }
+
+
+def _ensure_digest_fetch_summary(
+    markdown: str,
+    raw_fetched_count: int | None,
+    selected_count: int,
+) -> str:
+    if raw_fetched_count is None:
+        return markdown
+    expected = f"首次从 arXiv 抓取 {raw_fetched_count} 篇"
+    if expected in markdown:
+        return markdown
+    line = f"今日首次从 arXiv 抓取 {raw_fetched_count} 篇候选论文，最终精选 {selected_count} 篇。"
+    if "\n---\n\n## 今日主线" in markdown:
+        return markdown.replace("\n---\n\n## 今日主线", f"\n\n{line}\n\n---\n\n## 今日主线", 1)
+    if "## 今日主线" in markdown:
+        return markdown.replace("## 今日主线", f"{line}\n\n---\n\n## 今日主线", 1)
+    return markdown.rstrip() + f"\n\n{line}\n"
+
+
+def _source_label(source: str | None) -> str:
+    if not source:
+        return ""
+    if source.lower() == "arxiv":
+        return "arXiv"
+    return source
+
+
+def _ensure_digest_source_labels(markdown: str, papers: list[SelectionRecord]) -> str:
+    updated = markdown
+    for index, paper in enumerate(papers):
+        if not paper.published_date or not paper.source:
+            continue
+        label = _source_label(paper.source)
+        expected = f"{paper.published_date} · {label}"
+        title_start = updated.find(paper.title)
+        if title_start < 0:
+            continue
+        next_starts = [
+            pos for other in papers[index + 1:]
+            if (pos := updated.find(other.title, title_start + len(paper.title))) >= 0
+        ]
+        title_end = min(next_starts) if next_starts else len(updated)
+        segment = updated[title_start:title_end]
+        if expected in segment or paper.published_date not in segment:
+            continue
+        patched = segment.replace(paper.published_date, expected, 1)
+        updated = updated[:title_start] + patched + updated[title_end:]
+    return updated
 
 
 def generate_three_card_digest_markdown(
@@ -1377,6 +1487,8 @@ def generate_three_card_digest_markdown(
         ],
     )
     markdown = _strip_markdown_fence(content)
+    markdown = _ensure_digest_fetch_summary(markdown, raw_fetched_count, len(papers))
+    markdown = _ensure_digest_source_labels(markdown, papers)
     audit = audit_three_card_digest(
         markdown,
         papers,
@@ -1384,7 +1496,10 @@ def generate_three_card_digest_markdown(
         raw_fetched_count=raw_fetched_count,
         card_pdf_links=card_pdf_links,
     )
-    write_json(Path(output_path).with_suffix(".json"), {
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(markdown, encoding="utf-8")
+    write_json(output_path.with_suffix(".json"), {
         "status": "generated" if audit["status"] != "fail" else "failed_audit",
         "prompt_chars": len(prompt),
         "card_count": len(card_paths),
@@ -1395,9 +1510,6 @@ def generate_three_card_digest_markdown(
     })
     if audit["status"] == "fail":
         raise ValueError(f"three_card_digest_audit_failed: {audit['errors']}")
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(markdown, encoding="utf-8")
     return {
         "status": "three_card_digest",
         "prompt_chars": len(prompt),
@@ -2081,8 +2193,8 @@ def run_full_research_radar_pipeline(
     card_mode: str,
     full_card_input_chars: int,
     full_card_output_tokens: int,
-    quick_look_input_chars: int = 60_000,
-    quick_look_output_tokens: int = 1_800,
+    quick_look_input_chars: int = 8_000,
+    quick_look_output_tokens: int = 1_200,
     three_card_digest_input_chars: int = 180_000,
     three_card_digest_output_tokens: int = 2_400,
     quote_enabled: bool = True,
@@ -2503,8 +2615,8 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     card_mode = _config_get(config, "daily_pipeline", "card_mode", "brief")
     full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 160_000)
     full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 16_000)
-    quick_look_input_chars = _config_int(config, "daily_pipeline", "quick_look_input_chars", 60_000)
-    quick_look_output_tokens = _config_int(config, "daily_pipeline", "quick_look_output_tokens", 1_800)
+    quick_look_input_chars = _config_int(config, "daily_pipeline", "quick_look_input_chars", 8_000)
+    quick_look_output_tokens = _config_int(config, "daily_pipeline", "quick_look_output_tokens", 1_200)
     three_card_digest_input_chars = _config_int(config, "daily_pipeline", "three_card_digest_input_chars", 180_000)
     three_card_digest_output_tokens = _config_int(config, "daily_pipeline", "three_card_digest_output_tokens", 2_400)
     quote_enabled = _config_bool(config, "daily_radar", "quote_enabled", True)

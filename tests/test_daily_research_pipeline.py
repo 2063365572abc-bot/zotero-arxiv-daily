@@ -7,6 +7,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     CARD_SECTIONS,
     QUICK_LOOK_FIELDS,
     SelectionRecord,
+    _card_excerpt_for_quick_look,
     audit_paper_card,
     export_markdown_to_pdf,
     extract_source_bundle,
@@ -360,6 +361,26 @@ def test_paper_quick_look_is_card_only_and_audited(tmp_path):
     assert result["status"] == "paper_quick_look"
     assert result["audit"]["status"] == "pass"
     assert (tmp_path / "paper-quick-look.md").exists()
+
+
+def test_quick_look_excerpt_uses_relevant_card_sections():
+    card = "\n\n".join(
+        [
+            "## 01 基本信息\nkeep metadata",
+            "## 03 研究问题\nkeep question",
+            "## 09 关键公式与符号\ndrop formula details",
+            "## 10 实验设计与证据链\nkeep evidence",
+            "## 15 与既有知识的连接\nkeep relation",
+            "## 16 研究想法\ndrop future ideas",
+        ]
+    )
+    excerpt = _card_excerpt_for_quick_look(card, max_chars=10_000)
+    assert "keep metadata" in excerpt
+    assert "keep question" in excerpt
+    assert "keep evidence" in excerpt
+    assert "keep relation" in excerpt
+    assert "drop formula details" not in excerpt
+    assert "drop future ideas" not in excerpt
 
 
 def test_daily_quote_writes_one_model_generated_sentence(tmp_path):
