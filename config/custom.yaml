@@ -36,8 +36,10 @@ daily_pipeline:
   card_mode: ${oc.env:DAILY_PIPELINE_CARD_MODE,one_shot_full}
   full_card_input_chars: ${oc.env:DAILY_PIPELINE_FULL_CARD_INPUT_CHARS,160000}
   full_card_output_tokens: ${oc.env:DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS,16000}
+  quick_look_input_chars: ${oc.env:DAILY_PIPELINE_QUICK_LOOK_INPUT_CHARS,60000}
+  quick_look_output_tokens: ${oc.env:DAILY_PIPELINE_QUICK_LOOK_OUTPUT_TOKENS,1800}
   three_card_digest_input_chars: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_INPUT_CHARS,180000}
-  three_card_digest_output_tokens: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS,5000}
+  three_card_digest_output_tokens: ${oc.env:DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS,2400}
 
 daily_radar:
   quote_enabled: ${oc.env:DAILY_QUOTE_ENABLED,true}

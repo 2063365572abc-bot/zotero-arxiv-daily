@@ -6,6 +6,7 @@ from hashlib import sha256
 from pathlib import Path
 import json
 import re
+import time
 from typing import Any
 
 from loguru import logger
@@ -64,6 +65,17 @@ CARD_SECTION_MAP = {
     "15 与既有知识的连接": "knowledge_connections",
     "16 研究想法": "research_ideas",
 }
+
+QUICK_LOOK_FIELDS = [
+    "研究背景",
+    "核心假设或问题",
+    "方法逻辑",
+    "主要结果",
+    "真正贡献",
+    "与你研究方向的关系",
+    "局限性",
+    "是否值得精读",
+]
 
 
 @dataclass
@@ -280,7 +292,7 @@ def rank_candidates_with_llm(
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
     generation_kwargs["max_tokens"] = min(max(int(generation_kwargs.get("max_tokens") or 0), 3000), 6000)
     params = {**llm_params, "generation_kwargs": generation_kwargs}
-    content = _request_llm(
+    content = _request_llm_with_retry(
         openai_client,
         params,
         [
@@ -767,6 +779,34 @@ def _normalise_card_sections(raw_sections: Any) -> dict[str, str]:
     return sections
 
 
+def _request_llm_with_retry(
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+    messages: list[dict[str, str]],
+    *,
+    force_json: bool = False,
+    attempts: int = 3,
+) -> str:
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return _request_llm(openai_client, llm_params, messages, force_json=force_json)
+        except Exception as exc:
+            last_error = exc
+            status_code = getattr(exc, "status_code", None)
+            if status_code in {400, 401, 403}:
+                raise RuntimeError("llm_request_failed_non_retriable") from exc
+            if attempt >= attempts:
+                break
+            delay = min(2 ** (attempt - 1), 8)
+            logger.warning(
+                f"LLM request failed; retrying attempt {attempt + 1}/{attempts} in {delay}s: "
+                f"{type(exc).__name__}: {exc}"
+            )
+            time.sleep(delay)
+    raise RuntimeError(f"llm_request_failed_after_{attempts}_attempts") from last_error
+
+
 def build_one_shot_full_card_prompt(
     paper: SelectionRecord,
     bundle: dict[str, Any],
@@ -917,26 +957,218 @@ def generate_one_shot_full_card_markdown(
     }
 
 
+def build_paper_quick_look_prompt(
+    paper: SelectionRecord,
+    card_markdown: str,
+    max_input_chars: int = 60_000,
+) -> str:
+    if len(card_markdown) > max_input_chars:
+        raise ValueError(
+            f"paper_card_exceeds_quick_look_limit: chars={len(card_markdown)} limit={max_input_chars}"
+        )
+    return f"""
+你是“一多科研”的论文速读编辑。下面是一篇已经完成的完整 Paper Card。
+请只把 Card 中已有内容整理成一份适合手机快速阅读的“论文速看”。
+
+这是压缩、重排和改写任务，不是重新分析论文：
+- 只能使用下面 Card 中出现的信息；
+- 不得联网，不得调用常识补充信息；
+- 不得编造或推断发布日期、作者、机构、期刊、实验结果、代码或数据；
+- 数字、指标、模型名、数据集名和结论限定条件必须忠实保留；
+- Card 没有明确支持的内容写“Card未提供”，不要自行补全；
+- 将作者声称、实验结果和分析判断保持原有边界，不要把结论说得更强。
+- 以专业科研编辑的标准压缩内容：每个栏目保留最关键的信息和必要证据，不复述 Card 的项目符号清单。
+
+基本元数据（只能原样整理，不能改写）：
+- 标题：{paper.title}
+- 发布时间：{paper.published_date or 'Card未提供'}
+- 来源：{paper.source}；arXiv ID：{paper.arxiv_id or 'Card未提供'}
+- 原文链接：{paper.url}
+
+只输出 Markdown，不要输出代码块、JSON、解释或免责声明。
+全文控制在 2,200 个中文字符以内；每个栏目按信息复杂度写 1—3 个短句，避免展开成长清单。
+严格使用以下格式和顺序：
+
+## {paper.title}
+
+**标题与发布时间**
+{paper.title}（{paper.published_date or 'Card未提供'}）
+
+**作者和机构**
+从 Card 的“01 基本信息”中整理；没有就写“Card未提供”。
+
+**研究背景**
+只压缩 Card 第 04 节。
+
+**核心假设或问题**
+只压缩 Card 第 03 节和相关核心思想，不新增假设。
+
+**方法逻辑**
+用“输入 → 核心方法 → 输出”整理 Card 第 07—08 节。
+
+**主要结果**
+只整理 Card 第 10—11 节已有的结果和结论。
+
+**真正贡献**
+只提炼 Card 第 06—07 节已经支持的贡献，不使用夸大性宣传语。
+
+**与你研究方向的关系**
+只整理 Card 第 15 节中关于空间转录组、机器学习、单细胞、多组学或相关方法的连接。
+
+**局限性**
+压缩 Card 第 12—13 节，区分作者明确限制和 Card 已有的批判性风险。
+
+**是否值得精读**
+根据 Card 已有证据给出“值得精读 / 可以选读 / 暂不推荐”，并用一句话说明理由。
+
+**原文 PDF**：{paper.pdf_url or paper.url}
+
+下面是唯一允许使用的 Card 内容：
+{card_markdown}
+""".strip()
+
+
+def audit_paper_quick_look(markdown: str, paper: SelectionRecord) -> dict[str, Any]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not markdown.strip():
+        errors.append("quick_look_empty")
+    if paper.title not in markdown:
+        errors.append("quick_look_missing_title")
+    for field in QUICK_LOOK_FIELDS:
+        if f"**{field}**" not in markdown:
+            errors.append(f"quick_look_missing:{field}")
+    if not paper.published_date:
+        errors.append("quick_look_record_missing_published_date")
+    if paper.published_date and paper.published_date not in markdown:
+        errors.append("quick_look_missing_canonical_published_date")
+    if paper.pdf_url and paper.pdf_url not in markdown and paper.url not in markdown:
+        errors.append("quick_look_missing_original_link")
+    if "```" in markdown or "<html" in markdown.lower() or "<div" in markdown.lower():
+        errors.append("quick_look_contains_wrapping_or_html")
+    status = "fail" if errors else ("pass_with_warnings" if warnings else "pass")
+    return {
+        "schema_version": "1.0",
+        "status": status,
+        "character_count": len(markdown),
+        "errors": errors,
+        "warnings": warnings,
+    }
+
+
+def generate_paper_quick_look_markdown(
+    paper: SelectionRecord,
+    card_path: str | Path,
+    output_path: str | Path,
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+    max_input_chars: int = 60_000,
+    max_output_tokens: int = 1_800,
+) -> dict[str, Any]:
+    card_markdown = Path(card_path).read_text(encoding="utf-8")
+    prompt = build_paper_quick_look_prompt(paper, card_markdown, max_input_chars=max_input_chars)
+    generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
+    generation_kwargs.pop("stream", None)
+    generation_kwargs["max_tokens"] = max_output_tokens
+    generation_kwargs["temperature"] = min(float(generation_kwargs.get("temperature", 0.2)), 0.2)
+    content = _request_llm_with_retry(
+        openai_client,
+        {**llm_params, "generation_kwargs": generation_kwargs},
+        [
+            {
+                "role": "system",
+                "content": "你是严格的科研 Card 整理器，只根据输入内容输出 Markdown，不添加任何外部事实。",
+            },
+            {"role": "user", "content": prompt},
+        ],
+    )
+    markdown = _strip_markdown_fence(content)
+    audit = audit_paper_quick_look(markdown, paper)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(markdown, encoding="utf-8")
+    write_json(output_path.with_suffix(".json"), {
+        "status": "generated" if audit["status"] != "fail" else "failed_audit",
+        "prompt_chars": len(prompt),
+        "card_chars": len(card_markdown),
+        "quick_look_chars": len(markdown),
+        "model": generation_kwargs.get("model"),
+        "audit": audit,
+    })
+    if audit["status"] == "fail":
+        raise ValueError(f"paper_quick_look_audit_failed: {audit['errors']}")
+    return {
+        "status": "paper_quick_look",
+        "prompt_chars": len(prompt),
+        "card_chars": len(card_markdown),
+        "quick_look_chars": len(markdown),
+        "model": generation_kwargs.get("model"),
+        "audit": audit,
+    }
+
+
+def generate_daily_quote(
+    output_path: str | Path,
+    openai_client: OpenAI,
+    llm_params: dict[str, Any],
+    max_output_tokens: int = 120,
+) -> dict[str, Any]:
+    prompt = (
+        "请生成一句简短、克制、有启发性的原创中文科研寄语，适合放在早晨的科研论文速递开头。"
+        "不要冒充名人名言，不要添加作者、出处、引号或解释，只输出一句话。"
+    )
+    generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
+    generation_kwargs.pop("stream", None)
+    generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), max_output_tokens)
+    generation_kwargs["temperature"] = max(float(generation_kwargs.get("temperature", 0.2)), 0.6)
+    content = _request_llm_with_retry(
+        openai_client,
+        {**llm_params, "generation_kwargs": generation_kwargs},
+        [
+            {"role": "system", "content": "你是简洁、克制的中文科研晨间编辑。"},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    quote = re.sub(r"\s+", " ", (content or "").strip()).strip("`#> \t")
+    if not quote:
+        raise ValueError("daily_quote_empty")
+    if len(quote) > 80:
+        quote = quote[:79].rstrip() + "…"
+    result = {
+        "status": "generated",
+        "quote": quote,
+        "model": generation_kwargs.get("model"),
+        "prompt_chars": len(prompt),
+    }
+    write_json(output_path, result)
+    return result
+
+
 def build_three_card_digest_prompt(
     papers: list[SelectionRecord],
     card_markdowns: list[str],
     max_input_chars: int = 180_000,
     report_date: str | None = None,
+    raw_fetched_count: int | None = None,
+    quote: str | None = None,
+    card_pdf_links: list[str] | None = None,
 ) -> str:
     if len(papers) != len(card_markdowns):
         raise ValueError("papers_and_cards_length_mismatch")
     blocks: list[str] = []
     total = 0
     for index, (paper, card) in enumerate(zip(papers, card_markdowns), start=1):
+        card_pdf_link = (card_pdf_links or [""] * len(papers))[index - 1]
         block = (
-            f"\n===== CARD {index} =====\n"
+            f"\n===== PAPER QUICK LOOK {index} =====\n"
             f"Title: {paper.title}\n"
             f"arXiv ID: {paper.arxiv_id or 'unknown'}\n"
             f"URL: {paper.url}\n"
             f"Published metadata: {getattr(paper, 'published_date', None) or 'unknown'}\n"
+            f"Original PDF URL: {paper.pdf_url or paper.url}\n"
+            f"Card PDF link: {card_pdf_link or 'not provided'}\n"
             f"Selection role: {paper.role}\n"
-            f"Selection reason: {paper.selection_reason}\n"
-            f"CARD CONTENT:\n{card}\n"
+            f"QUICK LOOK CONTENT:\n{card}\n"
         )
         total += len(block)
         if total > max_input_chars:
@@ -946,56 +1178,99 @@ def build_three_card_digest_prompt(
         blocks.append(block)
 
     report_date = report_date or datetime.now().strftime("%Y-%m-%d")
+    fetched = raw_fetched_count if raw_fetched_count is not None else "未记录"
+    quote_text = quote.strip() if quote and quote.strip() else ""
+    quote_block = f"\n> {quote_text}\n" if quote_text else ""
     return f"""
-你是“一多科研”每日科研雷达的日报编辑。下面提供了三篇已经完成全文深读的 Paper Card。
-请只根据这三篇 Card 和它们提供的论文元数据，生成一份适合微信阅读的精简 Markdown 日报。
+你是“一多科研”的高级科研新闻速递编辑。下面提供的是三篇已经完成全文深读后生成的“论文速看”。
+请将它们整理成一份高级、简约、适合手机阅读的 Markdown 科研新闻速递。
 
-你的任务不是重新发明论文事实，而是完成三篇 Card 的交叉综合：
-1. 提炼三篇共同的研究趋势，并说明它们共同指向的技术演化；
-2. 比较三篇在数据、任务、模型、监督信号、验证方式上的差异；
-3. 判断证据强弱，区分预印本结果、benchmark 提升和真实生物学验证；
-4. 说明每篇论文对用户“空间转录组 + 机器学习”的直接价值、方法启发或仅趋势参考；
-5. 给出优先阅读顺序、最值得复现的方法、最值得检查的数据或实验；
-6. 指出跨论文总结的风险、信息缺口和不能下的结论。
+输入边界：
+- 论文内容只能来自三篇 PAPER QUICK LOOK；不要重新分析 PDF；
+- 标题、发布日期、作者、机构、链接必须使用输入中的值，不得修改、猜测或补充；
+- 不得联网，不得添加论文 Card 之外的新事实；
+- 今日首轮抓取数量必须原样使用：{fetched}；
+- 今日寄语必须原样使用，不要改写；
+- 只输出最终 Markdown，不要输出解释、免责声明、审计内容、JSON、HTML 或代码块。
 
-输出硬性要求：
-- 只输出 Markdown，不要输出 HTML、JSON、代码块或分析过程；
-- 不超过 3800 个字符；
-- 标题必须严格使用：`【一多科研日报｜{report_date}】`，不得自行推断、改写或使用其他日期；
-- 必须有“今日趋势”“重点论文”“今日结论”三个部分；
-- 重点论文必须恰好 1、2、3 三篇，标题必须与输入一致；
-- 每篇都要有：作者/来源、发布日期或“未核验”、核心逻辑、值得阅读的原因、局限或风险、原文链接；
-- 没有证据的作者机构、实验室、正式期刊、DOI 不得猜测，写“未核验”；
-- Card 中的论文事实不要改写成更强的结论；
-- 跨论文推断使用“[趋势判断]”，阅读建议使用“[建议]”，风险使用“[风险]”。
+内容要求：
+- 开头是“一多科研｜每日论文速递”、日期、早上好和今日寄语；
+- “今日主线”必须根据三篇速看动态生成，不能使用固定套话；
+- 明确写出“今日首次从 arXiv 抓取 {fetched} 篇候选论文，最终精选 {len(papers)} 篇”；
+- 三篇论文标题必须使用大号标题；日期放在标题下方的独立信息行；
+- 每篇必须展示：标题与发布时间、作者和机构、研究背景、核心假设或问题、方法逻辑、主要结果、真正贡献、与你研究方向的关系、局限性、是否值得精读；
+- 每个栏目按信息复杂度写 1—3 个短句，避免展开成长清单；单篇正文控制在约 650—900 个中文字符，今日主线控制在约 150—220 个中文字符；
+- 不要复制 Card 的项目符号清单、公式或多条指标；只保留最关键的一条证据；
+- 每篇结尾必须有原文 PDF 下载链接和 Paper Card PDF 下载链接；链接必须使用输入中的值；
+- 结尾给出简短的今日精读顺序；
+- 语言像专业科研新闻速递：克制、清楚、密度高，不写宣传口号。
+- 全文不得超过 6,500 个中文字符；每篇论文正文控制在 650—900 个中文字符；
+- 每个栏目最多 1 个短段落，不得复制输入中的长列表、公式、多个指标或逐条实验结果；
+- “主要结果”最多保留最有代表性的 1—2 个结果，“局限性”最多保留最关键的 1—2 个限制；
+- “真正贡献”和“与你研究方向的关系”必须是压缩后的专业判断，各不超过 2 句。
 
-推荐格式：
-【一多科研日报｜{report_date}】
+最终格式：
 
-来源：arXiv
-筛选链：50篇候选 → embedding Top20 → Qwen Top3
+# 一多科研｜每日论文速递
 
-## 今日趋势
-150—250字，必须是三篇 Card 的交叉分析。
+**{report_date}**
 
-## 重点论文
-### 1. 论文标题
-作者/来源：...
-发布日期：...
-核心逻辑：...
-为什么值得看：...
-局限/风险：...
-原文：...
+早上好，一多。
+{quote_block}
+---
 
-### 2. ...
-### 3. ...
+## 今日主线
 
-## 今日结论
-优先阅读、方法启发、趋势参考和主要风险。
+根据三篇论文速看动态生成一段简洁的研究趋势概览。
 
-三篇 Card 内容如下：
+---
+
+# 01｜论文标题
+
+**发布时间 · 来源**
+必须填写该篇 PAPER QUICK LOOK 中的准确日期；没有日期才写“Card未提供”，不得写 unknown。
+
+**作者和机构**
+
+**研究背景**
+
+**核心假设或问题**
+
+**方法逻辑**
+
+**主要结果**
+
+**真正贡献**
+
+**与你研究方向的关系**
+
+**局限性**
+
+**是否值得精读**
+
+[原文 PDF](...) · [下载 Paper Card](...)
+
+---
+
+# 02｜论文标题
+
+按相同结构整理。
+
+---
+
+# 03｜论文标题
+
+按相同结构整理。
+
+---
+
+## 今日精读顺序
+
+给出 01 → 02 → 03 的简短排序理由。
+
+三篇论文速看如下：
 {''.join(blocks)}
-"""
+""".strip()
 
 
 def _strip_markdown_fence(text: str) -> str:
@@ -1008,29 +1283,51 @@ def audit_three_card_digest(
     markdown: str,
     papers: list[SelectionRecord],
     report_date: str | None = None,
+    raw_fetched_count: int | None = None,
+    card_pdf_links: list[str] | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     if not markdown.strip():
         errors.append("digest_empty")
-    if report_date and f"【一多科研日报｜{report_date}】" not in markdown:
+    if report_date and report_date not in markdown:
         errors.append("digest_wrong_or_missing_report_date")
     if "<html" in markdown.lower() or "<div" in markdown.lower():
         errors.append("digest_contains_html")
-    for heading in ("今日趋势", "重点论文", "今日结论"):
+    if "一多科研" not in markdown or "每日论文速递" not in markdown:
+        errors.append("digest_missing_newsletter_title")
+    for heading in ("今日主线", "今日精读顺序"):
         if heading not in markdown:
             errors.append(f"digest_missing:{heading}")
     if len(papers) != 3:
         errors.append("digest_requires_three_papers")
     for index, paper in enumerate(papers, start=1):
         if f"### {index}." not in markdown and f"{index}. {paper.title}" not in markdown:
-            errors.append(f"digest_missing_paper_slot:{index}")
+            if f"# {index:02d}｜" not in markdown:
+                errors.append(f"digest_missing_paper_slot:{index}")
         if paper.title not in markdown:
             errors.append(f"digest_missing_title:{paper.arxiv_id or paper.title}")
-        if paper.url and paper.url not in markdown:
+        if paper.url and paper.url not in markdown and (not paper.pdf_url or paper.pdf_url not in markdown):
             warnings.append(f"digest_missing_url:{paper.arxiv_id or paper.title}")
-    if len(markdown) > 3800:
-        warnings.append("digest_exceeds_wechat_recommended_length")
+        if not paper.published_date:
+            errors.append(f"digest_record_missing_published_date:{paper.arxiv_id or paper.title}")
+        if paper.published_date and paper.published_date not in markdown:
+            errors.append(f"digest_missing_published_date:{paper.arxiv_id or paper.title}")
+        if paper.pdf_url and paper.pdf_url not in markdown:
+            warnings.append(f"digest_missing_original_pdf_url:{paper.arxiv_id or paper.title}")
+        if card_pdf_links and index <= len(card_pdf_links):
+            link = card_pdf_links[index - 1]
+            if link and link not in markdown:
+                errors.append(f"digest_missing_card_pdf_link:{paper.arxiv_id or paper.title}")
+        for field in QUICK_LOOK_FIELDS:
+            if markdown.count(f"**{field}**") < len(papers):
+                errors.append(f"digest_missing:{field}:{index}")
+    if raw_fetched_count is not None:
+        expected = f"首次从 arXiv 抓取 {raw_fetched_count} 篇"
+        if expected not in markdown:
+            errors.append("digest_missing_canonical_raw_fetched_count")
+    if len(markdown) > 6_500:
+        errors.append("digest_exceeds_maximum_length")
     status = "fail" if errors else ("pass_with_warnings" if warnings else "pass")
     return {
         "schema_version": "1.0",
@@ -1050,6 +1347,9 @@ def generate_three_card_digest_markdown(
     max_input_chars: int = 180_000,
     max_output_tokens: int = 5_000,
     report_date: str | None = None,
+    raw_fetched_count: int | None = None,
+    quote: str | None = None,
+    card_pdf_links: list[str] | None = None,
 ) -> dict[str, Any]:
     card_markdowns = [Path(path).read_text(encoding="utf-8") for path in card_paths]
     prompt = build_three_card_digest_prompt(
@@ -1057,12 +1357,15 @@ def generate_three_card_digest_markdown(
         card_markdowns,
         max_input_chars=max_input_chars,
         report_date=report_date,
+        raw_fetched_count=raw_fetched_count,
+        quote=quote,
+        card_pdf_links=card_pdf_links,
     )
     generation_kwargs = dict(llm_params.get("generation_kwargs", {}))
     generation_kwargs.pop("stream", None)
-    generation_kwargs["max_tokens"] = max(int(generation_kwargs.get("max_tokens") or 0), max_output_tokens)
+    generation_kwargs["max_tokens"] = max_output_tokens
     generation_kwargs["temperature"] = min(float(generation_kwargs.get("temperature", 0.2)), 0.2)
-    content = _request_llm(
+    content = _request_llm_with_retry(
         openai_client,
         {**llm_params, "generation_kwargs": generation_kwargs},
         [
@@ -1074,7 +1377,13 @@ def generate_three_card_digest_markdown(
         ],
     )
     markdown = _strip_markdown_fence(content)
-    audit = audit_three_card_digest(markdown, papers, report_date=report_date)
+    audit = audit_three_card_digest(
+        markdown,
+        papers,
+        report_date=report_date,
+        raw_fetched_count=raw_fetched_count,
+        card_pdf_links=card_pdf_links,
+    )
     write_json(Path(output_path).with_suffix(".json"), {
         "status": "generated" if audit["status"] != "fail" else "failed_audit",
         "prompt_chars": len(prompt),
@@ -1772,8 +2081,11 @@ def run_full_research_radar_pipeline(
     card_mode: str,
     full_card_input_chars: int,
     full_card_output_tokens: int,
+    quick_look_input_chars: int = 60_000,
+    quick_look_output_tokens: int = 1_800,
     three_card_digest_input_chars: int = 180_000,
-    three_card_digest_output_tokens: int = 5_000,
+    three_card_digest_output_tokens: int = 2_400,
+    quote_enabled: bool = True,
 ) -> Path:
     run_date = output_dir.name
     state_path = Path(str(_config_get(config, "daily_pipeline", "state_path", "state/research_radar.sqlite")))
@@ -1970,16 +2282,109 @@ def run_full_research_radar_pipeline(
             write_daily_index(output_dir)
             return output_dir
 
+        quick_look_paths: list[Path] = []
+        quick_look_reports: list[dict[str, Any]] = []
+        quick_look_model_calls = 0
+        for record, card_report in zip(selected, card_reports):
+            folder = Path(card_report["folder"])
+            quick_look_path = folder / "paper-quick-look.md"
+            try:
+                quick_meta = generate_paper_quick_look_markdown(
+                    record,
+                    folder / "paper-card.md",
+                    quick_look_path,
+                    executor.openai_client,
+                    llm_params,
+                    max_input_chars=quick_look_input_chars,
+                    max_output_tokens=quick_look_output_tokens,
+                )
+                quick_look_model_calls += 1
+                quick_look_reports.append({
+                    "arxiv_id": record.arxiv_id,
+                    "title": record.title,
+                    "path": str(quick_look_path),
+                    "audit": quick_meta["audit"],
+                })
+                quick_look_paths.append(quick_look_path)
+            except Exception as exc:
+                logger.error(f"Paper quick look failed for {record.title}: {exc}")
+                quick_look_reports.append({
+                    "arxiv_id": record.arxiv_id,
+                    "title": record.title,
+                    "path": str(quick_look_path),
+                    "audit": {
+                        "status": "fail",
+                        "errors": [f"quick_look_failed:{type(exc).__name__}"],
+                        "warnings": [],
+                    },
+                })
+
+        write_json(output_dir / "quick-look-quality.json", quick_look_reports)
+        quick_look_gate_passed = len(quick_look_reports) == selected_count and all(
+            item["audit"].get("status") == "pass" for item in quick_look_reports
+        )
+        if not quick_look_gate_passed:
+            daily_audit.update({
+                "status": "quick_look_quality_failed",
+                "raw_arxiv_count": len(raw_candidates),
+                "candidate_50_count": len(candidates),
+                "excluded_previously_promoted_count": len(excluded_candidates),
+                "top20_count": len(top20),
+                "selected_count": len(selected),
+                "deep_card_model_calls": deep_card_model_calls,
+                "quick_look_model_calls": quick_look_model_calls,
+                "card_quality": card_reports,
+                "quick_look_quality": quick_look_reports,
+                "pdf_success_count": sum(
+                    1 for folder in paper_folders
+                    if (folder / "metadata.json").exists()
+                    and json.loads((folder / "metadata.json").read_text(encoding="utf-8")).get("download_status") == "downloaded"
+                ),
+                "card_success_count": len(card_reports),
+                "zotero_upload_success_count": 0,
+            })
+            write_json(output_dir / "daily_audit.json", daily_audit)
+            write_daily_report_markdown(output_dir, daily_audit, selected)
+            write_daily_index(output_dir)
+            return output_dir
+
+        quote_meta: dict[str, Any] = {"status": "disabled", "quote": "", "model": None}
+        if quote_enabled:
+            try:
+                quote_meta = generate_daily_quote(
+                    output_dir / "daily-quote.json",
+                    executor.openai_client,
+                    llm_params,
+                )
+            except Exception as exc:
+                logger.warning(f"Daily quote generation failed; continuing without quote: {exc}")
+                quote_meta = {
+                    "status": "failed",
+                    "quote": "",
+                    "model": llm_params.get("generation_kwargs", {}).get("model"),
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                write_json(output_dir / "daily-quote.json", quote_meta)
+
+        card_pdf_links = [
+            Path(folder / "文档分析.pdf").relative_to(output_dir).as_posix()
+            for folder in paper_folders
+        ]
         digest_meta = generate_three_card_digest_markdown(
             selected,
-            [Path(item["folder"]) / "paper-card.md" for item in card_reports],
+            quick_look_paths,
             output_dir / "wechat-digest.md",
             executor.openai_client,
             llm_params,
             max_input_chars=three_card_digest_input_chars,
             max_output_tokens=three_card_digest_output_tokens,
             report_date=run_date,
+            raw_fetched_count=len(raw_candidates),
+            quote=quote_meta.get("quote", ""),
+            card_pdf_links=card_pdf_links,
         )
+        digest_meta["quick_look_model_calls"] = quick_look_model_calls
+        digest_meta["daily_quote_model_calls"] = 1 if quote_enabled else 0
         write_json(output_dir / "trend-analysis.json", digest_meta)
 
         zotero_uploads = []
@@ -2029,8 +2434,12 @@ def run_full_research_radar_pipeline(
                 },
                 "llm_model_calls": llm_model_calls,
                 "deep_card_model_calls": deep_card_model_calls,
+                "quick_look_model_calls": quick_look_model_calls,
+                "daily_quote_model_calls": 1 if quote_enabled else 0,
                 "three_card_digest_model_calls": 1,
                 "card_quality": card_reports,
+                "quick_look_quality": quick_look_reports,
+                "daily_quote": quote_meta,
                 "wechat_digest": digest_meta,
                 "freshness_distribution": freshness_distribution(candidates),
                 "top20_from_candidates": all(paper in candidates for paper in top20),
@@ -2094,8 +2503,11 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
     card_mode = _config_get(config, "daily_pipeline", "card_mode", "brief")
     full_card_input_chars = _config_int(config, "daily_pipeline", "full_card_input_chars", 160_000)
     full_card_output_tokens = _config_int(config, "daily_pipeline", "full_card_output_tokens", 16_000)
+    quick_look_input_chars = _config_int(config, "daily_pipeline", "quick_look_input_chars", 60_000)
+    quick_look_output_tokens = _config_int(config, "daily_pipeline", "quick_look_output_tokens", 1_800)
     three_card_digest_input_chars = _config_int(config, "daily_pipeline", "three_card_digest_input_chars", 180_000)
-    three_card_digest_output_tokens = _config_int(config, "daily_pipeline", "three_card_digest_output_tokens", 5_000)
+    three_card_digest_output_tokens = _config_int(config, "daily_pipeline", "three_card_digest_output_tokens", 2_400)
+    quote_enabled = _config_bool(config, "daily_radar", "quote_enabled", True)
     output_dir = daily_output_dir(output_root)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -2114,8 +2526,11 @@ def run_daily_file_pipeline(config: DictConfig) -> Path:
             card_mode=card_mode,
             full_card_input_chars=full_card_input_chars,
             full_card_output_tokens=full_card_output_tokens,
+            quick_look_input_chars=quick_look_input_chars,
+            quick_look_output_tokens=quick_look_output_tokens,
             three_card_digest_input_chars=three_card_digest_input_chars,
             three_card_digest_output_tokens=three_card_digest_output_tokens,
+            quote_enabled=quote_enabled,
         )
 
     if retrieval_only:

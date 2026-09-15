@@ -5,12 +5,15 @@ import pymupdf
 
 from zotero_arxiv_daily.daily_research_pipeline import (
     CARD_SECTIONS,
+    QUICK_LOOK_FIELDS,
     SelectionRecord,
     audit_paper_card,
     export_markdown_to_pdf,
     extract_source_bundle,
     filter_previously_promoted_candidates,
+    generate_daily_quote,
     generate_one_shot_full_card_markdown,
+    generate_paper_quick_look_markdown,
     generate_three_card_digest_markdown,
     generate_paper_card_markdown,
     rank_candidates_with_llm,
@@ -264,7 +267,10 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
     papers = [
         SelectionRecord(
             source="arxiv", title=f"Paper {index}", authors=["A"], abstract="Abstract",
-            url=f"https://arxiv.org/abs/2601.0000{index}", pdf_url=None, score=1.0,
+            url=f"https://arxiv.org/abs/2601.0000{index}",
+            pdf_url=f"https://arxiv.org/pdf/2601.0000{index}",
+            published_date="2026-09-14",
+            score=1.0,
             role="best_match", scoring={}, selection_reason="test", arxiv_id=f"2601.0000{index}",
         )
         for index in range(1, 4)
@@ -277,12 +283,24 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
             *[f"## {section}\n\n[Paper: PDF p. 1] [Analysis] [Hypothesis] content" for section in CARD_SECTIONS],
         ]
     )
-    digest = (
-        "【一多科研日报｜2026-09-15】\n\n## 今日趋势\ntrend\n\n## 重点论文\n"
-        "### 1. Paper 1\nhttps://arxiv.org/abs/2601.00001\n"
-        "### 2. Paper 2\nhttps://arxiv.org/abs/2601.00002\n"
-        "### 3. Paper 3\nhttps://arxiv.org/abs/2601.00003\n\n## 今日结论\nconclusion"
+    quick_fields = "\n".join(
+        f"**{field}**\ncontent"
+        for field in [
+            "标题与发布时间", "作者和机构", "研究背景", "核心假设或问题",
+            "方法逻辑", "主要结果", "真正贡献", "与你研究方向的关系",
+            "局限性", "是否值得精读",
+        ]
     )
+    digest = "# 一多科研｜每日论文速递\n\n**2026-09-15**\n\n早上好，一多。\n\n> quote\n\n"
+    digest += "## 今日主线\ntrend\n\n"
+    for index in range(1, 4):
+        digest += (
+            f"# {index:02d}｜Paper {index}\n\n"
+            f"**2026-09-14 · arXiv**\n\n{quick_fields}\n\n"
+            f"[原文 PDF](https://arxiv.org/pdf/2601.0000{index}) · "
+            f"[下载 Paper Card](paper-{index}.pdf)\n\n"
+        )
+    digest += "## 今日精读顺序\n01 → 02 → 03\n今日首次从 arXiv 抓取 50 篇候选论文，最终精选 3 篇"
     fake_response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=digest))])
     fake_client = SimpleNamespace(
         chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: fake_response))
@@ -296,8 +314,68 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
         fake_client,
         {"generation_kwargs": {"model": "qwen3.8-max", "max_tokens": 100}},
         report_date="2026-09-15",
+        raw_fetched_count=50,
+        quote="quote",
+        card_pdf_links=["paper-1.pdf", "paper-2.pdf", "paper-3.pdf"],
     )
     assert result["audit"]["status"] == "pass"
+
+
+def test_paper_quick_look_is_card_only_and_audited(tmp_path):
+    paper = SelectionRecord(
+        source="arxiv",
+        title="Card-grounded paper",
+        authors=["Author"],
+        abstract="Abstract",
+        url="https://arxiv.org/abs/2601.00001",
+        pdf_url="https://arxiv.org/pdf/2601.00001",
+        published_date="2026-09-14",
+        score=1.0,
+        role="best_match",
+        scoring={},
+        selection_reason="test",
+        arxiv_id="2601.00001",
+    )
+    card = "\n".join(["## 01 基本信息", "**作者**: Author", "**机构**: Test Lab"])
+    quick = (
+        "## Card-grounded paper\n\n"
+        "**标题与发布时间**\nCard-grounded paper（2026-09-14）\n\n"
+        "**作者和机构**\nAuthor；Test Lab\n\n"
+        + "\n\n".join(f"**{field}**\nCard content" for field in QUICK_LOOK_FIELDS)
+        + "\n\n**原文 PDF**：https://arxiv.org/pdf/2601.00001"
+    )
+    fake_response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=quick))])
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: fake_response))
+    )
+    card_path = tmp_path / "paper-card.md"
+    card_path.write_text(card, encoding="utf-8")
+    result = generate_paper_quick_look_markdown(
+        paper,
+        card_path,
+        tmp_path / "paper-quick-look.md",
+        fake_client,
+        {"generation_kwargs": {"model": "qwen3.8-max", "max_tokens": 100}},
+    )
+    assert result["status"] == "paper_quick_look"
+    assert result["audit"]["status"] == "pass"
+    assert (tmp_path / "paper-quick-look.md").exists()
+
+
+def test_daily_quote_writes_one_model_generated_sentence(tmp_path):
+    fake_response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="把复杂的问题拆开，答案会开始出现。"))]
+    )
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: fake_response))
+    )
+    result = generate_daily_quote(
+        tmp_path / "daily-quote.json",
+        fake_client,
+        {"generation_kwargs": {"model": "qwen3.8-max", "max_tokens": 100}},
+    )
+    assert result["status"] == "generated"
+    assert result["quote"] == "把复杂的问题拆开，答案会开始出现。"
 
 
 def test_process_selected_paper_records_download_failure(tmp_path, monkeypatch):
