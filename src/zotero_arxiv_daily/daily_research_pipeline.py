@@ -1008,7 +1008,7 @@ def generate_one_shot_full_card_markdown(
         "card_chars": len(markdown),
         "source_pages": len(bundle.get("pages", [])),
         "source_characters": sum(int(page.get("character_count", 0)) for page in bundle.get("pages", [])),
-        "source_fully_included": True,
+        "source_fully_included": bool(require_full_source),
         "evidence_inventory": {
             key: len(value or []) for key, value in (bundle.get("evidence_inventory", {}) or {}).items()
         },
@@ -1863,6 +1863,14 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
             warnings.append("missing_analysis_provenance")
         if "[Hypothesis]" not in card:
             warnings.append("missing_hypothesis_provenance")
+        analysis_path = folder / "paper_analysis.json"
+        if analysis_path.exists():
+            try:
+                analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+                if analysis.get("source_fully_included") is False:
+                    warnings.append("source_excerpted_for_context_limit")
+            except (OSError, json.JSONDecodeError):
+                warnings.append("paper_analysis_unreadable")
         if "scaffold must be replaced" in card:
             warnings.append("scaffold_card_needs_llm_enrichment")
         if "llm_enrichment_failed" in card or "llm_client_not_configured" in card:
@@ -2031,16 +2039,34 @@ def process_selected_paper(
     (folder / "fulltext.md").write_text(write_text, encoding="utf-8")
     if card_mode == "one_shot_full" and openai_client is not None and llm_params is not None:
         try:
-            analysis = generate_one_shot_full_card_markdown(
-                record,
-                bundle,
-                folder / "paper-card.md",
-                openai_client,
-                llm_params,
-                max_input_chars=full_card_input_chars,
-                max_output_tokens=full_card_output_tokens,
-                require_full_source=True,
-            )
+            try:
+                analysis = generate_one_shot_full_card_markdown(
+                    record,
+                    bundle,
+                    folder / "paper-card.md",
+                    openai_client,
+                    llm_params,
+                    max_input_chars=full_card_input_chars,
+                    max_output_tokens=full_card_output_tokens,
+                    require_full_source=True,
+                )
+            except ValueError as exc:
+                if not str(exc).startswith("full_source_exceeds_limit:"):
+                    raise
+                logger.warning(
+                    f"Full source exceeds model context limit for {record.title}; "
+                    "retrying with an explicitly bounded source excerpt."
+                )
+                analysis = generate_one_shot_full_card_markdown(
+                    record,
+                    bundle,
+                    folder / "paper-card.md",
+                    openai_client,
+                    llm_params,
+                    max_input_chars=full_card_input_chars,
+                    max_output_tokens=full_card_output_tokens,
+                    require_full_source=False,
+                )
             write_json(folder / "paper_analysis.json", analysis)
         except Exception as exc:
             logger.error(f"Full Paper Card generation failed for {record.title}: {exc}")

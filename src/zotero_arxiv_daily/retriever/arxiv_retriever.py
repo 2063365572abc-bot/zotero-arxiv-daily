@@ -287,6 +287,17 @@ class ArxivRetriever(BaseRetriever):
                 logger.info(f"Recent topic retrieval produced {len(results[:limit])} candidates within {hours}h.")
                 return results[:limit]
 
+        # When the topic API and HTML search are rate-limited, search the RSS
+        # feeds with the domain+method gate across every freshness window before
+        # falling back to broad category recall.
+        domain, method, task = self._keyword_groups()
+        for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
+            batch = self._retrieve_strict_keyword_rss(domain, method, task, hours)
+            add_candidates(batch)
+            if len(results) >= limit:
+                logger.info(f"Strict keyword RSS retrieval produced {len(results[:limit])} candidates within {hours}h.")
+                return results[:limit]
+
         # Only use broad category RSS after the topical windows are exhausted.
         # This is a recall safety net, never a historical backfill and never a
         # reason to stop before the more relevant topic search has run.
@@ -299,13 +310,10 @@ class ArxivRetriever(BaseRetriever):
                         f"arXiv category API returned {exc.status}; using keyword RSS fallback "
                         f"before category RSS for {hours}h."
                     )
-                    domain, method, task = self._keyword_groups()
                     batch = self._retrieve_strict_keyword_rss(domain, method, task, hours)
                     if len(batch) < max(max_results, limit):
                         category_batch = self._retrieve_recent_category_rss(hours)
                         batch.extend(category_batch)
-            else:
-                raise
             add_candidates(batch)
             if len(results) >= limit:
                 logger.info(f"Recent category retrieval produced {len(results[:limit])} candidates within {hours}h.")
