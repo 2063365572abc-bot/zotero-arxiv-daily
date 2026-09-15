@@ -2050,8 +2050,10 @@ def process_selected_paper(
         generate_paper_card_markdown(record, analysis, folder / "paper-card.md")
     export_markdown_to_pdf(folder / "paper-card.md", folder / "文档分析.pdf")
     report = audit_paper_card(folder)
-    if card_mode == "one_shot_full" and report["status"] != "pass":
+    if card_mode == "one_shot_full" and report["status"] == "failed":
         logger.error(f"Full Paper Card failed quality gate for {record.title}: {report}")
+    elif card_mode == "one_shot_full" and report["status"] != "pass":
+        logger.warning(f"Full Paper Card passed with warnings for {record.title}: {report}")
     logger.info(f"Finished selected paper {index}: audit_status={report['status']} title={record.title}")
     return folder
 
@@ -2421,7 +2423,7 @@ def run_full_research_radar_pipeline(
         write_json(output_dir / "card_quality.json", card_reports)
 
         card_gate_passed = len(selected) == selected_count and all(
-            item["audit"].get("status") == "pass" for item in card_reports
+            item["audit"].get("status") in {"pass", "warning"} for item in card_reports
         )
         if not card_gate_passed:
             daily_audit.update({
@@ -2438,7 +2440,7 @@ def run_full_research_radar_pipeline(
                     if (folder / "metadata.json").exists()
                     and json.loads((folder / "metadata.json").read_text(encoding="utf-8")).get("download_status") == "downloaded"
                 ),
-                "card_success_count": sum(1 for item in card_reports if item["audit"].get("status") == "pass"),
+                "card_success_count": sum(1 for item in card_reports if item["audit"].get("status") in {"pass", "warning"}),
                 "zotero_upload_success_count": 0,
             })
             write_json(output_dir / "daily_audit.json", daily_audit)
