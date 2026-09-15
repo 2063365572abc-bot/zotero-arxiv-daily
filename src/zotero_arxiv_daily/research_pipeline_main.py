@@ -8,6 +8,7 @@ from loguru import logger
 from omegaconf import DictConfig
 
 from zotero_arxiv_daily.daily_research_pipeline import run_daily_file_pipeline
+from zotero_arxiv_daily.utils import send_wechat_notification
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 dotenv.load_dotenv()
@@ -30,6 +31,11 @@ def main(config: DictConfig):
 
     output_dir = run_daily_file_pipeline(config)
     logger.info(f"Daily research file pipeline written to {output_dir}")
+    digest_path = output_dir / "wechat-digest.md"
+    if digest_path.exists():
+        send_wechat_notification(config, digest_path.read_text(encoding="utf-8"))
+    else:
+        logger.warning(f"WeChat digest not found; skip notification: {digest_path}")
 
 
 if __name__ == "__main__":

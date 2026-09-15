@@ -3,8 +3,8 @@ name: Daily Research Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # 07:00 Beijing time (23:00 UTC)
-    - cron: "0 23 * * *"
+    # 06:30 Beijing time (22:30 UTC, previous day)
+    - cron: "30 22 * * *"
 
 jobs:
   build-research-artifacts:
@@ -28,6 +28,8 @@ jobs:
         env:
           ZOTERO_ID: ${{ secrets.ZOTERO_ID }}
           ZOTERO_KEY: ${{ secrets.ZOTERO_KEY }}
+          WECHAT_PUSH_PROVIDER: ${{ vars.WECHAT_PUSH_PROVIDER }}
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
           OPENAI_API_TIMEOUT: ${{ vars.OPENAI_API_TIMEOUT }}
@@ -67,6 +69,11 @@ jobs:
           DAILY_PIPELINE_CARD_MODE: ${{ vars.DAILY_PIPELINE_CARD_MODE }}
           DAILY_PIPELINE_FULL_CARD_INPUT_CHARS: ${{ vars.DAILY_PIPELINE_FULL_CARD_INPUT_CHARS }}
           DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS: ${{ vars.DAILY_PIPELINE_FULL_CARD_OUTPUT_TOKENS }}
+          DAILY_PIPELINE_QUICK_LOOK_INPUT_CHARS: ${{ vars.DAILY_PIPELINE_QUICK_LOOK_INPUT_CHARS }}
+          DAILY_PIPELINE_QUICK_LOOK_OUTPUT_TOKENS: ${{ vars.DAILY_PIPELINE_QUICK_LOOK_OUTPUT_TOKENS }}
+          DAILY_PIPELINE_THREE_CARD_DIGEST_INPUT_CHARS: ${{ vars.DAILY_PIPELINE_THREE_CARD_DIGEST_INPUT_CHARS }}
+          DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS: ${{ vars.DAILY_PIPELINE_THREE_CARD_DIGEST_OUTPUT_TOKENS }}
+          DAILY_QUOTE_ENABLED: ${{ vars.DAILY_QUOTE_ENABLED }}
           CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
         run: |
           if [ -n "$CUSTOM_CONFIG" ]; then
