@@ -2431,6 +2431,13 @@ def run_full_research_radar_pipeline(
     }
     try:
         corpus = executor.filter_corpus(executor.fetch_zotero_corpus())
+        incomplete_upload_titles = state.incomplete_zotero_upload_title_fingerprints(before_date=run_date)
+        if incomplete_upload_titles:
+            corpus = [
+                item for item in corpus
+                if _title_fingerprint(item.title) not in incomplete_upload_titles
+            ]
+            daily_audit["incomplete_zotero_corpus_excluded_count"] = len(incomplete_upload_titles)
         if not corpus:
             raise RuntimeError("No Zotero corpus papers found; cannot personalize candidate selection.")
         state.upsert_zotero_items(corpus, embedding_model)
