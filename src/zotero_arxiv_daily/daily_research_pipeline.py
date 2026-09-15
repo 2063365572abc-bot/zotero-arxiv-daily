@@ -2200,11 +2200,20 @@ def _zotero_attachment_key(response: Any, filename: str) -> str | None:
 def _find_zotero_attachment_key(zot: Any, item_key: str, filename: str) -> str | None:
     """Verify an uploaded child attachment exists under the parent item."""
     for attempt in range(4):
-        children = zot.children(item_key)
-        for child in children or []:
-            data = (child.get("data") or {}) if isinstance(child, dict) else {}
-            if data.get("title") == filename or Path(str(data.get("filename") or "")).name == filename:
-                return _zotero_object_key(child)
+        queries = []
+        try:
+            queries.append(zot.children(item_key))
+        except Exception as exc:
+            logger.warning(f"Zotero children lookup failed for {item_key}: {type(exc).__name__}: {exc}")
+        try:
+            queries.append(zot.items(parentItem=item_key))
+        except Exception as exc:
+            logger.warning(f"Zotero parent item lookup failed for {item_key}: {type(exc).__name__}: {exc}")
+        for children in queries:
+            for child in children or []:
+                data = (child.get("data") or {}) if isinstance(child, dict) else {}
+                if data.get("title") == filename or Path(str(data.get("filename") or "")).name == filename:
+                    return _zotero_object_key(child)
         if attempt < 3:
             time.sleep(2)
     return None
@@ -2289,6 +2298,15 @@ def upload_selected_paper_to_zotero(
                 uploaded = zot.attachment_simple([str(path)], parentid=item_key)
                 attachment_key = _zotero_attachment_key(uploaded, path.name)
                 if not attachment_key:
+                    bucket_counts = {
+                        bucket: len(uploaded.get(bucket) or [])
+                        for bucket in ("success", "unchanged", "failure", "successful")
+                        if isinstance(uploaded, dict) and uploaded.get(bucket)
+                    }
+                    logger.warning(
+                        f"Zotero attachment response had no key for {path.name} under {item_key}; "
+                        f"response_buckets={bucket_counts}"
+                    )
                     attachment_key = _find_zotero_attachment_key(zot, item_key, path.name)
                 if not attachment_key:
                     attachment_failures.append(f"{path.name}:remote_attachment_not_found")
