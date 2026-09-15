@@ -61,9 +61,9 @@ source:
       "q-bio.GN","q-bio.QM","q-bio.CB","q-bio.TO","cs.LG","cs.CV","cs.AI","stat.ML"
     ]
     keywords: ${oc.decode:${oc.env:ARXIV_KEYWORDS,null}}
-    domain_keywords: ${oc.decode:${oc.env:ARXIV_DOMAIN_KEYWORDS,null}}
-    method_keywords: ${oc.decode:${oc.env:ARXIV_METHOD_KEYWORDS,null}}
-    task_keywords: ${oc.decode:${oc.env:ARXIV_TASK_KEYWORDS,null}}
+    domain_keywords: ${oc.decode:${oc.env:ARXIV_DOMAIN_KEYWORDS,["spatial transcriptomics","spatially resolved transcriptomics","spatial omics","spatial gene expression","spatial transcriptomic","spatial molecular","spatial multi-omics","spatial proteomics"]}}
+    method_keywords: ${oc.decode:${oc.env:ARXIV_METHOD_KEYWORDS,["machine learning","deep learning","representation learning","foundation model","graph neural network","graph transformer","self-supervised learning","contrastive learning","transformer","neural network","embedding","generative model","diffusion model","variational autoencoder"]}}
+    task_keywords: ${oc.decode:${oc.env:ARXIV_TASK_KEYWORDS,["spatial domain","cellular neighborhood","cell-cell communication","spatially variable genes","deconvolution","cell type annotation","tissue architecture","spatial multi-omics"]}}
     keyword_query_max_results: ${oc.env:ARXIV_KEYWORD_QUERY_MAX_RESULTS,100}
     retrieval_result_limit: ${oc.env:ARXIV_RETRIEVAL_RESULT_LIMIT,50}
     freshness_hours: ${oc.env:ARXIV_FRESHNESS_HOURS,48}
@@ -72,7 +72,7 @@ source:
     retrieval_backfill_hours: ${oc.env:ARXIV_RETRIEVAL_BACKFILL_HOURS,17520}
     strict_rss_first: ${oc.env:ARXIV_STRICT_RSS_FIRST,true}
     strict_html_fallback_enabled: ${oc.env:ARXIV_STRICT_HTML_FALLBACK_ENABLED,true}
-    html_fallback_result_limit: ${oc.env:ARXIV_HTML_FALLBACK_RESULT_LIMIT,50}
+    html_fallback_result_limit: ${oc.env:ARXIV_HTML_FALLBACK_RESULT_LIMIT,200}
     keyword_fallback_to_rss: ${oc.env:ARXIV_KEYWORD_FALLBACK_TO_RSS,true}
     include_cross_list: ${oc.env:ARXIV_INCLUDE_CROSS_LIST,false}
     use_rss_metadata: ${oc.env:ARXIV_USE_RSS_METADATA,true}

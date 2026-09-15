@@ -26,6 +26,8 @@ def test_arxiv_retriever(config, mock_feedparser, monkeypatch):
     with open_dict(config):
         config.source.arxiv.include_cross_list = False
         config.source.arxiv.use_rss_metadata = False
+        config.source.arxiv.domain_keywords = None
+        config.source.arxiv.method_keywords = None
 
     monkeypatch.setattr("zotero_arxiv_daily.retriever.base.sleep", lambda _: None)
 
@@ -77,6 +79,8 @@ def test_arxiv_retriever_rss_metadata_fast_path(config, mock_feedparser, monkeyp
     with open_dict(config):
         config.source.arxiv.include_cross_list = False
         config.source.arxiv.use_rss_metadata = True
+        config.source.arxiv.domain_keywords = None
+        config.source.arxiv.method_keywords = None
 
     monkeypatch.setattr("zotero_arxiv_daily.retriever.base.sleep", lambda _: None)
     retriever = ArxivRetriever(config)
@@ -119,6 +123,8 @@ def test_arxiv_retriever_keyword_search(config, monkeypatch):
 
     with open_dict(config):
         config.source.arxiv.keywords = ["single-cell foundation model", "spatial transcriptomics"]
+        config.source.arxiv.domain_keywords = None
+        config.source.arxiv.method_keywords = None
         config.source.arxiv.keyword_query_max_results = 7
         config.source.arxiv.category = ["cs.LG", "q-bio.GN"]
         config.source.arxiv.extract_full_text = False
@@ -343,6 +349,8 @@ def test_arxiv_retriever_keyword_search_falls_back_to_rss_on_api_error(config, m
 
     with open_dict(config):
         config.source.arxiv.keywords = ["spatial transcriptomics"]
+        config.source.arxiv.domain_keywords = None
+        config.source.arxiv.method_keywords = None
         config.source.arxiv.keyword_query_max_results = 3
         config.source.arxiv.keyword_fallback_to_rss = True
         config.source.arxiv.category = ["cs.LG"]
