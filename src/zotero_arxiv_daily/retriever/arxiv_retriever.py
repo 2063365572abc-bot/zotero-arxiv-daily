@@ -298,6 +298,13 @@ class ArxivRetriever(BaseRetriever):
                 logger.info(f"Strict keyword RSS retrieval produced {len(results[:limit])} candidates within {hours}h.")
                 return results[:limit]
 
+        for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
+            batch = self._retrieve_recent_category_list_html(domain, method, hours, max(max_results, limit))
+            add_candidates(batch)
+            if len(results) >= limit:
+                logger.info(f"Category list HTML retrieval produced {len(results[:limit])} candidates within {hours}h.")
+                return results[:limit]
+
         # Only use broad category RSS after the topical windows are exhausted.
         # This is a recall safety net, never a historical backfill and never a
         # reason to stop before the more relevant topic search has run.
@@ -466,6 +473,105 @@ class ArxivRetriever(BaseRetriever):
         matches.sort(key=lambda item: self._raw_datetime(item) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
         logger.info(f"Recent category RSS fallback returned {len(matches)} papers in {freshness_hours}h.")
         return matches
+
+    def _retrieve_recent_category_list_html(
+        self,
+        domain: list[str],
+        method: list[str],
+        freshness_hours: int,
+        max_results: int,
+    ) -> list[dict[str, Any]]:
+        """Read recent arXiv category lists, then hydrate matching abstracts."""
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=freshness_hours)
+        matches: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        title_terms = [term.lower() for term in [*domain, *method] if term.strip()]
+        for category in self.config.source.arxiv.category or []:
+            try:
+                response = requests.get(
+                    f"https://arxiv.org/list/{category}/recent",
+                    headers={"User-Agent": "zotero-arxiv-daily/1.0 (research metadata retrieval)"},
+                    timeout=(5, 20),
+                )
+                response.raise_for_status()
+            except requests.RequestException as exc:
+                logger.warning(f"arXiv category list fallback failed for {category}: {type(exc).__name__}: {exc}")
+                continue
+
+            root = lxml_html.fromstring(response.content)
+            abstract_links = root.xpath("//dl[@id='articles']//dt/a[@title='Abstract']")
+            for link in abstract_links:
+                paper_id = str(link.get("id") or "").strip()
+                if not paper_id or paper_id in seen_ids:
+                    continue
+                detail_node = link.getparent().getnext()
+                list_text = " ".join(detail_node.itertext()).lower() if detail_node is not None else ""
+                if title_terms and not any(term in list_text for term in title_terms):
+                    continue
+                try:
+                    abs_response = requests.get(
+                        f"https://arxiv.org/abs/{paper_id}",
+                        headers={"User-Agent": "zotero-arxiv-daily/1.0 (research metadata retrieval)"},
+                        timeout=(5, 20),
+                    )
+                    abs_response.raise_for_status()
+                except requests.RequestException as exc:
+                    logger.warning(f"arXiv abstract fallback failed for {paper_id}: {type(exc).__name__}: {exc}")
+                    continue
+
+                abs_root = lxml_html.fromstring(abs_response.content)
+                title = self._node_text(abs_root.xpath("//h1[contains(@class, 'title')][1]"), "Title:")
+                abstract = self._node_text(abs_root.xpath("//blockquote[contains(@class, 'abstract')][1]"), "Abstract:")
+                authors = [
+                    " ".join(node.itertext()).strip()
+                    for node in abs_root.xpath("//div[contains(@class, 'authors')][1]//a")
+                    if " ".join(node.itertext()).strip()
+                ]
+                dateline = " ".join(abs_root.xpath("//div[contains(@class, 'dateline')][1]//text()"))
+                published = self._parse_abs_dateline(dateline)
+                if not title or not abstract or published is None or published < cutoff:
+                    continue
+                raw = {
+                    "title": title,
+                    "summary": abstract,
+                    "authors": [{"name": name} for name in authors],
+                    "link": f"https://arxiv.org/abs/{paper_id}",
+                    "id": f"oai:arXiv.org:{paper_id}",
+                    "published": published.isoformat(),
+                    "updated": published.isoformat(),
+                    "tags": [{"term": category}],
+                    "arxiv_announce_type": "new",
+                    "retrieval_source": "category_list_html",
+                }
+                if self._matches_keyword_groups(raw, domain, method):
+                    matches.append(raw)
+                    seen_ids.add(paper_id)
+                if len(matches) >= max_results:
+                    return matches
+                sleep(0.25)
+        logger.info(f"Recent category list HTML matched {len(matches)} papers in {freshness_hours}h.")
+        return matches
+
+    @staticmethod
+    def _node_text(nodes: list[Any], descriptor: str = "") -> str:
+        if not nodes:
+            return ""
+        text = " ".join(nodes[0].itertext()).strip()
+        if descriptor and text.startswith(descriptor):
+            text = text[len(descriptor):].strip()
+        return re.sub(r"\s+", " ", text)
+
+    @staticmethod
+    def _parse_abs_dateline(value: str) -> datetime | None:
+        match = re.search(r"Submitted on\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})", value)
+        if not match:
+            return None
+        for fmt in ("%d %b %Y", "%d %B %Y"):
+            try:
+                return datetime.strptime(match.group(1), fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+        return None
 
     @staticmethod
     def _ordered_freshness_windows(*hours_values: int) -> tuple[int, ...]:

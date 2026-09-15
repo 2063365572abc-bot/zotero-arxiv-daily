@@ -221,6 +221,25 @@ def _direct_research_anchor_score(paper: Paper) -> int:
     return sum(1 for term in DIRECT_RESEARCH_ANCHORS if term.lower() in text)
 
 
+def _require_relevant_top3(
+    papers: list[Paper],
+    llm_scores: dict[str, dict[str, Any]],
+    count: int,
+) -> list[Paper]:
+    eligible = [
+        paper
+        for paper in papers
+        if float(llm_scores.get(paper.title, {}).get("relevance_to_user", 0)) >= 5.0
+    ]
+    if len(eligible) < count:
+        raise RuntimeError(
+            "insufficient_relevant_candidates: "
+            f"Qwen found {len(eligible)}/{count} candidates with relevance_to_user >= 5; "
+            "refusing to deep-read or upload weakly related papers"
+        )
+    return eligible
+
+
 def select_papers_for_deep_read(
     papers: list[Paper],
     count: int = 3,
@@ -2429,7 +2448,8 @@ def run_full_research_radar_pipeline(
                 "fallback": "embedding_top3",
             })
 
-        selected = select_papers_for_deep_read(reranked_for_selection, count=selected_count, llm_scores=llm_scores)
+        relevant_top20 = _require_relevant_top3(reranked_for_selection, llm_scores, selected_count)
+        selected = select_papers_for_deep_read(relevant_top20, count=selected_count, llm_scores=llm_scores)
         write_selected_papers(selected, output_dir)
         write_llm_selection_audit(selected, top20, output_dir, summary=llm_summary, fallback=selection_fallback)
         for record in selected:
