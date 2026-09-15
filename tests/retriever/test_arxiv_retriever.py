@@ -193,10 +193,10 @@ def test_arxiv_retriever_strict_groups_query_and_ranks(config, monkeypatch):
     assert len(papers) == 1
     assert papers[0].title == "Spatial Transcriptomics with Deep Learning"
     query = captured["queries"][0]
-    assert '(ti:"spatial transcriptomics" OR abs:"spatial transcriptomics")' in query
-    assert '(ti:"deep learning" OR abs:"deep learning")' in query
     assert "cat:q-bio.GN" in query
     assert "submittedDate:[" in query
+    assert 'all:"spatial transcriptomics"' in query
+    assert "deep learning" not in query
     assert captured["max_results"] == 100
     assert papers[0].published_date == published.isoformat()
     assert papers[0].matched_terms["domain"] == ["spatial transcriptomics"]
@@ -205,7 +205,62 @@ def test_arxiv_retriever_strict_groups_query_and_ranks(config, monkeypatch):
     assert papers[0].freshness_label == "latest_48h"
 
 
-def test_arxiv_retriever_strict_groups_rss_fallback_filters_date_and_terms(config, monkeypatch):
+def test_arxiv_retriever_strict_groups_prefers_newer_candidates_before_score(config, monkeypatch):
+    from omegaconf import open_dict
+
+    new_date = datetime(2026, 9, 14, tzinfo=timezone.utc)
+    old_date = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    fake_results = [
+        SimpleNamespace(
+            title="Spatial Transcriptomics Foundation Model Graph Transformer",
+            authors=[SimpleNamespace(name="Old Author")],
+            summary="A foundation model graph transformer embedding method for spatial transcriptomics.",
+            published=old_date,
+            updated=old_date,
+            categories=["q-bio.GN"],
+            pdf_url="https://arxiv.org/pdf/2501.00001",
+            entry_id="https://arxiv.org/abs/2501.00001",
+            source_url=lambda: "https://arxiv.org/e-print/2501.00001",
+        ),
+        SimpleNamespace(
+            title="Spatial Transcriptomics with Graph Learning",
+            authors=[SimpleNamespace(name="New Author")],
+            summary="A graph learning method for spatial transcriptomics.",
+            published=new_date,
+            updated=new_date,
+            categories=["q-bio.GN"],
+            pdf_url="https://arxiv.org/pdf/2609.00001",
+            entry_id="https://arxiv.org/abs/2609.00001",
+            source_url=lambda: "https://arxiv.org/e-print/2609.00001",
+        ),
+    ]
+
+    class FakeClient:
+        def __init__(self, **kw):
+            pass
+
+        def results(self, search):
+            return iter(fake_results)
+
+    with open_dict(config):
+        config.source.arxiv.domain_keywords = ["spatial transcriptomics"]
+        config.source.arxiv.method_keywords = ["graph learning", "foundation model", "graph transformer", "embedding"]
+        config.source.arxiv.task_keywords = []
+        config.source.arxiv.keyword_query_max_results = 100
+        config.source.arxiv.retrieval_result_limit = 2
+        config.source.arxiv.strict_rss_first = False
+        config.source.arxiv.strict_html_fallback_enabled = False
+        config.source.arxiv.category = ["q-bio.GN"]
+        config.source.arxiv.extract_full_text = False
+
+    monkeypatch.setattr(arxiv_retriever.arxiv, "Client", FakeClient)
+    retriever = ArxivRetriever(config)
+    papers = retriever.retrieve_papers()
+
+    assert [paper.arxiv_id for paper in papers] == ["2609.00001", "2501.00001"]
+
+
+def test_arxiv_retriever_recent_category_rss_fallback_keeps_recent_candidates(config, monkeypatch):
     from omegaconf import open_dict
 
     class FakeClient:
@@ -259,19 +314,25 @@ def test_arxiv_retriever_strict_groups_rss_fallback_filters_date_and_terms(confi
         config.source.arxiv.extract_full_text = False
 
     monkeypatch.setattr(arxiv_retriever.arxiv, "Client", FakeClient)
+    monkeypatch.setattr(retriever := ArxivRetriever(config), "_retrieve_recent_topic_html", lambda *_: [])
     monkeypatch.setattr(
         arxiv_retriever.feedparser,
         "parse",
         lambda _: SimpleNamespace(feed=SimpleNamespace(title="q-bio.GN updates on arXiv.org"), entries=feed_entries),
     )
-    retriever = ArxivRetriever(config)
     papers = retriever.retrieve_papers()
 
-    assert len(papers) == 2
+    assert len(papers) == 3
     assert papers[0].title == "Spatial Transcriptomics with Graph Learning"
     assert papers[0].source == "arxiv"
     assert papers[0].categories == []
-    assert [paper.freshness_label for paper in papers] == ["latest_48h", "recent_30d"]
+    assert papers[1].title == "Spatial Transcriptomics without the Required Method"
+    assert papers[2].title == "Old Spatial Transcriptomics Graph Learning Paper"
+    assert [paper.freshness_label for paper in papers] == [
+        "latest_48h",
+        "latest_48h",
+        "recent_30d",
+    ]
 
 
 def test_arxiv_retriever_html_fallback_parses_recent_matching_result(config, monkeypatch):
@@ -315,6 +376,38 @@ def test_arxiv_retriever_html_fallback_parses_recent_matching_result(config, mon
     assert papers[0]["retrieval_source"] == "html"
     assert papers[0]["authors"] == [{"name": "Test Author"}]
     assert "Less" not in papers[0]["summary"]
+
+
+def test_arxiv_retriever_html_fallback_uses_original_arxiv_month_for_revised_old_papers(config, monkeypatch):
+    from omegaconf import open_dict
+
+    html = """
+    <html><body><ol>
+      <li class="arxiv-result">
+        <p class="title is-5 mathjax">Spatial Transcriptomics with Graph Learning</p>
+        <p class="list-title"><a href="https://arxiv.org/abs/2411.00007">arXiv:2411.00007</a></p>
+        <p class="abstract mathjax">Abstract: We use graph learning to analyze spatial transcriptomics.</p>
+        <p class="is-size-7">Submitted 15 September, 2026; originally announced November 2024.</p>
+      </li>
+    </ol></body></html>
+    """
+
+    class FakeResponse:
+        content = html.encode("utf-8")
+
+        def raise_for_status(self):
+            return None
+
+    with open_dict(config):
+        config.source.arxiv.category = ["q-bio.GN"]
+
+    monkeypatch.setattr(arxiv_retriever.requests, "get", lambda *args, **kwargs: FakeResponse())
+    retriever = ArxivRetriever(config)
+    papers = retriever._retrieve_strict_keyword_html(
+        ["spatial transcriptomics"], ["graph learning"], [], 720, 50
+    )
+
+    assert papers == []
 
 
 @pytest.mark.parametrize("status_code", [429, 503])

@@ -74,7 +74,7 @@ source:
     strict_html_fallback_enabled: ${oc.env:ARXIV_STRICT_HTML_FALLBACK_ENABLED,true}
     html_fallback_result_limit: ${oc.env:ARXIV_HTML_FALLBACK_RESULT_LIMIT,200}
     keyword_fallback_to_rss: ${oc.env:ARXIV_KEYWORD_FALLBACK_TO_RSS,true}
-    include_cross_list: ${oc.env:ARXIV_INCLUDE_CROSS_LIST,false}
+    include_cross_list: ${oc.env:ARXIV_INCLUDE_CROSS_LIST,true}
     use_rss_metadata: ${oc.env:ARXIV_USE_RSS_METADATA,true}
     extract_full_text: ${oc.env:ARXIV_EXTRACT_FULL_TEXT,false}
   biorxiv:

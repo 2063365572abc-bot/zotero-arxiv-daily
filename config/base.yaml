@@ -8,20 +8,20 @@ source:
   arxiv:
     category: null # The categories of target arxiv papers. Find the abbr of your research area from [here](https://arxiv.org/category_taxonomy). Example: ["cs.AI","cs.CV","cs.LG","cs.CL"]
     keywords: null # Optional keyword phrases for arXiv API search over title/abstract/full metadata. Example: ["single-cell foundation model","spatial transcriptomics"]
-    domain_keywords: null # Required biology-domain phrases. Example: ["spatial transcriptomics", "spatially resolved transcriptomics"]
-    method_keywords: null # Required machine-learning phrases. Example: ["machine learning", "deep learning", "graph neural network"]
+    domain_keywords: null # Optional soft biology-domain phrases used for candidate metadata and later ranking. Example: ["spatial transcriptomics", "spatially resolved transcriptomics"]
+    method_keywords: null # Optional soft machine-learning phrases used for candidate metadata and later ranking. Example: ["machine learning", "deep learning", "graph neural network"]
     task_keywords: null # Optional task phrases used for deterministic retrieval scoring. Example: ["spatial domain", "cellular neighborhood"]
-    keyword_query_max_results: 100 # Maximum arXiv API results fetched before deterministic retrieval filtering. Example: 100
-    retrieval_result_limit: 50 # Maximum high-relevance candidates returned by the retriever. Example: 50
+    keyword_query_max_results: 100 # Maximum recent arXiv category results fetched before downstream ranking. Example: 100
+    retrieval_result_limit: 50 # Maximum recent candidates returned by the retriever. Example: 50
     freshness_hours: 48 # Primary age window for first submissions. Example: 48
     freshness_fallback_hours: 168 # Optional wider window used only when the primary window is sparse. Example: 168
-    freshness_month_hours: 720 # Wider recent window before historical backfill. Example: 720
-    retrieval_backfill_hours: 17520 # Maximum age for arXiv web-search backfill when recent results are sparse. Example: 17520
-    strict_rss_first: true # Use category RSS before the search API to avoid unnecessary API traffic. Example: true
-    strict_html_fallback_enabled: true # Use arXiv's public HTML search when RSS/API cannot fill the candidate quota. Example: true
+    freshness_month_hours: 720 # Wider recent window used before reporting a sparse daily candidate pool. Example: 720
+    retrieval_backfill_hours: 17520 # Legacy historical search window; daily radar should not use it to fill recent candidates. Example: 17520
+    strict_rss_first: true # Legacy option; recent category API is preferred for daily radar candidates. Example: true
+    strict_html_fallback_enabled: true # Legacy option; historical HTML search is not used to fill daily radar candidates. Example: true
     html_fallback_result_limit: 50 # Maximum HTML search results inspected for local filtering. Example: 50
     keyword_fallback_to_rss: true # When arXiv search API is rate-limited, pull category RSS and filter by keywords locally. Example: true
-    include_cross_list: false # Whether to include arXiv cross-list papers in subscribed categories. Example: true
+    include_cross_list: true # Whether to include arXiv cross-list papers in subscribed categories. Example: true
     use_rss_metadata: true # Whether to use RSS title/abstract metadata instead of slower arXiv API detail calls. Example: true
     extract_full_text: false # Whether to download and extract arXiv source/html/pdf text. This is slower. Example: true
   biorxiv:

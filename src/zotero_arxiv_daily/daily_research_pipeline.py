@@ -19,6 +19,7 @@ from .executor import Executor
 from .protocol import Paper, _request_llm
 from .research_state import (
     ResearchRadarState,
+    _title_fingerprint,
     candidate_embedding_records,
     corpus_embedding_records,
     embedding_rerank_candidates,
@@ -1123,7 +1124,35 @@ def retrieve_daily_candidates(executor: Executor, candidate_count: int) -> list[
         papers = retriever.retrieve_papers()
         logger.info(f"Retrieved {len(papers)} {source} papers")
         all_papers.extend(papers)
+    all_papers.sort(
+        key=lambda paper: (
+            str(getattr(paper, "published_date", "") or ""),
+            paper.score if paper.score is not None else -1,
+        ),
+        reverse=True,
+    )
     return all_papers[:candidate_count]
+
+
+def filter_previously_promoted_candidates(
+    candidates: list[Paper],
+    *,
+    excluded_arxiv_ids: set[str],
+    zotero_title_fingerprints: set[str],
+) -> tuple[list[Paper], list[dict[str, str]]]:
+    filtered: list[Paper] = []
+    excluded: list[dict[str, str]] = []
+    for paper in candidates:
+        arxiv_id = str(getattr(paper, "arxiv_id", "") or "")
+        title_fingerprint = _title_fingerprint(paper.title)
+        if arxiv_id and arxiv_id in excluded_arxiv_ids:
+            excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "previously_selected_or_uploaded"})
+            continue
+        if title_fingerprint and title_fingerprint in zotero_title_fingerprints:
+            excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "already_in_zotero_by_title"})
+            continue
+        filtered.append(paper)
+    return filtered, excluded
 
 
 def process_selected_paper(
@@ -1397,13 +1426,28 @@ def run_full_research_radar_pipeline(
             batch_size=embedding_batch_size,
         )
 
-        candidates = retrieve_daily_candidates(executor, candidate_count)
-        state.upsert_arxiv_papers(candidates)
+        raw_candidates = retrieve_daily_candidates(executor, candidate_count)
+        state.upsert_arxiv_papers(raw_candidates)
+        excluded_arxiv_ids = state.previously_selected_or_uploaded_arxiv_ids(before_date=run_date)
+        zotero_titles = state.zotero_title_fingerprints()
+        candidates, excluded_candidates = filter_previously_promoted_candidates(
+            raw_candidates,
+            excluded_arxiv_ids=excluded_arxiv_ids,
+            zotero_title_fingerprints=zotero_titles,
+        )
+        write_json(output_dir / "excluded_candidates.json", excluded_candidates)
         write_candidates(candidates, output_dir, limit=candidate_count)
         write_embedding_ranking(candidates, output_dir, "candidates_50.json")
         if not candidates:
             write_selected_papers([], output_dir)
-            daily_audit.update({"status": "no_candidates", "raw_arxiv_count": 0})
+            daily_audit.update(
+                {
+                    "status": "no_candidates",
+                    "raw_arxiv_count": len(raw_candidates),
+                    "candidate_50_count": 0,
+                    "excluded_previously_promoted_count": len(excluded_candidates),
+                }
+            )
             write_json(output_dir / "daily_audit.json", daily_audit)
             write_daily_index(output_dir)
             return output_dir
@@ -1526,8 +1570,9 @@ def run_full_research_radar_pipeline(
         daily_audit.update(
             {
                 "status": "complete",
-                "raw_arxiv_count": len(candidates),
+                "raw_arxiv_count": len(raw_candidates),
                 "candidate_50_count": len(candidates),
+                "excluded_previously_promoted_count": len(excluded_candidates),
                 "top20_count": len(top20),
                 "selected_count": len(selected),
                 "embedding_audit": {

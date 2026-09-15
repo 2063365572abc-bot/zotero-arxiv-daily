@@ -274,6 +274,26 @@ class ResearchRadarState:
             "candidate_embedding_count": counts.get("candidate", 0),
         }
 
+    def previously_selected_or_uploaded_arxiv_ids(self, before_date: str | None = None) -> set[str]:
+        """Return arXiv IDs that have already been promoted beyond the candidate pool."""
+        selected_query = "SELECT arxiv_id FROM daily_selections"
+        upload_query = "SELECT arxiv_id FROM zotero_uploads"
+        params: tuple[str, ...] = ()
+        if before_date is not None:
+            selected_query += " WHERE run_date < ?"
+            upload_query += " WHERE run_date < ?"
+            params = (before_date,)
+        rows = self.conn.execute(f"{selected_query} UNION {upload_query}", params * 2).fetchall()
+        return {str(row["arxiv_id"]) for row in rows if row["arxiv_id"]}
+
+    def zotero_title_fingerprints(self) -> set[str]:
+        rows = self.conn.execute("SELECT title FROM zotero_items").fetchall()
+        return {_title_fingerprint(str(row["title"])) for row in rows if row["title"]}
+
+
+def _title_fingerprint(title: str) -> str:
+    return " ".join(title.casefold().split())
+
 
 def _create_embeddings(
     texts: list[str],

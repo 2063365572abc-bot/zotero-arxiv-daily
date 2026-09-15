@@ -9,6 +9,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     audit_paper_card,
     export_markdown_to_pdf,
     extract_source_bundle,
+    filter_previously_promoted_candidates,
     generate_one_shot_full_card_markdown,
     generate_paper_card_markdown,
     rank_candidates_with_llm,
@@ -53,6 +54,24 @@ def test_write_candidates_and_selected_papers(tmp_path):
     assert len(candidates) == 3
     assert [item["role"] for item in selected_payload] == ["best_match", "method_inspiration", "trend_signal"]
     assert selected_payload[0]["title"] == "Paper A"
+
+
+def test_filter_previously_promoted_candidates_excludes_history_and_zotero_titles():
+    promoted = make_sample_paper(title="Previously Selected", score=9.0)
+    promoted.arxiv_id = "2601.00001"
+    in_zotero = make_sample_paper(title="Already In Zotero", score=8.0)
+    in_zotero.arxiv_id = "2601.00002"
+    fresh = make_sample_paper(title="Fresh Relevant Paper", score=7.0)
+    fresh.arxiv_id = "2601.00003"
+
+    filtered, excluded = filter_previously_promoted_candidates(
+        [promoted, in_zotero, fresh],
+        excluded_arxiv_ids={"2601.00001"},
+        zotero_title_fingerprints={"already in zotero"},
+    )
+
+    assert [paper.arxiv_id for paper in filtered] == ["2601.00003"]
+    assert [item["reason"] for item in excluded] == ["previously_selected_or_uploaded", "already_in_zotero_by_title"]
 
 
 def test_llm_ranking_uses_title_abstract_and_selects_distinct_roles():

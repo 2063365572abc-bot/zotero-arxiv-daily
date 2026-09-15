@@ -171,9 +171,8 @@ class ArxivRetriever(BaseRetriever):
             paper.score = self._deterministic_retrieval_score(paper)
         papers.sort(
             key=lambda paper: (
-                getattr(paper, "freshness_bucket", 0),
+                self._paper_published_sort_value(paper),
                 paper.score if paper.score is not None else -1,
-                getattr(paper, "published_date", ""),
             ),
             reverse=True,
         )
@@ -254,7 +253,6 @@ class ArxivRetriever(BaseRetriever):
         return raw_papers
 
     def _retrieve_strict_keyword_papers(self) -> list[ArxivResult | dict[str, Any]]:
-        domain, method, task = self._keyword_groups()
         limit = int(self.config.source.arxiv.get("retrieval_result_limit") or 20)
         max_results = int(self.config.source.arxiv.get("keyword_query_max_results") or 100)
         primary_hours = int(self.config.source.arxiv.get("freshness_hours") or 48)
@@ -263,59 +261,196 @@ class ArxivRetriever(BaseRetriever):
         results: list[ArxivResult | dict[str, Any]] = []
         seen_ids: set[str] = set()
 
-        def add_matches(batch: list[ArxivResult | dict[str, Any]]) -> None:
+        def add_candidates(batch: list[ArxivResult | dict[str, Any]]) -> None:
             for item in batch:
                 item_id = self._raw_id(item)
                 if item_id and item_id in seen_ids:
                     continue
                 if item_id:
                     seen_ids.add(item_id)
-                if self._matches_keyword_groups(item, domain, method):
-                    results.append(item)
+                results.append(item)
 
-        if self.config.source.arxiv.get("strict_rss_first", True):
-            for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
-                add_matches(self._retrieve_strict_keyword_rss(domain, method, task, hours))
-                if len(results) >= limit:
-                    return results[:limit]
-
-        if self.config.source.arxiv.get("strict_html_fallback_enabled", True):
-            backfill_hours = int(self.config.source.arxiv.get("retrieval_backfill_hours") or 720)
-            html_limit = int(self.config.source.arxiv.get("html_fallback_result_limit") or 50)
-            add_matches(self._retrieve_strict_keyword_html(domain, method, task, backfill_hours, html_limit))
-            if len(results) >= limit:
-                return results[:limit]
-
-        # The API is a last resort. A single failed request disables the rest of
-        # the API window for this run, preventing a 429 from turning into a burst
-        # of retries. RSS and HTML already provide the title/abstract metadata.
-        client = arxiv.Client(num_retries=1, delay_seconds=3, page_size=max_results)
-        api_hours = (
-            self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours)
-            if not self.config.source.arxiv.get("strict_rss_first", True)
-            else (monthly_hours,)
-        )
-        for hours in api_hours:
-            query = self._build_grouped_keyword_query(domain, method, task, hours)
-            logger.info(f"Retrieving strict arXiv keyword query: {query}")
-            search = arxiv.Search(
-                query=query,
-                max_results=max_results,
-                sort_by=arxiv.SortCriterion.SubmittedDate,
-                sort_order=arxiv.SortOrder.Descending,
-            )
+        # Recall is topic-first, not domain+method hard filtering. A topic OR
+        # query keeps the pool biologically useful while leaving method/value
+        # decisions to embedding and the LLM in later pipeline stages.
+        for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
             try:
-                batch = list(client.results(search))
+                batch = self._retrieve_recent_topic_api(hours, max(max_results, limit))
             except arxiv.HTTPError as exc:
                 if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
-                    logger.warning(f"arXiv keyword API returned {exc.status}; skipping further API requests for this run.")
-                    break
-                raise
-            add_matches(batch)
+                    logger.warning(f"arXiv topic API returned {exc.status}; using HTML topic fallback for {hours}h.")
+                    batch = self._retrieve_recent_topic_html(hours, max(max_results, limit))
+                else:
+                    raise
+            add_candidates(batch)
             if len(results) >= limit:
-                break
-        logger.info(f"Strict arXiv retrieval produced {len(results)} domain+method candidates.")
+                logger.info(f"Recent topic retrieval produced {len(results[:limit])} candidates within {hours}h.")
+                return results[:limit]
+
+        # Only use broad category RSS after the topical windows are exhausted.
+        # This is a recall safety net, never a historical backfill and never a
+        # reason to stop before the more relevant topic search has run.
+        for hours in self._ordered_freshness_windows(primary_hours, fallback_hours, monthly_hours):
+            try:
+                batch = self._retrieve_recent_category_api(hours, max(max_results, limit))
+            except arxiv.HTTPError as exc:
+                if exc.status in {429, 503} and self.config.source.arxiv.get("keyword_fallback_to_rss", True):
+                    logger.warning(f"arXiv category API returned {exc.status}; using RSS fallback for {hours}h.")
+                    batch = self._retrieve_recent_category_rss(hours)
+                else:
+                    raise
+            add_candidates(batch)
+            if len(results) >= limit:
+                logger.info(f"Recent category retrieval produced {len(results[:limit])} candidates within {hours}h.")
+                return results[:limit]
+
+        logger.info(f"Recent arXiv retrieval produced {len(results)} candidates without historical backfill.")
         return results[:limit]
+
+    def _retrieve_recent_topic_api(self, freshness_hours: int, max_results: int) -> list[ArxivResult]:
+        query = self._build_recent_topic_query(freshness_hours)
+        logger.info(f"Retrieving recent arXiv topic query: {query}")
+        client = arxiv.Client(num_retries=1, delay_seconds=3, page_size=max_results)
+        search = arxiv.Search(
+            query=query,
+            max_results=max_results,
+            sort_by=arxiv.SortCriterion.SubmittedDate,
+            sort_order=arxiv.SortOrder.Descending,
+        )
+        return list(client.results(search))
+
+    def _retrieve_recent_topic_html(self, freshness_hours: int, max_results: int) -> list[dict[str, Any]]:
+        """Use arXiv HTML search for recent topic recall when API is rate-limited."""
+        configured_topics = self._topic_terms()
+        preferred_topics = [
+            "spatial transcriptomics",
+            "spatially resolved transcriptomics",
+            "spatial omics",
+            "spatial gene expression",
+        ]
+        topics = [
+            term for term in preferred_topics
+            if any(term.lower() == configured.lower() for configured in configured_topics)
+        ] or configured_topics[:4]
+        categories = self.config.source.arxiv.category or []
+        category_query = " OR ".join(f"cat:{category}" for category in categories)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=freshness_hours)
+        matches: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for topic in topics:
+            query = f'"{topic.replace(chr(34), chr(92) + chr(34))}"'
+            if category_query:
+                query = f"{query} AND ({category_query})"
+            try:
+                response = requests.get(
+                    "https://arxiv.org/search/",
+                    params={
+                        "query": query,
+                        "searchtype": "all",
+                        "abstracts": "show",
+                        "order": "-announced_date_first",
+                        "size": min(max_results, 200),
+                    },
+                    headers={"User-Agent": "zotero-arxiv-daily/1.0 (research metadata retrieval)"},
+                    timeout=(5, 20),
+                )
+                response.raise_for_status()
+            except requests.RequestException as exc:
+                logger.warning(f"arXiv recent HTML topic fallback failed for {topic}: {type(exc).__name__}: {exc}")
+                continue
+
+            root = lxml_html.fromstring(response.content)
+            result_nodes = root.xpath('//li[contains(concat(" ", normalize-space(@class), " "), " arxiv-result ")]')
+            for node in result_nodes:
+                title = self._html_node_text(node, "title")
+                abstract = self._html_abstract_text(node)
+                abs_url = ""
+                paper_id = ""
+                for link in node.xpath('.//a[@href]'):
+                    found = re.search(r"/abs/([^/?#]+)", link.get("href", ""))
+                    if found:
+                        paper_id = found.group(1)
+                        abs_url = f"https://arxiv.org/abs/{paper_id}"
+                        break
+                published = self._html_published_datetime(node, paper_id)
+                if not paper_id or paper_id in seen_ids or not title or published is None or published < cutoff:
+                    continue
+                matches.append(
+                    {
+                        "title": title,
+                        "summary": abstract,
+                        "authors": [{"name": name} for name in self._html_authors(node)],
+                        "link": abs_url,
+                        "id": f"oai:arXiv.org:{paper_id}",
+                        "published": published.isoformat(),
+                        "updated": published.isoformat(),
+                        "tags": [],
+                        "arxiv_announce_type": "new",
+                        "retrieval_source": "html_topic",
+                    }
+                )
+                seen_ids.add(paper_id)
+                if len(matches) >= max_results:
+                    break
+            if len(matches) >= max_results:
+                break
+
+        matches.sort(
+            key=lambda item: self._raw_datetime(item) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+        logger.info(f"Recent HTML topic fallback returned {len(matches)} papers in {freshness_hours}h.")
+        return matches
+
+    def _topic_terms(self) -> list[str]:
+        domain, _, task = self._keyword_groups()
+        configured = [str(value).strip() for value in (self.config.source.arxiv.get("keywords") or []) if str(value).strip()]
+        terms: list[str] = []
+        for term in [*configured, *domain, *task]:
+            if term and term.lower() not in {item.lower() for item in terms}:
+                terms.append(term)
+        if not terms:
+            raise ValueError("At least one arXiv topic keyword is required for strict retrieval.")
+        return terms
+
+    def _retrieve_recent_category_api(self, freshness_hours: int, max_results: int) -> list[ArxivResult]:
+        query = self._build_recent_category_query(freshness_hours)
+        logger.info(f"Retrieving recent arXiv category query: {query}")
+        client = arxiv.Client(num_retries=1, delay_seconds=3, page_size=max_results)
+        search = arxiv.Search(
+            query=query,
+            max_results=max_results,
+            sort_by=arxiv.SortCriterion.SubmittedDate,
+            sort_order=arxiv.SortOrder.Descending,
+        )
+        return list(client.results(search))
+
+    def _retrieve_recent_category_rss(self, freshness_hours: int) -> list[dict[str, Any]]:
+        categories = self.config.source.arxiv.category
+        if not categories:
+            raise ValueError("source.arxiv.category is required for arxiv RSS fallback.")
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=freshness_hours)
+        include_cross_list = self.config.source.arxiv.get("include_cross_list", True)
+        allowed = {"new", "cross"} if include_cross_list else {"new"}
+        matches: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for category in categories:
+            feed = feedparser.parse(f"https://rss.arxiv.org/atom/{category}")
+            if "Feed error for query" in feed.feed.title:
+                raise ValueError(f"Invalid ARXIV_QUERY: {category}.")
+            for entry in feed.entries:
+                if entry.get("arxiv_announce_type", "new") not in allowed:
+                    continue
+                published = self._raw_datetime(entry)
+                item_id = self._raw_id(entry)
+                if published is None or published < cutoff or not item_id or item_id in seen_ids:
+                    continue
+                entry["retrieval_source"] = "rss"
+                matches.append(entry)
+                seen_ids.add(item_id)
+        matches.sort(key=lambda item: self._raw_datetime(item) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        logger.info(f"Recent category RSS fallback returned {len(matches)} papers in {freshness_hours}h.")
+        return matches
 
     @staticmethod
     def _ordered_freshness_windows(*hours_values: int) -> tuple[int, ...]:
@@ -435,12 +570,12 @@ class ArxivRetriever(BaseRetriever):
                 abs_url = ""
                 paper_id = ""
                 for link in node.xpath('.//a[@href]'):
-                    found = re.search(r"arxiv\.org/abs/([^/?#]+)", link.get("href", ""))
+                    found = re.search(r"/abs/([^/?#]+)", link.get("href", ""))
                     if found:
                         paper_id = found.group(1)
                         abs_url = f"https://arxiv.org/abs/{paper_id}"
                         break
-                published = self._html_submitted_datetime(node)
+                published = self._html_published_datetime(node, paper_id)
                 if not paper_id or paper_id in seen_ids or not title or published is None or published < cutoff:
                     continue
                 raw = {
@@ -480,15 +615,49 @@ class ArxivRetriever(BaseRetriever):
         return re.sub(r"^Abstract:\s*", "", text, flags=re.IGNORECASE)
 
     @classmethod
-    def _html_submitted_datetime(cls, node: Any) -> datetime | None:
+    def _html_published_datetime(cls, node: Any, paper_id: str = "") -> datetime | None:
         text = re.sub(r"\s+", " ", node.text_content()).strip()
-        match = re.search(r"Submitted\s+(\d{1,2}\s+[A-Za-z]+,\s+\d{4})", text)
+        submitted = None
+        submitted_match = re.search(r"Submitted\s+(\d{1,2}\s+[A-Za-z]+,\s+\d{4})", text)
+        if submitted_match:
+            try:
+                submitted = datetime.strptime(submitted_match.group(1), "%d %B, %Y").replace(tzinfo=timezone.utc)
+            except ValueError:
+                submitted = None
+        original = cls._arxiv_id_month_datetime(paper_id)
+        if original is None:
+            original_match = re.search(r"originally announced\s+([A-Za-z]+)\s+(\d{4})", text, flags=re.IGNORECASE)
+            if original_match:
+                try:
+                    original = datetime.strptime(
+                        f"1 {original_match.group(1)} {original_match.group(2)}",
+                        "%d %B %Y",
+                    ).replace(tzinfo=timezone.utc)
+                except ValueError:
+                    original = None
+        if original is not None and submitted is not None:
+            if original.year == submitted.year and original.month == submitted.month:
+                return submitted
+            return original
+        return submitted or original
+
+    @staticmethod
+    def _arxiv_id_month_datetime(paper_id: str) -> datetime | None:
+        match = re.match(r"(\d{2})(\d{2})\.", paper_id)
         if not match:
             return None
+        year = 2000 + int(match.group(1))
+        month = int(match.group(2))
+        if not 1 <= month <= 12:
+            return None
         try:
-            return datetime.strptime(match.group(1), "%d %B, %Y").replace(tzinfo=timezone.utc)
+            return datetime(year, month, 1, tzinfo=timezone.utc)
         except ValueError:
             return None
+
+    @staticmethod
+    def _paper_published_sort_value(paper: Paper) -> str:
+        return str(getattr(paper, "published_date", "") or "")
 
     @staticmethod
     def _html_authors(node: Any) -> list[str]:
@@ -535,6 +704,30 @@ class ArxivRetriever(BaseRetriever):
         start = (now - timedelta(hours=freshness_hours)).strftime("%Y%m%d%H%M")
         end = (now + timedelta(minutes=5)).strftime("%Y%m%d%H%M")
         return f"{query} AND submittedDate:[{start} TO {end}]"
+
+    def _build_recent_category_query(self, freshness_hours: int) -> str:
+        categories = self.config.source.arxiv.category
+        if not categories:
+            raise ValueError("source.arxiv.category is required for recent arxiv retrieval.")
+        category_query = "(" + " OR ".join(f"cat:{category}" for category in categories) + ")"
+        now = datetime.now(timezone.utc)
+        start = (now - timedelta(hours=freshness_hours)).strftime("%Y%m%d%H%M")
+        end = (now + timedelta(minutes=5)).strftime("%Y%m%d%H%M")
+        return f"{category_query} AND submittedDate:[{start} TO {end}]"
+
+    def _build_recent_topic_query(self, freshness_hours: int) -> str:
+        topics = self._topic_terms()
+        topic_query = "(" + " OR ".join(
+            f'all:"{term.replace(chr(34), chr(92) + chr(34))}"' for term in topics
+        ) + ")"
+        categories = self.config.source.arxiv.category or []
+        if categories:
+            category_query = "(" + " OR ".join(f"cat:{category}" for category in categories) + ")"
+            topic_query = f"{topic_query} AND {category_query}"
+        now = datetime.now(timezone.utc)
+        start = (now - timedelta(hours=freshness_hours)).strftime("%Y%m%d%H%M")
+        end = (now + timedelta(minutes=5)).strftime("%Y%m%d%H%M")
+        return f"{topic_query} AND submittedDate:[{start} TO {end}]"
 
     @staticmethod
     def _raw_id(raw_paper: ArxivResult | dict[str, Any]) -> str:

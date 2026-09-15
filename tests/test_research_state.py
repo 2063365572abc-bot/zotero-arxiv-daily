@@ -108,3 +108,25 @@ def test_embedding_record_builders_are_stable():
     corpus = [CorpusPaper("C", "D", datetime(2026, 1, 1), ["x"])]
     assert candidate_embedding_records([paper], "text-embedding-v4")[0][0] == "1"
     assert len(corpus_embedding_records(corpus, "text-embedding-v4")[0][0]) == 64
+
+
+def test_state_returns_previously_promoted_ids_and_zotero_titles(tmp_path):
+    state = ResearchRadarState(tmp_path / "radar.sqlite")
+    state.conn.execute(
+        "INSERT INTO daily_selections(run_date, arxiv_id, selection_json) VALUES(?,?,?)",
+        ("2026-09-14", "2601.00001", "{}"),
+    )
+    state.conn.execute(
+        "INSERT INTO zotero_uploads(run_date, arxiv_id, upload_json) VALUES(?,?,?)",
+        ("2026-09-13", "2601.00002", "{}"),
+    )
+    state.conn.execute(
+        "INSERT INTO daily_selections(run_date, arxiv_id, selection_json) VALUES(?,?,?)",
+        ("2026-09-15", "2601.00003", "{}"),
+    )
+    corpus = [CorpusPaper("Already In Zotero", "abstract", datetime(2026, 1, 1), ["一多科研"])]
+    state.upsert_zotero_items(corpus, "text-embedding-v4")
+
+    assert state.previously_selected_or_uploaded_arxiv_ids(before_date="2026-09-15") == {"2601.00001", "2601.00002"}
+    assert "already in zotero" in state.zotero_title_fingerprints()
+    state.close()
