@@ -94,6 +94,7 @@ QUICK_LOOK_CARD_SECTION_PREFIXES = [
 ]
 
 CHINA_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
+ARXIV_VERSION_RE = re.compile(r"v\d+$", re.IGNORECASE)
 
 
 @dataclass
@@ -143,6 +144,26 @@ def write_json(path: str | Path, payload: Any) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def canonical_arxiv_id(arxiv_id: str | None) -> str:
+    value = str(arxiv_id or "").strip()
+    if not value:
+        return ""
+    value = value.rstrip("/").rsplit("/", 1)[-1]
+    value = re.sub(r"\.pdf$", "", value, flags=re.IGNORECASE)
+    return ARXIV_VERSION_RE.sub("", value).lower()
+
+
+def paper_identity_key(paper: Paper) -> str:
+    arxiv_id = canonical_arxiv_id(getattr(paper, "arxiv_id", None))
+    if arxiv_id:
+        return f"arxiv:{arxiv_id}"
+    return f"title:{_title_fingerprint(paper.title)}"
+
+
+def _score_for_paper(llm_scores: dict[str, dict[str, Any]], paper: Paper) -> dict[str, Any]:
+    return llm_scores.get(paper_identity_key(paper)) or llm_scores.get(paper.title, {})
 
 
 def paper_to_candidate(paper: Paper) -> CandidateRecord:
@@ -234,12 +255,12 @@ def _require_relevant_top3(
     eligible = [
         paper
         for paper in papers
-        if float(llm_scores.get(paper.title, {}).get("relevance_to_user", 0)) >= 4.0
+        if float(_score_for_paper(llm_scores, paper).get("relevance_to_user", 0)) >= 4.0
     ]
     strong = [
         paper
         for paper in papers
-        if float(llm_scores.get(paper.title, {}).get("relevance_to_user", 0)) >= 5.0
+        if float(_score_for_paper(llm_scores, paper).get("relevance_to_user", 0)) >= 5.0
     ]
     direct_eligible = [paper for paper in eligible if _direct_research_anchor_score(paper) >= 1]
     direct_strong = [paper for paper in strong if _direct_research_anchor_score(paper) >= 1]
@@ -270,11 +291,11 @@ def select_papers_for_deep_read(
         }
         role_selected: list[Paper] = []
         for role in roles[:count]:
-            available = [paper for paper in remaining if paper.title in llm_scores]
+            available = [paper for paper in remaining if _score_for_paper(llm_scores, paper)]
             if not available:
                 break
             field = role_fields[role]
-            chosen = max(available, key=lambda paper: llm_scores[paper.title][field])
+            chosen = max(available, key=lambda paper: _score_for_paper(llm_scores, paper)[field])
             role_selected.append(chosen)
             remaining.remove(chosen)
         ranked = role_selected + [paper for paper in ranked if paper not in role_selected]
@@ -286,7 +307,7 @@ def select_papers_for_deep_read(
             ranked = sorted(
                 direct_pool,
                 key=lambda paper: (
-                    llm_scores[paper.title]["total"],
+                    _score_for_paper(llm_scores, paper)["total"],
                     _direct_research_anchor_score(paper),
                     paper.score if paper.score is not None else -1,
                 ),
@@ -295,7 +316,7 @@ def select_papers_for_deep_read(
     selected = []
     for index, paper in enumerate(ranked[:count]):
         role = roles[index] if index < len(roles) else "best_match"
-        llm_score = (llm_scores or {}).get(paper.title)
+        llm_score = _score_for_paper(llm_scores or {}, paper) or None
         scoring = _selection_scoring(paper, role, llm_score)
         selected.append(
             SelectionRecord(
@@ -414,7 +435,7 @@ def rank_candidates_with_llm(
             continue
         values = {field: max(0.0, min(10.0, float(item.get(field, 0)))) for field in weights}
         total = sum(values[field] * weight / 10 for field, weight in weights.items())
-        scores[paper.title] = {
+        scores[paper_identity_key(paper)] = {
             **values,
             "total": round(total, 2),
             "best_role": str(item.get("best_role") or "best_match"),
@@ -423,9 +444,9 @@ def rank_candidates_with_llm(
         }
     if len(scores) < len(papers):
         raise ValueError(f"LLM selection returned {len(scores)} of {len(papers)} candidates")
-    ranked = sorted(papers, key=lambda paper: scores[paper.title]["total"], reverse=True)
+    ranked = sorted(papers, key=lambda paper: _score_for_paper(scores, paper)["total"], reverse=True)
     for paper in ranked:
-        paper.score = scores[paper.title]["total"]
+        paper.score = _score_for_paper(scores, paper)["total"]
     summary = {
         "trend_summary": str(payload.get("trend_summary") or ""),
         "rejected_summary": str(payload.get("rejected_summary") or ""),
@@ -452,7 +473,7 @@ def write_llm_ranking(
                 "published_date": getattr(paper, "published_date", None),
                 "freshness_label": getattr(paper, "freshness_label", "unknown"),
                 "matched_terms": getattr(paper, "matched_terms", None),
-                **scores[paper.title],
+                **_score_for_paper(scores, paper),
             }
         )
     path = Path(output_dir) / "llm_ranking.json"
@@ -2021,6 +2042,18 @@ def retrieval_source_distribution(papers: list[Paper]) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def deduplicate_papers(papers: list[Paper]) -> list[Paper]:
+    deduped: list[Paper] = []
+    seen: set[str] = set()
+    for paper in papers:
+        key = paper_identity_key(paper)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(paper)
+    return deduped
+
+
 def retrieve_daily_candidates(executor: Executor, candidate_count: int) -> list[Paper]:
     all_papers: list[Paper] = []
     for source, retriever in executor.retrievers.items():
@@ -2035,7 +2068,7 @@ def retrieve_daily_candidates(executor: Executor, candidate_count: int) -> list[
         ),
         reverse=True,
     )
-    return all_papers[:candidate_count]
+    return deduplicate_papers(all_papers)[:candidate_count]
 
 
 def filter_previously_promoted_candidates(
@@ -2048,13 +2081,22 @@ def filter_previously_promoted_candidates(
     filtered: list[Paper] = []
     excluded: list[dict[str, str]] = []
     retry_arxiv_ids = retry_arxiv_ids or set()
+    normalized_excluded_ids = {canonical_arxiv_id(arxiv_id) for arxiv_id in excluded_arxiv_ids}
+    normalized_retry_ids = {canonical_arxiv_id(arxiv_id) for arxiv_id in retry_arxiv_ids}
+    seen_candidate_keys: set[str] = set()
     for paper in candidates:
         arxiv_id = str(getattr(paper, "arxiv_id", "") or "")
+        normalized_arxiv_id = canonical_arxiv_id(arxiv_id)
         title_fingerprint = _title_fingerprint(paper.title)
-        if arxiv_id and arxiv_id in excluded_arxiv_ids:
+        candidate_key = paper_identity_key(paper)
+        if candidate_key in seen_candidate_keys:
+            excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "duplicate_candidate"})
+            continue
+        seen_candidate_keys.add(candidate_key)
+        if normalized_arxiv_id and normalized_arxiv_id in normalized_excluded_ids:
             excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "previously_selected_or_uploaded"})
             continue
-        if title_fingerprint and title_fingerprint in zotero_title_fingerprints and arxiv_id not in retry_arxiv_ids:
+        if title_fingerprint and title_fingerprint in zotero_title_fingerprints and normalized_arxiv_id not in normalized_retry_ids:
             excluded.append({"arxiv_id": arxiv_id, "title": paper.title, "reason": "already_in_zotero_by_title"})
             continue
         filtered.append(paper)

@@ -17,6 +17,9 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     generate_paper_quick_look_markdown,
     generate_three_card_digest_markdown,
     generate_paper_card_markdown,
+    canonical_arxiv_id,
+    deduplicate_papers,
+    paper_identity_key,
     rank_candidates_with_llm,
     process_selected_paper,
     select_papers_for_deep_read,
@@ -76,7 +79,7 @@ def test_write_candidates_and_selected_papers(tmp_path):
 
 def test_filter_previously_promoted_candidates_excludes_history_and_zotero_titles():
     promoted = make_sample_paper(title="Previously Selected", score=9.0)
-    promoted.arxiv_id = "2601.00001"
+    promoted.arxiv_id = "2601.00001v2"
     in_zotero = make_sample_paper(title="Already In Zotero", score=8.0)
     in_zotero.arxiv_id = "2601.00002"
     fresh = make_sample_paper(title="Fresh Relevant Paper", score=7.0)
@@ -90,6 +93,20 @@ def test_filter_previously_promoted_candidates_excludes_history_and_zotero_title
 
     assert [paper.arxiv_id for paper in filtered] == ["2601.00003"]
     assert [item["reason"] for item in excluded] == ["previously_selected_or_uploaded", "already_in_zotero_by_title"]
+
+
+def test_arxiv_identity_deduplicates_versioned_ids():
+    first = make_sample_paper(title="Same Paper", score=9.0)
+    first.arxiv_id = "2609.14970v1"
+    second = make_sample_paper(title="Same Paper", score=8.0)
+    second.arxiv_id = "2609.14970"
+    distinct = make_sample_paper(title="Distinct Paper", score=7.0)
+    distinct.arxiv_id = "2609.14971v2"
+
+    deduped = deduplicate_papers([first, second, distinct])
+
+    assert canonical_arxiv_id("https://arxiv.org/abs/2609.14970v1") == "2609.14970"
+    assert [paper.arxiv_id for paper in deduped] == ["2609.14970v1", "2609.14971v2"]
 
 
 def test_llm_ranking_uses_title_abstract_and_selects_distinct_roles():
@@ -124,7 +141,7 @@ def test_llm_ranking_uses_title_abstract_and_selects_distinct_roles():
     assert "Abstract: single-cell foundation model" in prompt
     assert "全文摘录" not in prompt
     assert ranked[0].title == "Best Match"
-    assert scores["Best Match"]["total"] == 74.0
+    assert scores[paper_identity_key(papers[0])]["total"] == 74.0
 
     selected = select_papers_for_deep_read(ranked, count=3, llm_scores=scores)
     assert [paper.title for paper in selected] == ["Best Match", "Method", "Trend"]
