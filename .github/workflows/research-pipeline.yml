@@ -128,20 +128,28 @@ jobs:
           done
           test "$copied" -gt 0
           git fetch origin reports || true
+          publish_worktree="$tmpdir/reports-worktree"
           if git rev-parse --verify origin/reports >/dev/null 2>&1; then
-            git switch --detach origin/reports
+            git worktree add --detach "$publish_worktree" origin/reports
           else
-            git switch --orphan reports-publish
-            git rm -rf . || true
+            git worktree add --detach "$publish_worktree" HEAD
+            (
+              cd "$publish_worktree"
+              git switch --orphan reports-publish
+              git rm -rf . || true
+            )
           fi
-          mkdir -p public/daily
-          rm -rf "public/daily/$date_name"
-          cp -R "$target" "public/daily/$date_name"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public
-          git commit -m "Publish daily report $date_name" || exit 0
-          git push origin HEAD:refs/heads/reports
+          (
+            cd "$publish_worktree"
+            mkdir -p public/daily
+            rm -rf "public/daily/$date_name"
+            cp -R "$target" "public/daily/$date_name"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public
+            git commit -m "Publish daily report $date_name" || exit 0
+            git push origin HEAD:refs/heads/reports
+          )
 
       - name: Send WeChat digest
         env:
