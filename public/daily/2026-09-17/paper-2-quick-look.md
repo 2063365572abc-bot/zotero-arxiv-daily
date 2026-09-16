@@ -7,30 +7,32 @@ OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constra
 Rabeya Tus Sadia, Qiang Ye, Qiang Cheng；University of Kentucky 计算机科学与数学系
 
 **发表状态**  
-arXiv 预印本；无正式期刊、会议或出版平台信息
+arXiv 预印本
 
 **研究背景**  
-现有空间多组学方法如 GROVER、SpatialGlue、COSMOS 只输出聚类分区，不提供 spot 级可靠性指示、模态贡献归因或可解释性。LLM 在单细胞中用于注释，但未与空间聚类模型耦合生成证据约束解释。
+现有空间多组学聚类方法（如 SpatialGlue、MISO）只输出硬聚类标签，缺乏可靠性量化、可解释性与模态归因。单细胞领域虽有LLM应用，但未与空间聚类模型耦合。OmicSync首次将不确定性估计与MoE路由结合用于空间多组学。
 
 **核心假设或问题**  
-如何在无真实标注的临床 FFPE 数据上，为每个 spot 生成可审计、证据约束的可靠性解释？如何分别衡量软分配置信度、模态路由权重、路由不确定性这三类信号？能否用 LLM 推理质量作为非可微反馈信号，闭环优化聚类结果？
+如何在无真实标注的临床FFPE数据上，同时输出聚类结果与可靠性信号，并用这些信号约束LLM生成可审计的逐点自然语言解释？能否用非可微推理质量反馈优化聚类隐空间？
 
 **方法逻辑**  
-输入 RNA、ADT、H&E 图像块和空间坐标；先用图神经网络建模空间邻接关系，再经跨模态 Transformer 融合；通过带随机失活的专家混合结构生成潜表示，并从中提取三类可靠性信号；将这些信号连同标记基因和邻域信息组成提示，驱动大语言模型执行五类结构化解释；最后用解释质量得分作为奖励，通过强化学习更新聚类分配。
+输入：每个spot的RNA、ADT、H&E图像块和空间坐标。  
+核心方法：用KAN-GCN和CrossModalTransformer融合多模态；SpatialPositionEncoder注入位置信息；UncertaintyMoE通过MC Dropout估计模态路由权重与不确定性；ClusteringHead输出软聚类与置信度；LLM仅基于模型内生的五类证据生成解释；OmicSync-R用REINFORCE将推理质量作为reward反向优化聚类分配。  
+输出：共享隐表示、软聚类、三类可靠性信号（置信度、不确定性、模态权重）、结构化自然语言解释。
 
 **主要结果**  
-在四个 10x CytAssist FFPE 数据集（Tonsil、Glioblastoma 等）上，OmicSync 平均聚类排名最优（如 Tonsil 1.44），调整兰德指数全面领先；所有评估基于 GROVER 生成的伪参考标签，非人工标注。
+在四个10x CytAssist FFPE数据集（Human Tonsil等）上，OmicSync平均排名最优（如Tonsil为1.44），综合九项指标（ARI/NMI/FMI等）。Stepwise解释策略在GR/CA/SC三项忠实性指标上达1.00，但属特定设计，不意味全面最优。
 
 **真正贡献**  
-提出同时使用三类正交可靠性信号的框架；实现仅依赖模型自身输出证据的大语言模型解释；首次将大语言模型推理质量作为强化学习奖励来优化聚类潜空间。
+提出可靠性作为模型原生输出；构建证据约束的LLM解释框架；实现无需梯度传播的推理-聚类协同优化；建立面向FFPE数据的跨数据集鲁棒评估协议。
 
 **与你研究方向的关系**  
-延伸空间转录组方法至多组学（RNA+ADT+H&E），兼容 STAGATE/GraphST 思路；采用 GROVER 的图神经网络建模；未使用基础模型预训练，聚焦多头监督融合。
+连接空间转录组（替代BayesSpace/GraphST）、多组学融合（扩展SpatialGlue/MISO）、单细胞基础模型（适配UNI/KAN-GCN）、以及LLM在生物医学中的可信推理。
 
 **局限性**  
-基础版本 Task C 是后验解释，虽闭环优化的 OmicSync-R 其奖励对聚类数敏感，优势集中在十类情形；路由不确定性仅来自随机失活的方差，未对路由网络本身做不确定性校准；大语言模型调用开销大，训练不稳定。
+基础版OmicSync为后验解释，不优化聚类；OmicSync-R训练开销大；LLM仅见采样域的证据，存在确认偏误风险；所有结果均基于伪标签，无真实细胞类型标注验证。
 
 **是否值得精读**  
-值得精读：首次系统整合可靠性量化、证据约束大语言模型解释与强化学习闭环，在临床 FFPE 多组学场景提供可审计聚类新范式。
+值得精读：首次系统整合可靠性建模、证据约束LLM与空间多组学聚类，且在多个FFPE基准上验证有效。
 
 **原文 PDF**：https://arxiv.org/pdf/2608.22785v2

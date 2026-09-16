@@ -1,11 +1,11 @@
 {
   "status": "generated",
-  "prompt_chars": 7096,
+  "prompt_chars": 7250,
   "card_count": 3,
   "card_chars": [
-    1351,
-    1351,
-    1234
+    1413,
+    1423,
+    1254
   ],
   "model": "qwen-plus-latest",
   "report_date": "2026-09-17",
@@ -13,7 +13,7 @@
   "audit": {
     "schema_version": "1.0",
     "status": "pass",
-    "character_count": 4002,
+    "character_count": 4400,
     "errors": [],
     "warnings": []
   }
