@@ -2086,6 +2086,30 @@ def find_pdf_font_file() -> Path:
 
 def _clean_pdf_markdown_inline(text: str) -> str:
     text = text.replace("\u00a0", " ")
+    replacements = {
+        "\u2010": "-",
+        "\u2011": "-",
+        "\u2012": "-",
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+        "\u2190": "<-",
+        "\u2192": "->",
+        "\u2194": "<->",
+        "\u21d2": "=>",
+        "\u2264": "<=",
+        "\u2265": ">=",
+        "\u2248": "约",
+        "\u223c": "约",
+        "\u00b1": "+/-",
+        "\u00d7": "x",
+        "\u2211": "sum",
+        "\u2208": "in",
+        "\u2209": "not in",
+        "\u221e": "infinity",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
     text = re.sub(r"`([^`]*)`", r"\1", text)
     text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
     text = re.sub(r"\*([^*]+)\*", r"\1", text)
