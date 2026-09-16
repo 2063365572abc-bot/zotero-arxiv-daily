@@ -206,6 +206,7 @@ def test_serverchan_uses_markdown_desp(config, monkeypatch):
     send_wechat_notification(config, "**早上好**\n\n## 今日趋势")
 
     assert calls[0]["url"] == "https://sctapi.ftqq.com/SCT-test.send"
+    assert calls[0]["data"]["title"] == "每日速看"
     assert calls[0]["data"]["desp"] == "**早上好**\n\n## 今日趋势"
     assert "<div" not in calls[0]["data"]["desp"]
 

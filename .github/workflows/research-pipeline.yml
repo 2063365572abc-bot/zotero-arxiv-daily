@@ -3,8 +3,8 @@ name: Daily Research Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # 06:00 Beijing time (22:00 UTC, previous day)
-    - cron: "0 22 * * *"
+    # 04:00 Beijing time (20:00 UTC, previous day)
+    - cron: "0 20 * * *"
 
 permissions:
   contents: write
@@ -38,6 +38,10 @@ jobs:
           ZOTERO_KEY: ${{ secrets.ZOTERO_KEY }}
           WECHAT_PUSH_PROVIDER: ${{ vars.WECHAT_PUSH_PROVIDER }}
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          DAILY_PIPELINE_SEND_WECHAT: "false"
+          DAILY_PIPELINE_PUBLIC_BASE_URL: https://raw.githubusercontent.com/${{ github.repository }}/reports/public/daily
           DAILY_PIPELINE_ARTIFACT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_BASE: ${{ vars.OPENAI_API_BASE }}
@@ -89,6 +93,55 @@ jobs:
             printf "%b\n" "$CUSTOM_CONFIG" > config/custom.yaml
           fi
           uv run src/zotero_arxiv_daily/research_pipeline_main.py
+
+      - name: Publish public daily report files
+        run: |
+          set -euo pipefail
+          out_dir="$(find outputs/daily -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+          test -n "$out_dir"
+          date_name="$(basename "$out_dir")"
+          tmpdir="$(mktemp -d)"
+          target="$tmpdir/public/daily/$date_name"
+          mkdir -p "$target"
+          cp "$out_dir/wechat-digest.md" "$target/wechat-digest.md"
+          cp "$out_dir/wechat-digest.json" "$target/wechat-digest.json" || true
+          cp "$out_dir/daily_report.md" "$target/daily_report.md" || true
+          cp "$out_dir/daily_audit.json" "$target/daily_audit.json" || true
+          cp "$out_dir/selected_papers.json" "$target/selected_papers.json" || true
+          for idx in 1 2 3; do
+            folder="$(find "$out_dir/paper-$idx" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+            test -n "$folder"
+            cp "$folder/original.pdf" "$target/paper-$idx-original.pdf"
+            cp "$folder/文档分析.pdf" "$target/paper-$idx-card.pdf"
+            cp "$folder/paper-card.md" "$target/paper-$idx-card.md"
+            cp "$folder/paper-quick-look.md" "$target/paper-$idx-quick-look.md"
+          done
+          git fetch origin reports || true
+          git switch --detach
+          if git rev-parse --verify origin/reports >/dev/null 2>&1; then
+            git checkout origin/reports -- public || true
+          fi
+          mkdir -p public/daily
+          rm -rf "public/daily/$date_name"
+          cp -R "$target" "public/daily/$date_name"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public
+          git commit -m "Publish daily report $date_name" || exit 0
+          git push origin HEAD:reports
+
+      - name: Send WeChat digest
+        env:
+          WECHAT_PUSH_PROVIDER: ${{ vars.WECHAT_PUSH_PROVIDER }}
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          CUSTOM_CONFIG: ${{ vars.CUSTOM_CONFIG }}
+        run: |
+          if [ -n "$CUSTOM_CONFIG" ]; then
+            printf "%b\n" "$CUSTOM_CONFIG" > config/custom.yaml
+          fi
+          uv run src/zotero_arxiv_daily/send_wechat_digest_main.py
 
       - name: Upload daily research artifacts
         if: always()

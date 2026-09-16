@@ -9,6 +9,7 @@ import os
 import re
 import time
 from typing import Any
+from urllib.parse import quote
 
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
@@ -77,6 +78,7 @@ QUICK_LOOK_FIELDS = [
     "与你研究方向的关系",
     "局限性",
     "是否值得精读",
+    "发表状态",
 ]
 
 QUICK_LOOK_CARD_SECTION_PREFIXES = [
@@ -95,6 +97,8 @@ QUICK_LOOK_CARD_SECTION_PREFIXES = [
 
 CHINA_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 ARXIV_VERSION_RE = re.compile(r"v\d+$", re.IGNORECASE)
+MARKDOWN_HTML_TAG_RE = re.compile(r"</?[a-z][^>]*>", re.IGNORECASE)
+WECHAT_FORMULA_RE = re.compile(r"(`|\$|\\\(|\\\[|\\frac|\\sum|\\int|\b[A-Za-z]_[A-Za-z0-9]|\b[A-Za-z]\^[A-Za-z0-9]|[ℍℝ∈∉∑∫√±µμσλ∗])")
 
 
 @dataclass
@@ -164,6 +168,15 @@ def paper_identity_key(paper: Paper) -> str:
 
 def _score_for_paper(llm_scores: dict[str, dict[str, Any]], paper: Paper) -> dict[str, Any]:
     return llm_scores.get(paper_identity_key(paper)) or llm_scores.get(paper.title, {})
+
+
+def _wechat_readability_errors(markdown: str, prefix: str) -> list[str]:
+    errors: list[str] = []
+    if MARKDOWN_HTML_TAG_RE.search(markdown):
+        errors.append(f"{prefix}_contains_html_tag")
+    if WECHAT_FORMULA_RE.search(markdown):
+        errors.append(f"{prefix}_contains_formula_markup")
+    return errors
 
 
 def paper_to_candidate(paper: Paper) -> CandidateRecord:
@@ -1147,6 +1160,8 @@ def build_paper_quick_look_prompt(
 - Card 没有明确支持的内容写“Card未提供”，不要自行补全；
 - 将作者声称、实验结果和分析判断保持原有边界，不要把结论说得更强。
 - 以专业科研编辑的标准压缩内容：每个栏目保留最关键的信息和必要证据，不复述 Card 的项目符号清单。
+- 面向早晨手机阅读：语言必须清楚、短句、少黑话；遇到公式、变量、上下标、LaTeX 或 HTML 标记，不要照抄，只用一句中文解释它解决什么问题。
+- 不得输出反引号代码、HTML 标签、数学公式、变量下标、特殊数学符号；模型名、数据集名、指标名可以保留，但具体公式和多项指标要压缩成自然语言。
 
 基本元数据（只能原样整理，不能改写）：
 - 标题：{paper.title}
@@ -1166,6 +1181,11 @@ def build_paper_quick_look_prompt(
 **作者和机构**
 从 Card 的“01 基本信息”中整理；没有就写“Card未提供”。
 
+**发表状态**
+从 Card 的“01 基本信息”中提取 Publication、Source、发表平台、Journal、Venue、Conference 或期刊信息。
+如果是 arXiv/bioRxiv/medRxiv/chemRxiv 预印本，明确写“arXiv 预印本”或对应预印本平台。
+如果 Card 没有正式期刊、会议或发表状态，写“Card未提供”，不得联网查询，不得自行补充。
+
 **研究背景**
 只压缩 Card 第 04 节。
 
@@ -1173,7 +1193,7 @@ def build_paper_quick_look_prompt(
 只压缩 Card 第 03 节和相关核心思想，不新增假设。
 
 **方法逻辑**
-用“输入 → 核心方法 → 输出”整理 Card 第 07—08 节。
+用“输入、核心方法、输出”整理 Card 第 07—08 节；不要展示公式或变量名，要解释方法直觉和流程。
 
 **主要结果**
 只整理 Card 第 10—11 节已有的结果和结论。
@@ -1213,8 +1233,9 @@ def audit_paper_quick_look(markdown: str, paper: SelectionRecord) -> dict[str, A
         errors.append("quick_look_missing_canonical_published_date")
     if paper.pdf_url and paper.pdf_url not in markdown and paper.url not in markdown:
         errors.append("quick_look_missing_original_link")
-    if "```" in markdown or "<html" in markdown.lower() or "<div" in markdown.lower():
-        errors.append("quick_look_contains_wrapping_or_html")
+    if "```" in markdown:
+        errors.append("quick_look_contains_code_fence")
+    errors.extend(_wechat_readability_errors(markdown, "quick_look"))
     status = "fail" if errors else ("pass_with_warnings" if warnings else "pass")
     return {
         "schema_version": "1.0",
@@ -1364,17 +1385,19 @@ def build_three_card_digest_prompt(
 - 只输出最终 Markdown，不要输出解释、免责声明、审计内容、JSON、HTML 或代码块。
 
 内容要求：
-- 开头是“一多科研｜每日论文速递”、日期、早上好和今日寄语；
+- 开头标题必须是“每日速看”四个字，下面放日期、早上好和今日寄语；
 - “今日主线”必须根据三篇速看动态生成，不能使用固定套话；
 - 明确写出“今日首次从 arXiv 抓取 {fetched} 篇候选论文，最终精选 {len(papers)} 篇”；
 - 三篇论文标题必须使用大号标题；日期和来源放在标题下方的独立信息行；
 - 每篇必须先写“速读判断”，用引用块 `>` 写 1—2 句专业判断，说明这篇真正值得看的点；
-- 每篇必须展示：发布时间与来源、作者和机构、研究背景、核心假设或问题、方法逻辑、主要结果、真正贡献、与你研究方向的关系、局限性、是否值得精读；
+- 每篇必须展示：发布时间与来源、作者和机构、发表状态、研究背景、核心假设或问题、方法逻辑、主要结果、真正贡献、与你研究方向的关系、局限性、是否值得精读；
 - 每个栏目按信息复杂度写 1—3 个短句，避免展开成长清单；单篇正文控制在约 650—900 个中文字符，今日主线控制在约 150—220 个中文字符；
-- 不要复制 Card 的项目符号清单、公式或多条指标；只保留最关键的一条证据；
+- 不要复制 Card 的项目符号清单、公式、变量名或多条指标；只保留最关键的一条证据；
+- 方法逻辑必须像给科研同事做晨间速递：解释“它输入什么、怎么建模、输出什么”，不要展示公式、LaTeX、上下标变量、特殊数学符号或反引号代码；
+- 如果输入中有公式或变量，只翻译成自然语言机制，例如“用一个可分解的邻域影响分数衡量细胞互作”，不要写变量表达式；
 - 每篇结尾必须有原文 PDF 下载链接和 Paper Card PDF 下载链接；链接必须使用输入中的值；
 - 结尾给出简短的今日精读顺序；
-- 语言像专业科研新闻速递：克制、清楚、密度高，不写宣传口号。
+- 语言像专业科研新闻速递：克制、清楚、密度高，不写宣传口号；优先讲研究问题和判断，不堆砌术语。
 - 全文不得超过 6,500 个中文字符；每篇论文正文控制在 650—900 个中文字符；
 - 每个栏目最多 1 个短段落，不得复制输入中的长列表、公式、多个指标或逐条实验结果；
 - 版式要好看但保持纯 Markdown：使用标题、引用块、粗体字段和分隔线；不要使用 HTML、表格、emoji 或复杂装饰符；
@@ -1383,7 +1406,7 @@ def build_three_card_digest_prompt(
 
 最终格式：
 
-# 一多科研｜每日论文速递
+# 每日速看
 
 **{report_date}**
 
@@ -1405,6 +1428,8 @@ def build_three_card_digest_prompt(
 > **速读判断**：用 1—2 句讲清楚这篇真正值得看的点，语气像专业科研博主的判断，不要复述摘要。
 
 **作者和机构**
+
+**发表状态**
 
 **研究背景**
 
@@ -1466,9 +1491,8 @@ def audit_three_card_digest(
         errors.append("digest_empty")
     if report_date and report_date not in markdown:
         errors.append("digest_wrong_or_missing_report_date")
-    if "<html" in markdown.lower() or "<div" in markdown.lower():
-        errors.append("digest_contains_html")
-    if "一多科研" not in markdown or "每日论文速递" not in markdown:
+    errors.extend(_wechat_readability_errors(markdown, "digest"))
+    if "每日速看" not in markdown:
         errors.append("digest_missing_newsletter_title")
     for heading in ("今日主线", "今日精读顺序"):
         if heading not in markdown:
@@ -1548,6 +1572,11 @@ def _source_label(source: str | None) -> str:
     if source.lower() == "arxiv":
         return "arXiv"
     return source
+
+
+def public_report_file_url(base_url: str, report_date: str, filename: str) -> str:
+    base = base_url.rstrip("/")
+    return f"{base}/{quote(report_date)}/{quote(filename)}"
 
 
 def _published_date_label(value: str | None) -> str:
@@ -2766,10 +2795,14 @@ def run_full_research_radar_pipeline(
                 }
                 write_json(output_dir / "daily-quote.json", quote_meta)
 
+        public_base_url = os.getenv("DAILY_PIPELINE_PUBLIC_BASE_URL", "").strip()
         cloud_artifact_url = os.getenv("DAILY_PIPELINE_ARTIFACT_URL", "").strip()
-        if cloud_artifact_url:
-            # The artifact page is known before upload and remains usable from
-            # WeChat after the workflow finishes; the zip contains each Card PDF.
+        if public_base_url:
+            card_pdf_links = [
+                public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-card.pdf")
+                for index in range(1, len(paper_folders) + 1)
+            ]
+        elif cloud_artifact_url:
             card_pdf_links = [cloud_artifact_url] * len(paper_folders)
         else:
             card_pdf_links = [

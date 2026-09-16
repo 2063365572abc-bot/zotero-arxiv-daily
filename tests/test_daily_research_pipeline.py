@@ -9,6 +9,8 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     SelectionRecord,
     _card_excerpt_for_quick_look,
     audit_paper_card,
+    audit_paper_quick_look,
+    audit_three_card_digest,
     export_markdown_to_pdf,
     extract_source_bundle,
     filter_previously_promoted_candidates,
@@ -20,6 +22,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     canonical_arxiv_id,
     deduplicate_papers,
     paper_identity_key,
+    public_report_file_url,
     rank_candidates_with_llm,
     process_selected_paper,
     select_papers_for_deep_read,
@@ -378,11 +381,11 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
         f"**{field}**\ncontent"
         for field in [
             "标题与发布时间", "作者和机构", "研究背景", "核心假设或问题",
-            "方法逻辑", "主要结果", "真正贡献", "与你研究方向的关系",
+            "发表状态", "方法逻辑", "主要结果", "真正贡献", "与你研究方向的关系",
             "局限性", "是否值得精读",
         ]
     )
-    digest = "# 一多科研｜每日论文速递\n\n**2026-09-15**\n\n早上好，一多。\n\n> quote\n\n"
+    digest = "# 每日速看\n\n**2026-09-15**\n\n早上好，一多。\n\n> quote\n\n"
     digest += "## 今日主线\ntrend\n\n"
     for index in range(1, 4):
         digest += (
@@ -412,6 +415,70 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
         card_pdf_links=["paper-1.pdf", "paper-2.pdf", "paper-3.pdf"],
     )
     assert result["audit"]["status"] == "pass"
+
+
+def test_wechat_readability_audit_rejects_formula_markup():
+    paper = SelectionRecord(
+        source="arxiv",
+        title="Formula Heavy Paper",
+        authors=["Author"],
+        abstract="Abstract",
+        url="https://arxiv.org/abs/2601.00001",
+        pdf_url="https://arxiv.org/pdf/2601.00001",
+        published_date="2026-09-14",
+        score=1.0,
+        role="best_match",
+        scoring={},
+        selection_reason="test",
+        arxiv_id="2601.00001",
+    )
+    quick = (
+        "## Formula Heavy Paper\n\n"
+        "**标题与发布时间**\nFormula Heavy Paper（2026-09-14）\n\n"
+        "**作者和机构**\nAuthor\n\n"
+        "**研究背景**\ncontent\n\n"
+        "**核心假设或问题**\ncontent\n\n"
+        "**方法逻辑**\nuses `z_i = x_i` and <sub>con</sub>\n\n"
+        "**主要结果**\ncontent\n\n"
+        "**真正贡献**\ncontent\n\n"
+        "**与你研究方向的关系**\ncontent\n\n"
+        "**局限性**\ncontent\n\n"
+        "**是否值得精读**\ncontent\n\n"
+        "https://arxiv.org/pdf/2601.00001"
+    )
+
+    quick_audit = audit_paper_quick_look(quick, paper)
+    digest_audit = audit_three_card_digest(
+        "# 每日速看\n\n**2026-09-15**\n\n## 今日主线\n"
+        "今日首次从 arXiv 抓取 50 篇候选论文，最终精选 3 篇。\n\n"
+        "# 01｜Formula Heavy Paper\n\n**2026-09-14 · arXiv**\n\n"
+        "> **速读判断**：uses `z_i` and <sub>con</sub>\n\n"
+        + "\n".join(f"**{field}**\ncontent" for field in QUICK_LOOK_FIELDS)
+        + "\n\n[原文 PDF](https://arxiv.org/pdf/2601.00001) · [下载 Paper Card](paper-1.pdf)\n\n"
+        "## 今日精读顺序\n01 → 02 → 03。排序完整。",
+        [paper, paper, paper],
+        report_date="2026-09-15",
+        raw_fetched_count=50,
+        card_pdf_links=["paper-1.pdf", "paper-1.pdf", "paper-1.pdf"],
+    )
+
+    assert quick_audit["status"] == "fail"
+    assert "quick_look_contains_formula_markup" in quick_audit["errors"]
+    assert "quick_look_contains_html_tag" in quick_audit["errors"]
+    assert digest_audit["status"] == "fail"
+    assert "digest_contains_formula_markup" in digest_audit["errors"]
+    assert "digest_contains_html_tag" in digest_audit["errors"]
+
+
+def test_public_report_file_url_quotes_filename():
+    assert (
+        public_report_file_url(
+            "https://raw.githubusercontent.com/u/r/reports/public/daily/",
+            "2026-09-16",
+            "paper-1-card.pdf",
+        )
+        == "https://raw.githubusercontent.com/u/r/reports/public/daily/2026-09-16/paper-1-card.pdf"
+    )
 
 
 def test_paper_quick_look_is_card_only_and_audited(tmp_path):

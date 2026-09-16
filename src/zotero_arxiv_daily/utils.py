@@ -187,8 +187,7 @@ def send_wechat_notification(config: DictConfig, markdown: str) -> None:
     if not provider:
         return
 
-    today = datetime.datetime.now(CHINA_TZ).strftime("%Y/%m/%d")
-    title = f"Daily Research Radar {today}"
+    title = "每日速看"
     provider = str(provider).lower()
 
     if provider == "serverchan":
