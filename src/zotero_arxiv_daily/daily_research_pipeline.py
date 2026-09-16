@@ -1408,14 +1408,16 @@ def build_three_card_digest_prompt(
 
     report_date = report_date or datetime.now(CHINA_TZ).strftime("%Y-%m-%d")
     fetched = raw_fetched_count if raw_fetched_count is not None else "未记录"
+    paper_count = len(papers)
+    reading_order = " → ".join(f"{index:02d}" for index in range(1, paper_count + 1))
     quote_text = quote.strip() if quote and quote.strip() else ""
     quote_block = f"\n> {quote_text}\n" if quote_text else ""
     return f"""
-你是“一多科研”的高级科研新闻速递编辑。下面提供的是三篇已经完成全文深读后生成的“论文速看”。
+你是“一多科研”的高级科研新闻速递编辑。下面提供的是 {paper_count} 篇已经完成全文深读后生成的“论文速看”。
 请将它们整理成一份高级、简约、适合手机阅读的 Markdown 科研新闻速递。
 
 输入边界：
-- 论文内容只能来自三篇 PAPER QUICK LOOK；不要重新分析 PDF；
+- 论文内容只能来自下面 {paper_count} 篇 PAPER QUICK LOOK；不要重新分析 PDF；
 - 标题、发布日期、作者、机构、链接必须使用输入中的值，不得修改、猜测或补充；
 - 不得联网，不得添加论文 Card 之外的新事实；
 - 今日首轮抓取数量必须原样使用：{fetched}；
@@ -1424,9 +1426,9 @@ def build_three_card_digest_prompt(
 
 内容要求：
 - 开头标题必须是“每日速看”四个字，下面放日期、早上好和今日寄语；
-- “今日主线”必须根据三篇速看动态生成，不能使用固定套话；
+- “今日主线”必须根据实际入选的 {paper_count} 篇速看动态生成，不能使用固定套话；
 - 明确写出“今日首次从 arXiv 抓取 {fetched} 篇候选论文，最终精选 {len(papers)} 篇”；
-- 三篇论文标题必须使用大号标题；日期和来源放在标题下方的独立信息行；
+- 每篇论文标题必须使用大号标题；日期和来源放在标题下方的独立信息行；
 - 每篇必须先写“速读判断”，用引用块 `>` 写 1—2 句专业判断，说明这篇真正值得看的点；
 - 每篇必须展示：发布时间与来源、作者和机构、发表状态、研究背景、核心假设或问题、方法逻辑、主要结果、真正贡献、与你研究方向的关系、局限性、是否值得精读；
 - 每个栏目按信息复杂度写 1—3 个短句，避免展开成长清单；单篇正文控制在约 650—900 个中文字符，今日主线控制在约 150—220 个中文字符；
@@ -1454,7 +1456,7 @@ def build_three_card_digest_prompt(
 
 ## 今日主线
 
-根据三篇论文速看动态生成一段简洁的研究趋势概览。
+根据实际入选论文速看动态生成一段简洁的研究趋势概览。
 
 ---
 
@@ -1491,21 +1493,15 @@ def build_three_card_digest_prompt(
 
 # 02｜论文标题
 
-按相同结构整理。
-
----
-
-# 03｜论文标题
-
-按相同结构整理。
+如果有第 2 篇及后续论文，均按相同结构继续整理，编号到第 {paper_count} 篇为止；不要新增不存在的论文。
 
 ---
 
 ## 今日精读顺序
 
-给出 01 → 02 → 03 的简短排序理由。
+给出 {reading_order} 的简短排序理由；如果只有 1 篇，就说明它为什么值得今天优先精读。
 
-三篇论文速看如下：
+实际入选论文速看如下：
 {''.join(blocks)}
 """.strip()
 
@@ -1535,8 +1531,6 @@ def audit_three_card_digest(
     for heading in ("今日主线", "今日精读顺序"):
         if heading not in markdown:
             errors.append(f"digest_missing:{heading}")
-    if len(papers) != 3:
-        errors.append("digest_requires_three_papers")
     for index, paper in enumerate(papers, start=1):
         if f"### {index}." not in markdown and f"{index}. {paper.title}" not in markdown:
             if f"# {index:02d}｜" not in markdown:
@@ -1707,15 +1701,15 @@ def generate_three_card_digest_markdown(
         repair_attempted = True
         repair_prompt = f"""
 下面这份每日速看没有通过审计：{audit['errors']}。
-请只根据三篇 PAPER QUICK LOOK 重写，不要新增任何事实，不要联网，不要改动标题、日期、来源或链接。
-必须保留“# 每日速看”、报告日期、今日主线、三篇论文和今日精读顺序。
+请只根据实际入选的 {len(papers)} 篇 PAPER QUICK LOOK 重写，不要新增任何事实，不要联网，不要改动标题、日期、来源或链接。
+必须保留“# 每日速看”、报告日期、今日主线、全部实际入选论文和今日精读顺序。
 必须去掉 HTML 标签、代码反引号、LaTeX、公式、变量下标、特殊数学符号，把它们改写成自然语言。
 仍然保持高级、简约、手机可读的 Markdown 版式。
 
 不合格版本：
 {markdown}
 
-原始任务和三篇 PAPER QUICK LOOK：
+原始任务和实际入选 PAPER QUICK LOOK：
 {prompt}
 """.strip()
         repaired = _request_llm_with_retry(

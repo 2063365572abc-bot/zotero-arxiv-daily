@@ -492,6 +492,44 @@ def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
     assert result["audit"]["status"] == "pass"
 
 
+def test_digest_audit_allows_partial_high_relevance_selection():
+    papers = [
+        SelectionRecord(
+            source="arxiv", title=f"Paper {index}", authors=["A"], abstract="Abstract",
+            url=f"https://arxiv.org/abs/2601.0000{index}",
+            pdf_url=f"https://arxiv.org/pdf/2601.0000{index}",
+            published_date="2026-09-14",
+            score=1.0,
+            role="best_match", scoring={}, selection_reason="test", arxiv_id=f"2601.0000{index}",
+        )
+        for index in range(1, 3)
+    ]
+    quick_fields = "\n".join(f"**{field}**\ncontent" for field in QUICK_LOOK_FIELDS)
+    digest = (
+        "# 每日速看\n\n**2026-09-15**\n\n早上好，一多。\n\n"
+        "## 今日主线\n今日首次从 arXiv 抓取 50 篇候选论文，最终精选 2 篇。\n\n"
+        "# 01｜Paper 1\n\n**发布时间 · 来源**\n2026-09-14 · arXiv\n\n"
+        "> **速读判断**：content\n\n"
+        f"{quick_fields}\n\n"
+        "[原文 PDF](https://arxiv.org/pdf/2601.00001) · [下载 Paper Card](paper-1.pdf)\n\n"
+        "# 02｜Paper 2\n\n**发布时间 · 来源**\n2026-09-14 · arXiv\n\n"
+        "> **速读判断**：content\n\n"
+        f"{quick_fields}\n\n"
+        "[原文 PDF](https://arxiv.org/pdf/2601.00002) · [下载 Paper Card](paper-2.pdf)\n\n"
+        "## 今日精读顺序\n01 → 02。先读空间转录组方法论文，再读单细胞基础模型论文；今天只有两篇达到高相关标准，不硬凑第三篇。"
+    )
+
+    audit = audit_three_card_digest(
+        digest,
+        papers,
+        report_date="2026-09-15",
+        raw_fetched_count=50,
+        card_pdf_links=["paper-1.pdf", "paper-2.pdf"],
+    )
+
+    assert audit["status"] == "pass"
+
+
 def test_wechat_readability_audit_rejects_formula_markup():
     paper = SelectionRecord(
         source="arxiv",
