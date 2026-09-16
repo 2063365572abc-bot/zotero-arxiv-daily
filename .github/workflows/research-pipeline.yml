@@ -128,11 +128,11 @@ jobs:
           done
           test "$copied" -gt 0
           git fetch origin reports || true
-          git switch --detach
-          git reset --mixed
           if git rev-parse --verify origin/reports >/dev/null 2>&1; then
-            git checkout origin/reports -- public || true
-            git reset --mixed
+            git switch --detach origin/reports
+          else
+            git switch --orphan reports-publish
+            git rm -rf . || true
           fi
           mkdir -p public/daily
           rm -rf "public/daily/$date_name"
