@@ -1274,6 +1274,34 @@ def generate_paper_quick_look_markdown(
     )
     markdown = _strip_markdown_fence(content)
     audit = audit_paper_quick_look(markdown, paper)
+    repair_attempted = False
+    if audit["status"] == "fail":
+        repair_attempted = True
+        repair_prompt = f"""
+下面这份论文速看没有通过审计：{audit['errors']}。
+请只根据原始 Card 摘录重写，不要新增任何事实，不要联网，不要改变标题、发布时间和链接。
+必须去掉 HTML 标签、代码反引号、LaTeX、公式、变量下标、特殊数学符号，把它们改写成自然语言。
+仍然严格使用原来的 Markdown 栏目顺序和字段名。
+
+不合格版本：
+{markdown}
+
+原始任务和 Card 摘录：
+{prompt}
+""".strip()
+        repaired = _request_llm_with_retry(
+            openai_client,
+            {**llm_params, "generation_kwargs": generation_kwargs},
+            [
+                {
+                    "role": "system",
+                    "content": "你是严格的科研 Card 整理器，只做格式和可读性修复，不添加任何外部事实。",
+                },
+                {"role": "user", "content": repair_prompt},
+            ],
+        )
+        markdown = _strip_markdown_fence(repaired)
+        audit = audit_paper_quick_look(markdown, paper)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(markdown, encoding="utf-8")
@@ -1283,6 +1311,7 @@ def generate_paper_quick_look_markdown(
         "card_chars": len(card_markdown),
         "quick_look_chars": len(markdown),
         "model": generation_kwargs.get("model"),
+        "repair_attempted": repair_attempted,
         "audit": audit,
     })
     if audit["status"] == "fail":
@@ -1293,6 +1322,7 @@ def generate_paper_quick_look_markdown(
         "card_chars": len(card_markdown),
         "quick_look_chars": len(markdown),
         "model": generation_kwargs.get("model"),
+        "repair_attempted": repair_attempted,
         "audit": audit,
     }
 
@@ -1664,6 +1694,43 @@ def generate_three_card_digest_markdown(
         raw_fetched_count=raw_fetched_count,
         card_pdf_links=card_pdf_links,
     )
+    repair_attempted = False
+    if audit["status"] == "fail":
+        repair_attempted = True
+        repair_prompt = f"""
+下面这份每日速看没有通过审计：{audit['errors']}。
+请只根据三篇 PAPER QUICK LOOK 重写，不要新增任何事实，不要联网，不要改动标题、日期、来源或链接。
+必须保留“# 每日速看”、报告日期、今日主线、三篇论文和今日精读顺序。
+必须去掉 HTML 标签、代码反引号、LaTeX、公式、变量下标、特殊数学符号，把它们改写成自然语言。
+仍然保持高级、简约、手机可读的 Markdown 版式。
+
+不合格版本：
+{markdown}
+
+原始任务和三篇 PAPER QUICK LOOK：
+{prompt}
+""".strip()
+        repaired = _request_llm_with_retry(
+            openai_client,
+            {**llm_params, "generation_kwargs": generation_kwargs},
+            [
+                {
+                    "role": "system",
+                    "content": "你是严格的科研速递编辑，只做结构和可读性修复，不添加任何外部事实。",
+                },
+                {"role": "user", "content": repair_prompt},
+            ],
+        )
+        markdown = _strip_markdown_fence(repaired)
+        markdown = _ensure_digest_fetch_summary(markdown, raw_fetched_count, len(papers))
+        markdown = _ensure_digest_source_labels(markdown, papers)
+        audit = audit_three_card_digest(
+            markdown,
+            papers,
+            report_date=report_date,
+            raw_fetched_count=raw_fetched_count,
+            card_pdf_links=card_pdf_links,
+        )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(markdown, encoding="utf-8")
@@ -1674,6 +1741,7 @@ def generate_three_card_digest_markdown(
         "card_chars": [len(card) for card in card_markdowns],
         "model": generation_kwargs.get("model"),
         "report_date": report_date,
+        "repair_attempted": repair_attempted,
         "audit": audit,
     })
     if audit["status"] == "fail":
@@ -1684,6 +1752,7 @@ def generate_three_card_digest_markdown(
         "digest_chars": len(markdown),
         "model": generation_kwargs.get("model"),
         "report_date": report_date,
+        "repair_attempted": repair_attempted,
         "audit": audit,
     }
 
@@ -2727,7 +2796,7 @@ def run_full_research_radar_pipeline(
                     max_input_chars=quick_look_input_chars,
                     max_output_tokens=quick_look_output_tokens,
                 )
-                quick_look_model_calls += 1
+                quick_look_model_calls += 1 + (1 if quick_meta.get("repair_attempted") else 0)
                 quick_look_reports.append({
                     "arxiv_id": record.arxiv_id,
                     "title": record.title,
