@@ -81,6 +81,8 @@ QUICK_LOOK_FIELDS = [
     "发表状态",
 ]
 
+DAILY_ZOTERO_COLLECTION_PATH = ["一多科研", "每日更新"]
+
 QUICK_LOOK_CARD_SECTION_PREFIXES = [
     "01 基本信息",
     "03 研究问题",
@@ -2408,7 +2410,7 @@ def upload_selected_paper_to_zotero(
         "item_key": None,
         "original_pdf_attachment_key": None,
         "card_pdf_attachment_key": None,
-        "collection_path": "一多科研 / 单细胞转录组",
+        "collection_path": " / ".join(DAILY_ZOTERO_COLLECTION_PATH),
         "failure_reason": None,
         "run_date": run_date,
     }
@@ -2450,7 +2452,7 @@ def upload_selected_paper_to_zotero(
             raise RuntimeError("Zotero item creation did not return an item key")
         result["item_key"] = item_key
 
-        collection_key = _zotero_collection_key(zot, ["一多科研", "单细胞转录组"])
+        collection_key = _zotero_collection_key(zot, DAILY_ZOTERO_COLLECTION_PATH)
         if collection_key:
             try:
                 item = zot.item(item_key)

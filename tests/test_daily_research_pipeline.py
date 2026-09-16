@@ -46,6 +46,44 @@ def test_zotero_object_key_supports_nested_data():
     from zotero_arxiv_daily.daily_research_pipeline import _zotero_object_key
 
     assert _zotero_object_key({"data": {"key": "COLL1234"}}) == "COLL1234"
+
+
+def test_daily_zotero_collection_path_creates_daily_update_child():
+    from zotero_arxiv_daily.daily_research_pipeline import (
+        DAILY_ZOTERO_COLLECTION_PATH,
+        _zotero_collection_key,
+    )
+
+    class StubZotero:
+        def __init__(self):
+            self._collections = [
+                {"key": "ROOT1", "data": {"name": "一多科研", "parentCollection": False}}
+            ]
+            self.created_payloads = []
+
+        def collections(self):
+            return self._collections
+
+        def everything(self, value):
+            return value
+
+        def create_collections(self, payloads):
+            self.created_payloads.extend(payloads)
+            self._collections.append(
+                {
+                    "key": "DAILY1",
+                    "data": {
+                        "name": payloads[0]["name"],
+                        "parentCollection": payloads[0].get("parentCollection", False),
+                    },
+                }
+            )
+            return {"success": {"0": "DAILY1"}}
+
+    zot = StubZotero()
+    assert DAILY_ZOTERO_COLLECTION_PATH == ["一多科研", "每日更新"]
+    assert _zotero_collection_key(zot, DAILY_ZOTERO_COLLECTION_PATH) == "DAILY1"
+    assert zot.created_payloads == [{"name": "每日更新", "parentCollection": "ROOT1"}]
 from tests.canned_responses import make_sample_paper
 
 
