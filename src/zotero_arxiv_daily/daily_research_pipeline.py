@@ -579,9 +579,9 @@ def rank_candidates_with_llm_batched(
 
     if len(all_scores) < len(papers):
         raise ValueError(f"LLM batched selection returned {len(all_scores)} of {len(papers)} candidates")
-    ranked = sorted(papers, key=lambda paper: all_scores[paper.title]["total"], reverse=True)
+    ranked = sorted(papers, key=lambda paper: _score_for_paper(all_scores, paper)["total"], reverse=True)
     for paper in ranked:
-        paper.score = all_scores[paper.title]["total"]
+        paper.score = _score_for_paper(all_scores, paper)["total"]
     summary = {
         "trend_summary": "；".join(trend_parts),
         "rejected_summary": "；".join(rejected_parts),
