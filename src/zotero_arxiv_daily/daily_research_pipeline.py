@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
+import html
 from pathlib import Path
 import json
 import os
@@ -2673,13 +2674,79 @@ def _upload_zotero_attachment(zot: Any, path: Path, parent_key: str) -> dict[str
     return Zupload(zot, [template], parentid=parent_key, basedir=path.parent).upload()
 
 
+def _is_zotero_storage_quota_error(message: str) -> bool:
+    normalized = message.lower()
+    return (
+        "requestentitytoolarge" in normalized
+        or "code: 413" in normalized
+        or "exceed quota" in normalized
+        or "storage quota" in normalized
+    )
+
+
+def _create_zotero_link_note(
+    zot: Any,
+    parent_key: str,
+    record: SelectionRecord,
+    links: dict[str, str],
+    run_date: str,
+    reason: str,
+) -> str | None:
+    """Create a child note with durable public download links when file storage is unavailable."""
+    if not links:
+        return None
+    note_lines = [
+        "<h2>每日更新文件链接</h2>",
+        f"<p><b>日期：</b>{html.escape(run_date)}</p>",
+        f"<p><b>说明：</b>{html.escape(reason)}</p>",
+        "<ul>",
+    ]
+    labels = {
+        "original_pdf": "原文 PDF",
+        "card_pdf": "文档分析 PDF",
+        "card_markdown": "Paper Card Markdown",
+        "quick_look": "速看摘要",
+        "arxiv_pdf": "arXiv PDF",
+    }
+    for key, label in labels.items():
+        url = links.get(key)
+        if url:
+            note_lines.append(
+                f'<li><a href="{html.escape(url, quote=True)}">{html.escape(label)}</a></li>'
+            )
+    note_lines.extend(
+        [
+            "</ul>",
+            f"<p><b>论文：</b>{html.escape(record.title)}</p>",
+            f"<p><b>arXiv：</b>{html.escape(record.arxiv_id or '')}</p>",
+        ]
+    )
+    template = zot.item_template("note")
+    template.update(
+        {
+            "parentItem": parent_key,
+            "note": "\n".join(note_lines),
+            "tags": [
+                {"tag": "daily-arxiv-links"},
+                {"tag": "zotero-storage-fallback"},
+            ],
+        }
+    )
+    created = zot.create_items([template])
+    if isinstance(created, dict):
+        return (created.get("success") or {}).get("0") or (created.get("successful") or {}).get("0")
+    return None
+
+
 def upload_selected_paper_to_zotero(
     config: DictConfig,
     record: SelectionRecord,
     folder: str | Path,
     run_date: str,
+    links: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     folder = Path(folder)
+    links = links or {}
     result: dict[str, Any] = {
         "arxiv_id": record.arxiv_id,
         "title": record.title,
@@ -2687,6 +2754,9 @@ def upload_selected_paper_to_zotero(
         "item_key": None,
         "original_pdf_attachment_key": None,
         "card_pdf_attachment_key": None,
+        "link_note_key": None,
+        "external_links": links,
+        "zotero_storage_quota_fallback": False,
         "collection_path": " / ".join(DAILY_ZOTERO_COLLECTION_PATH),
         "failure_reason": None,
         "run_date": run_date,
@@ -2709,7 +2779,9 @@ def upload_selected_paper_to_zotero(
                     "extra": (
                         f"Daily research radar selection: {run_date}\n"
                         f"Selection reason: {record.selection_reason}\n"
-                        f"PDF: {record.pdf_url or ''}"
+                        f"PDF: {record.pdf_url or ''}\n"
+                        f"Public original PDF: {links.get('original_pdf', '')}\n"
+                        f"Public Paper Card PDF: {links.get('card_pdf', '')}"
                     ),
                     "creators": [{"creatorType": "author", "name": author} for author in record.authors[:20]],
                     "tags": [
@@ -2768,7 +2840,19 @@ def upload_selected_paper_to_zotero(
                     result[key_name] = attachment_key
             except Exception as exc:
                 attachment_failures.append(f"{path.name}:{type(exc).__name__}: {exc}")
-        result["status"] = "uploaded" if not attachment_failures else "partial"
+        if attachment_failures and all(_is_zotero_storage_quota_error(failure) for failure in attachment_failures):
+            reason = "Zotero 文件存储配额已满，文件改用公开下载链接保留在条目 note 中。"
+            try:
+                result["link_note_key"] = _create_zotero_link_note(zot, item_key, record, links, run_date, reason)
+            except Exception as exc:
+                attachment_failures.append(f"link_note:{type(exc).__name__}: {exc}")
+            if result.get("link_note_key"):
+                result["status"] = "linked"
+                result["zotero_storage_quota_fallback"] = True
+            else:
+                result["status"] = "partial"
+        else:
+            result["status"] = "uploaded" if not attachment_failures else "partial"
         result["failure_reason"] = "; ".join(attachment_failures) if attachment_failures else None
     except Exception as exc:
         result["failure_reason"] = f"{type(exc).__name__}: {exc}"
@@ -2788,7 +2872,8 @@ def write_daily_report_markdown(output_dir: str | Path, audit: dict[str, Any], s
         f"- Selected count: {audit.get('selected_count', 0)}",
         f"- PDF success: {audit.get('pdf_success_count', 0)}",
         f"- Card success: {audit.get('card_success_count', 0)}",
-        f"- Zotero uploaded: {audit.get('zotero_upload_success_count', 0)}",
+        f"- Zotero file uploads: {audit.get('zotero_upload_success_count', 0)}",
+        f"- Zotero link fallbacks: {audit.get('zotero_upload_linked_count', 0)}",
         "",
         "## Freshness",
         "",
@@ -3186,8 +3271,20 @@ def run_full_research_radar_pipeline(
         write_json(output_dir / "trend-analysis.json", digest_meta)
 
         zotero_uploads = []
-        for record, folder in zip(selected, paper_folders):
-            upload = upload_selected_paper_to_zotero(config, record, folder, run_date)
+        for index, (record, folder) in enumerate(zip(selected, paper_folders), start=1):
+            upload_links = {
+                "arxiv_pdf": record.pdf_url or "",
+            }
+            if public_base_url:
+                upload_links.update(
+                    {
+                        "original_pdf": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-original.pdf"),
+                        "card_pdf": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-card.pdf"),
+                        "card_markdown": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-card.md"),
+                        "quick_look": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-quick-look.md"),
+                    }
+                )
+            upload = upload_selected_paper_to_zotero(config, record, folder, run_date, links=upload_links)
             zotero_uploads.append(upload)
             state.conn.execute(
                 """
@@ -3201,8 +3298,10 @@ def run_full_research_radar_pipeline(
         write_json(output_dir / "zotero_uploads.json", zotero_uploads)
 
         zotero_upload_success_count = sum(1 for item in zotero_uploads if item.get("status") == "uploaded")
+        zotero_upload_linked_count = sum(1 for item in zotero_uploads if item.get("status") == "linked")
         zotero_upload_partial_count = sum(1 for item in zotero_uploads if item.get("status") == "partial")
         zotero_upload_failure_count = sum(1 for item in zotero_uploads if item.get("status") == "failed")
+        zotero_complete_count = zotero_upload_success_count + zotero_upload_linked_count
 
         pdf_success_count = 0
         card_success_count = 0
@@ -3220,7 +3319,7 @@ def run_full_research_radar_pipeline(
 
         daily_audit.update(
             {
-                "status": "complete" if zotero_upload_success_count == len(selected) else "failed",
+                "status": "complete" if zotero_complete_count == len(selected) else "failed",
                 "raw_arxiv_count": len(raw_candidates),
                 "candidate_50_count": len(candidates),
                 "excluded_previously_promoted_count": len(excluded_candidates),
@@ -3249,6 +3348,7 @@ def run_full_research_radar_pipeline(
                 "pdf_success_count": pdf_success_count,
                 "card_success_count": card_success_count,
                 "zotero_upload_success_count": zotero_upload_success_count,
+                "zotero_upload_linked_count": zotero_upload_linked_count,
                 "zotero_upload_partial_count": zotero_upload_partial_count,
                 "zotero_upload_failure_count": zotero_upload_failure_count,
             }
@@ -3265,10 +3365,10 @@ def run_full_research_radar_pipeline(
         write_json(output_dir / "daily_audit.json", daily_audit)
         write_daily_report_markdown(output_dir, daily_audit, selected)
         write_daily_index(output_dir)
-        if zotero_upload_success_count != len(selected):
+        if zotero_complete_count != len(selected):
             raise RuntimeError(
                 "zotero_upload_incomplete: "
-                f"{zotero_upload_success_count}/{len(selected)} selected papers uploaded; "
+                f"{zotero_complete_count}/{len(selected)} selected papers uploaded_or_linked; "
                 f"failed={zotero_upload_failure_count}, partial={zotero_upload_partial_count}"
             )
         return output_dir
