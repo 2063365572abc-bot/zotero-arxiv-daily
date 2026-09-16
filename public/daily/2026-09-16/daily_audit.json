@@ -1,0 +1,164 @@
+{
+  "status": "complete",
+  "run_date": "2026-09-16",
+  "candidate_target": 50,
+  "top20_target": 20,
+  "selected_target": 3,
+  "embedding_model": "text-embedding-v4",
+  "zotero_upload_attempted_for": "selected_top3_only",
+  "candidate_or_top20_zotero_uploads": 0,
+  "fallbacks_used": [],
+  "incomplete_zotero_corpus_excluded_count": 3,
+  "retrieval_sources": {
+    "api": 4,
+    "rss_category": 31
+  },
+  "retrieval_fallback_sources": {
+    "rss_category": 31
+  },
+  "raw_arxiv_count": 49,
+  "candidate_50_count": 35,
+  "excluded_previously_promoted_count": 14,
+  "top20_count": 20,
+  "selected_count": 3,
+  "embedding_audit": {
+    "embedding_model": "text-embedding-v4",
+    "zotero_embedding_count": 25,
+    "candidate_embedding_count": 190,
+    "zotero_cache_hit_count": 23,
+    "zotero_api_create_count": 1,
+    "candidate_cache_hit_count": 35,
+    "candidate_api_create_count": 0,
+    "embedding_missing_count": 0
+  },
+  "llm_model_calls": 4,
+  "deep_card_model_calls": 3,
+  "quick_look_model_calls": 5,
+  "daily_quote_model_calls": 1,
+  "three_card_digest_model_calls": 1,
+  "card_quality": [
+    {
+      "arxiv_id": "2608.26208v1",
+      "title": "Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+      "folder": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation/source_bundle.json",
+        "source_page_count": 24,
+        "source_character_count": 77585
+      }
+    },
+    {
+      "arxiv_id": "2609.14970v1",
+      "title": "Towards a knowledge-enhanced single-cell foundation model",
+      "folder": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model/source_bundle.json",
+        "source_page_count": 31,
+        "source_character_count": 88555
+      }
+    },
+    {
+      "arxiv_id": "2608.20065v1",
+      "title": "Orthogonal JEPA: Factorized Predictive States for Latent World Models",
+      "folder": "outputs/daily/2026-09-16/paper-3/Orthogonal JEPA Factorized Predictive States for Latent World Models",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-16/paper-3/Orthogonal JEPA Factorized Predictive States for Latent World Models/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-16/paper-3/Orthogonal JEPA Factorized Predictive States for Latent World Models/source_bundle.json",
+        "source_page_count": 10,
+        "source_character_count": 22900
+      }
+    }
+  ],
+  "quick_look_quality": [
+    {
+      "arxiv_id": "2608.26208v1",
+      "title": "Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+      "path": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1328,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.14970v1",
+      "title": "Towards a knowledge-enhanced single-cell foundation model",
+      "path": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1407,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2608.20065v1",
+      "title": "Orthogonal JEPA: Factorized Predictive States for Latent World Models",
+      "path": "outputs/daily/2026-09-16/paper-3/Orthogonal JEPA Factorized Predictive States for Latent World Models/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1141,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "daily_quote": {
+    "status": "generated",
+    "quote": "晨光初照，问题已在，答案尚远。",
+    "model": "qwen-plus-latest",
+    "prompt_chars": 73
+  },
+  "wechat_digest": {
+    "status": "three_card_digest",
+    "prompt_chars": 6910,
+    "digest_chars": 4441,
+    "model": "qwen-plus-latest",
+    "report_date": "2026-09-16",
+    "repair_attempted": false,
+    "audit": {
+      "schema_version": "1.0",
+      "status": "pass",
+      "character_count": 4441,
+      "errors": [],
+      "warnings": []
+    },
+    "quick_look_model_calls": 5,
+    "daily_quote_model_calls": 1
+  },
+  "freshness_distribution": {
+    "latest_48h": 32,
+    "recent_7d": 0,
+    "recent_30d": 3,
+    "backfill": 0,
+    "unknown": 0
+  },
+  "top20_from_candidates": true,
+  "top3_from_top20": true,
+  "pdf_success_count": 3,
+  "card_success_count": 3,
+  "zotero_upload_success_count": 3,
+  "zotero_upload_partial_count": 0,
+  "zotero_upload_failure_count": 0
+}
