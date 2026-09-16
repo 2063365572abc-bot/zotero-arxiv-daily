@@ -24,7 +24,7 @@
       "role": "best_match",
       "needs_llm_scoring": false
     },
-    "selection_reason": "Selected as best_match; LLM total=91.0/100. 直接覆盖空间转录组+单细胞+TME+LR通路可解释建模，匹配全部核心方向 Risk: pan-cancer泛化性依赖配对数据质量",
+    "selection_reason": "Selected as best_match; LLM total=91.0/100. 直接解决空间转录组+单细胞联合建模、CCI机制可解释性，匹配全部核心关键词 Risk: 泛癌训练可能弱化特定组织domain segmentation性能",
     "arxiv_id": "2608.26208v1",
     "published_date": "2026-08-26T04:55:19+00:00"
   },
@@ -46,49 +46,21 @@
     "abstract": "Single-cell foundation models (scFMs) increasingly rely on large-scale transcriptomic pretraining, yet expanding pretraining data can yield diminishing gains while substantially increasing computational cost. Our data scaling analyses showed that incorporating biological knowledge, including cell-level text annotation and gene-level regulatory information, provided additional scaling dimension than simply increasing data size. Motivated by this observation, we present scKITE, a simple yet effective scFM that integrates cell-annotation and gene-regulatory supervision into a shared transcriptomic Transformer encoder through lightweight auxiliary decoders. These decoders are used only during pretraining and subsequently discarded, yielding a general-purpose encoder enriched with biological knowledge for downstream applications. With only 179,067 pretraining samples, i.e., less than 0.5\\% of those used by previous strong scFMs, scKITE outperformed these models across diverse downstream tasks, highlighting knowledge-enhanced pretraining as a promising paradigm for biologically grounded scFMs.",
     "url": "http://arxiv.org/abs/2609.14970v1",
     "pdf_url": "https://arxiv.org/pdf/2609.14970v1",
-    "score": 86.5,
+    "score": 89.5,
     "role": "method_inspiration",
     "scoring": {
-      "relevance": 9.0,
+      "relevance": 10.0,
       "method_novelty": 8.0,
       "evidence_quality": 8.0,
       "transferability": 9.0,
       "resource_value": 8.0,
       "trend_value": 10.0,
-      "total": 86.5,
+      "total": 89.5,
       "role": "method_inspiration",
       "needs_llm_scoring": false
     },
-    "selection_reason": "Selected as method_inspiration; LLM total=86.5/100. 知识增强scFM，轻量设计+生物监督解耦，契合用户foundation model与multi-omics需求 Risk: 未明示是否支持perturbation或cross-modal alignment",
+    "selection_reason": "Selected as method_inspiration; LLM total=89.5/100. 知识增强scFM，明确支持cell state representation与perturbation prediction下游任务 Risk: 未提空间或multi-omics扩展，跨模态对齐证据不足",
     "arxiv_id": "2609.14970v1",
     "published_date": "2026-09-14T03:23:55+00:00"
-  },
-  {
-    "source": "arxiv",
-    "title": "Orthogonal JEPA: Factorized Predictive States for Latent World Models",
-    "authors": [
-      "Taoyong Cui",
-      "Pheng Ann Heng",
-      "Wanli Ouyang"
-    ],
-    "abstract": "World models construct latent states that support prediction, planning, and reasoning about an underlying system. Joint-embedding predictive architectures (JEPAs) offer a direct way to learn such states by predicting targets in representation space instead of reconstructing every detail of the observation. Standard JEPAs, however, organize all predictable content through one target embedding and one prediction pathway. In complex systems, this monolithic state can allocate redundant capacity to dominant signals while providing weak or conflicting gradients to less dominant predictive structure. We introduce \\method, a latent world-modeling framework based on orthogonal predictive factorization. Learned basis matrices analyze each target state into multiple components, and a dedicated prediction branch estimates each component from a shared context representation. Predictive regression preserves the factor magnitudes required for state synthesis, an orthogonality objective discourages repeated directions, factor-activity regularization maintains variation in projected targets, and online variance regularization discourages coordinate-wise encoder collapse. Predicted components are synthesized into a complete latent state that can be used by a readout, decoder, planner, or autoregressive rollout. The same predictive-state mechanism applies when the target is temporally future, spatially hidden, or another partial observation of the same system. Experiments on controlled vision, single-cell transcriptomics, longitudinal health records, continuous control, and molecular dynamics evaluate representation quality, forecasting, planning, and long-horizon stability.",
-    "url": "http://arxiv.org/abs/2608.20065v1",
-    "pdf_url": "https://arxiv.org/pdf/2608.20065v1",
-    "score": 76.5,
-    "role": "trend_signal",
-    "scoring": {
-      "relevance": 7.0,
-      "method_novelty": 10.0,
-      "evidence_quality": 6.0,
-      "transferability": 8.0,
-      "resource_value": 5.0,
-      "trend_value": 9.0,
-      "total": 76.5,
-      "role": "trend_signal",
-      "needs_llm_scoring": false
-    },
-    "selection_reason": "Selected as trend_signal; LLM total=76.5/100. 正交JEPA提供cell state分解新范式，但摘要中single-cell实验仅作验证之一 Risk: 机制通用性强但生物特异性证据不足",
-    "arxiv_id": "2608.20065v1",
-    "published_date": "2026-08-20T13:59:57+00:00"
   }
 ]
