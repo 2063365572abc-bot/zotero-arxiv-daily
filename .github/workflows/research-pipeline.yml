@@ -19,6 +19,11 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
 
+      - name: Install CJK fonts for Paper Card PDFs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
       - name: Restore research radar state
         run: |
           git fetch origin state || true
@@ -34,6 +39,7 @@ jobs:
       - name: Run daily research file pipeline
         env:
           PYTHONUNBUFFERED: "1"
+          DAILY_PIPELINE_PDF_FONT_FILE: /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
           ZOTERO_ID: ${{ secrets.ZOTERO_ID }}
           ZOTERO_KEY: ${{ secrets.ZOTERO_KEY }}
           WECHAT_PUSH_PROVIDER: ${{ vars.WECHAT_PUSH_PROVIDER }}

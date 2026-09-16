@@ -238,6 +238,10 @@ def test_pdf_bundle_card_audit_and_export(tmp_path):
     export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
     ok, reason = validate_pdf(tmp_path / "文档分析.pdf", min_bytes=0)
     assert ok, reason
+    exported_text = "\n".join(page.get_text() for page in pymupdf.open(tmp_path / "文档分析.pdf"))
+    exported_text = " ".join(exported_text.replace("\u00a0", " ").split())
+    assert "01 基本信息" in exported_text
+    assert "02 一句话总结" in exported_text
 
     report = audit_paper_card(tmp_path)
     assert report["status"] == "warning"
@@ -294,6 +298,10 @@ def test_llm_enriched_card_passes_audit(tmp_path):
     assert "Analysis status: llm_enriched" in markdown
 
     export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
+    exported_text = "\n".join(page.get_text() for page in pymupdf.open(tmp_path / "文档分析.pdf"))
+    exported_text = " ".join(exported_text.replace("\u00a0", " ").split())
+    assert "01 基本信息" in exported_text
+    assert "16 研究想法" in exported_text
     report = audit_paper_card(tmp_path)
     assert report["status"] == "pass"
     assert report["errors"] == []

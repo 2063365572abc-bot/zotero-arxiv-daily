@@ -2059,39 +2059,292 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
     return report
 
 
+PDF_FONT_CANDIDATES = [
+    "C:/Windows/Fonts/msyh.ttc",
+    "C:/Windows/Fonts/simhei.ttf",
+    "C:/Windows/Fonts/simsun.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+]
+
+
+def find_pdf_font_file() -> Path:
+    env_font = os.getenv("DAILY_PIPELINE_PDF_FONT_FILE", "").strip()
+    candidates = [env_font] if env_font else []
+    candidates.extend(PDF_FONT_CANDIDATES)
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return Path(candidate)
+    raise RuntimeError(
+        "No CJK PDF font found. Install fonts-noto-cjk on Linux or set "
+        "DAILY_PIPELINE_PDF_FONT_FILE to a readable Chinese-capable TTF/TTC/OTF font."
+    )
+
+
+def _clean_pdf_markdown_inline(text: str) -> str:
+    text = text.replace("\u00a0", " ")
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"\*([^*]+)\*", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)
+    text = text.replace("<br>", " ").replace("<br/>", " ").replace("<br />", " ")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _pdf_display_units(text: str) -> float:
+    units = 0.0
+    for char in text:
+        code = ord(char)
+        if char == "\t":
+            units += 4
+        elif code <= 0x007F:
+            units += 1
+        elif 0xFF01 <= code <= 0xFF60:
+            units += 2
+        elif 0x4E00 <= code <= 0x9FFF:
+            units += 2
+        else:
+            units += 1.7
+    return units
+
+
+def _wrap_pdf_text(text: str, max_units: float) -> list[str]:
+    words = re.split(r"(\s+)", text.strip())
+    lines: list[str] = []
+    current = ""
+
+    def flush_long(segment: str) -> None:
+        nonlocal current
+        chunk = ""
+        for char in segment:
+            candidate = f"{chunk}{char}"
+            if chunk and _pdf_display_units(candidate) > max_units:
+                if current:
+                    lines.append(current.rstrip())
+                    current = ""
+                lines.append(chunk.rstrip())
+                chunk = char
+            else:
+                chunk = candidate
+        if chunk:
+            if current:
+                candidate = f"{current}{chunk}"
+                if _pdf_display_units(candidate) <= max_units:
+                    current = candidate
+                else:
+                    lines.append(current.rstrip())
+                    current = chunk
+            else:
+                current = chunk
+
+    for part in words:
+        if not part:
+            continue
+        candidate = f"{current}{part}"
+        if _pdf_display_units(part) > max_units:
+            flush_long(part)
+        elif current and _pdf_display_units(candidate) > max_units:
+            lines.append(current.rstrip())
+            current = part.lstrip()
+        else:
+            current = candidate
+    if current.strip():
+        lines.append(current.rstrip())
+    return lines or [""]
+
+
 def export_markdown_to_pdf(markdown_path: str | Path, pdf_path: str | Path) -> None:
     markdown_path = Path(markdown_path)
     pdf_path = Path(pdf_path)
     text = markdown_path.read_text(encoding="utf-8")
-    doc = pymupdf.open()
+    font_file = find_pdf_font_file()
+
     width, height = 595, 842
     margin = 42
-    fontsize = 9.5
-    line_height = 14
-    max_chars_per_line = 58
-
-    def wrapped_lines(raw_text: str) -> list[str]:
-        lines: list[str] = []
-        for paragraph in raw_text.splitlines():
-            if not paragraph:
-                lines.append("")
-                continue
-            remaining = paragraph
-            while remaining:
-                lines.append(remaining[:max_chars_per_line])
-                remaining = remaining[max_chars_per_line:]
-        return lines
-
+    content_width = width - (margin * 2)
+    font_name = "YiDuoCJK"
+    doc = pymupdf.open()
     page = doc.new_page(width=width, height=height)
     y = margin
-    for line in wrapped_lines(text):
-        if y > height - margin:
+
+    def ensure_space(required: float) -> None:
+        nonlocal page, y
+        if y + required > height - margin:
             page = doc.new_page(width=width, height=height)
             y = margin
-        page.insert_text((margin, y), line, fontsize=fontsize, fontname="china-s")
-        y += line_height if line else line_height * 0.7
+
+    def draw_line(
+        line: str,
+        *,
+        size: float,
+        color: tuple[float, float, float] = (0, 0, 0),
+        x_offset: float = 0,
+        line_height: float | None = None,
+    ) -> None:
+        nonlocal y
+        actual_line_height = line_height if line_height is not None else size * 1.55
+        ensure_space(actual_line_height)
+        page.insert_text(
+            (margin + x_offset, y),
+            line,
+            fontsize=size,
+            fontname=font_name,
+            fontfile=str(font_file),
+            color=color,
+        )
+        y += actual_line_height
+
+    def draw_wrapped(
+        body: str,
+        *,
+        size: float = 9.6,
+        color: tuple[float, float, float] = (0.08, 0.08, 0.08),
+        x_offset: float = 0,
+        max_units: float = 84,
+        spacing_after: float = 5,
+    ) -> None:
+        nonlocal y
+        for line in _wrap_pdf_text(body, max_units):
+            draw_line(line, size=size, color=color, x_offset=x_offset)
+        y += spacing_after
+
+    def draw_heading(title: str) -> None:
+        nonlocal y
+        y += 8
+        ensure_space(32)
+        rect = pymupdf.Rect(margin - 6, y - 16, margin + content_width + 6, y + 8)
+        page.draw_rect(rect, fill=(0.93, 0.96, 0.99), color=(0.78, 0.84, 0.92), width=0.4)
+        draw_line(title, size=12.8, color=(0.04, 0.12, 0.22), line_height=20)
+        y += 4
+
+    def is_table_row(line: str) -> bool:
+        stripped_line = line.strip()
+        return stripped_line.startswith("|") and stripped_line.endswith("|") and "|" in stripped_line[1:-1]
+
+    def is_table_separator(line: str) -> bool:
+        return bool(re.match(r"^\s*\|?[-:\s|]+\|?\s*$", line))
+
+    def split_table_row(line: str) -> list[str]:
+        return [_clean_pdf_markdown_inline(cell.strip()) for cell in line.strip().strip("|").split("|")]
+
+    def draw_table(table_lines: list[str]) -> None:
+        nonlocal y
+        rows = [split_table_row(line) for line in table_lines if not is_table_separator(line)]
+        rows = [[cell for cell in row] for row in rows if any(cell for cell in row)]
+        if not rows:
+            return
+        header = rows[0]
+        body_rows = rows[1:] if len(rows) > 1 else []
+        draw_wrapped(" / ".join(cell for cell in header if cell), size=8.2, color=(0.32, 0.36, 0.42), max_units=100, spacing_after=3)
+        for row in body_rows:
+            y_before = y
+            ensure_space(36)
+            for index, cell in enumerate(row):
+                if not cell:
+                    continue
+                label = header[index] if index < len(header) and header[index] else f"Field {index + 1}"
+                draw_wrapped(
+                    f"{label}: {cell}",
+                    size=8.1,
+                    color=(0.12, 0.12, 0.12),
+                    x_offset=8,
+                    max_units=96,
+                    spacing_after=1,
+                )
+            if y == y_before:
+                continue
+            y += 5
+
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        raw = lines[index]
+        stripped = raw.rstrip()
+        if not stripped:
+            y += 4
+            index += 1
+            continue
+
+        if stripped.startswith(">"):
+            quote = _clean_pdf_markdown_inline(stripped.lstrip("> "))
+            draw_wrapped(quote, size=8.5, color=(0.35, 0.38, 0.42), max_units=94, spacing_after=2)
+            index += 1
+            continue
+
+        heading_match = re.match(r"^#{1,3}\s+(.+)$", stripped)
+        if heading_match:
+            draw_heading(_clean_pdf_markdown_inline(heading_match.group(1)))
+            index += 1
+            continue
+
+        if is_table_separator(stripped):
+            index += 1
+            continue
+
+        if is_table_row(stripped):
+            table_lines: list[str] = []
+            while index < len(lines) and (is_table_row(lines[index]) or is_table_separator(lines[index])):
+                table_lines.append(lines[index])
+                index += 1
+            draw_table(table_lines)
+            continue
+
+        bullet_match = re.match(r"^\s*[-*]\s+(.+)$", stripped)
+        if bullet_match:
+            draw_wrapped(
+                f"- {_clean_pdf_markdown_inline(bullet_match.group(1))}",
+                size=9.3,
+                x_offset=10,
+                max_units=82,
+                spacing_after=2,
+            )
+            index += 1
+            continue
+
+        ordered_match = re.match(r"^\s*(\d+)[.)]\s+(.+)$", stripped)
+        if ordered_match:
+            draw_wrapped(
+                f"{ordered_match.group(1)}. {_clean_pdf_markdown_inline(ordered_match.group(2))}",
+                size=9.3,
+                x_offset=10,
+                max_units=82,
+                spacing_after=2,
+            )
+            index += 1
+            continue
+
+        draw_wrapped(_clean_pdf_markdown_inline(stripped), max_units=86)
+        index += 1
+
+    page_count = len(doc)
+    for index, pdf_page in enumerate(doc, start=1):
+        footer = f"Paper Card | {markdown_path.stem} | {index}/{page_count}"
+        pdf_page.insert_text(
+            (margin, height - 22),
+            footer,
+            fontsize=7.5,
+            fontname=font_name,
+            fontfile=str(font_file),
+            color=(0.45, 0.45, 0.45),
+        )
+
+    doc.set_metadata(
+        {
+            "title": markdown_path.stem,
+            "subject": "YiDuo Research Paper Card",
+            "creator": "zotero-arxiv-daily",
+        }
+    )
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(pdf_path)
+
+    extracted = "\n".join(page.get_text() for page in pymupdf.open(pdf_path))
+    normalized_extracted = re.sub(r"\s+", " ", extracted.replace("\u00a0", " ")).strip()
+    if "01 基本信息" not in normalized_extracted or len(normalized_extracted) < 200:
+        raise RuntimeError(f"PDF export verification failed for {pdf_path}: extracted text is incomplete.")
 
 
 def write_daily_index(output_dir: str | Path) -> Path:
