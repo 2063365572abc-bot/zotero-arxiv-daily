@@ -1,0 +1,166 @@
+{
+  "status": "complete",
+  "run_date": "2026-09-17",
+  "candidate_target": 50,
+  "top20_target": 20,
+  "selected_target": 3,
+  "embedding_model": "text-embedding-v4",
+  "zotero_upload_attempted_for": "selected_high_relevance_only",
+  "candidate_or_top20_zotero_uploads": 0,
+  "fallbacks_used": [],
+  "incomplete_zotero_corpus_excluded_count": 12,
+  "retrieval_sources": {
+    "api": 40
+  },
+  "retrieval_fallback_sources": {},
+  "raw_arxiv_count": 49,
+  "candidate_50_count": 40,
+  "excluded_previously_promoted_count": 9,
+  "top20_count": 20,
+  "selected_count": 3,
+  "embedding_audit": {
+    "embedding_model": "text-embedding-v4",
+    "zotero_embedding_count": 29,
+    "candidate_embedding_count": 192,
+    "zotero_cache_hit_count": 17,
+    "zotero_api_create_count": 0,
+    "candidate_cache_hit_count": 40,
+    "candidate_api_create_count": 0,
+    "embedding_missing_count": 0
+  },
+  "llm_model_calls": 4,
+  "deep_card_model_calls": 3,
+  "quick_look_model_calls": 4,
+  "daily_quote_model_calls": 1,
+  "three_card_digest_model_calls": 1,
+  "card_quality": [
+    {
+      "arxiv_id": "2609.05956v1",
+      "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+      "folder": "outputs/daily/2026-09-17/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "missing_hypothesis_provenance",
+          "source_excerpted_for_context_limit"
+        ],
+        "card_path": "outputs/daily/2026-09-17/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-17/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/source_bundle.json",
+        "source_page_count": 52,
+        "source_character_count": 165402
+      }
+    },
+    {
+      "arxiv_id": "2608.22785v2",
+      "title": "OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
+      "folder": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "tables_not_covered:['Table 7']",
+          "equations_not_covered:['Equation 5', 'Equation 6', 'Equation 9', 'Equation 12', 'Equation 21']",
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning/source_bundle.json",
+        "source_page_count": 21,
+        "source_character_count": 71084
+      }
+    },
+    {
+      "arxiv_id": "2609.13665v1",
+      "title": "MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
+      "folder": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 2', 'Figure 3']",
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/source_bundle.json",
+        "source_page_count": 8,
+        "source_character_count": 30011
+      }
+    }
+  ],
+  "quick_look_quality": [
+    {
+      "arxiv_id": "2609.05956v1",
+      "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+      "path": "outputs/daily/2026-09-17/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1351,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2608.22785v2",
+      "title": "OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
+      "path": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1351,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.13665v1",
+      "title": "MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
+      "path": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1234,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "daily_quote": {
+    "status": "generated",
+    "quote": "晨光初照，问题已在，答案尚远。",
+    "model": "qwen-plus-latest",
+    "prompt_chars": 73
+  },
+  "wechat_digest": {
+    "status": "three_card_digest",
+    "prompt_chars": 7096,
+    "digest_chars": 4002,
+    "model": "qwen-plus-latest",
+    "report_date": "2026-09-17",
+    "repair_attempted": false,
+    "audit": {
+      "schema_version": "1.0",
+      "status": "pass",
+      "character_count": 4002,
+      "errors": [],
+      "warnings": []
+    },
+    "quick_look_model_calls": 4,
+    "daily_quote_model_calls": 1
+  },
+  "freshness_distribution": {
+    "latest_48h": 36,
+    "recent_7d": 1,
+    "recent_30d": 3,
+    "backfill": 0,
+    "unknown": 0
+  },
+  "top20_from_candidates": true,
+  "top3_from_top20": true,
+  "pdf_success_count": 3,
+  "card_success_count": 3,
+  "zotero_upload_success_count": 0,
+  "zotero_upload_linked_count": 3,
+  "zotero_upload_partial_count": 0,
+  "zotero_upload_failure_count": 0
+}
