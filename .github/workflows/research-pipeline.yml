@@ -114,14 +114,19 @@ jobs:
           cp "$out_dir/daily_report.md" "$target/daily_report.md" || true
           cp "$out_dir/daily_audit.json" "$target/daily_audit.json" || true
           cp "$out_dir/selected_papers.json" "$target/selected_papers.json" || true
-          for idx in 1 2 3; do
-            folder="$(find "$out_dir/paper-$idx" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-            test -n "$folder"
+          copied=0
+          for paper_dir in "$out_dir"/paper-*; do
+            [ -d "$paper_dir" ] || continue
+            idx="${paper_dir##*/paper-}"
+            folder="$(find "$paper_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+            [ -n "$folder" ] || continue
             cp "$folder/original.pdf" "$target/paper-$idx-original.pdf"
             cp "$folder/文档分析.pdf" "$target/paper-$idx-card.pdf"
             cp "$folder/paper-card.md" "$target/paper-$idx-card.md"
             cp "$folder/paper-quick-look.md" "$target/paper-$idx-quick-look.md"
+            copied=$((copied + 1))
           done
+          test "$copied" -gt 0
           git fetch origin reports || true
           git switch --detach
           git reset --mixed

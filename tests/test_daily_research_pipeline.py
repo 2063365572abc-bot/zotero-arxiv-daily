@@ -2,12 +2,14 @@ import json
 from types import SimpleNamespace
 
 import pymupdf
+import pytest
 
 from zotero_arxiv_daily.daily_research_pipeline import (
     CARD_SECTIONS,
     QUICK_LOOK_FIELDS,
     SelectionRecord,
     _card_excerpt_for_quick_look,
+    _require_relevant_top3,
     audit_paper_card,
     audit_paper_quick_look,
     audit_three_card_digest,
@@ -206,6 +208,33 @@ def test_selection_prioritizes_direct_research_anchors_over_generic_methods():
     selected = select_papers_for_deep_read(papers, count=3, llm_scores=llm_scores)
 
     assert [paper.title for paper in selected] == ["RAGCell", "Spatial Omics Model", "Knowledge Single Cell"]
+
+
+def test_relevance_gate_allows_partial_without_padding_weak_papers():
+    papers = [
+        make_sample_paper(title="Spatial Direct", abstract="spatial transcriptomics graph transformer", score=90.0),
+        make_sample_paper(title="Single Cell Direct", abstract="single-cell foundation model", score=85.0),
+        make_sample_paper(title="Generic Method", abstract="generic video diffusion transformer", score=95.0),
+    ]
+    llm_scores = {
+        "Spatial Direct": {"relevance_to_user": 10, "total": 90},
+        "Single Cell Direct": {"relevance_to_user": 10, "total": 88},
+        "Generic Method": {"relevance_to_user": 2, "total": 75},
+    }
+
+    relevant = _require_relevant_top3(papers, llm_scores, count=3)
+
+    assert [paper.title for paper in relevant] == ["Spatial Direct", "Single Cell Direct"]
+
+
+def test_relevance_gate_rejects_zero_direct_candidates():
+    papers = [
+        make_sample_paper(title="Generic Method", abstract="generic video diffusion transformer", score=95.0),
+    ]
+    llm_scores = {"Generic Method": {"relevance_to_user": 2, "total": 75}}
+
+    with pytest.raises(RuntimeError, match="no_relevant_candidates"):
+        _require_relevant_top3(papers, llm_scores, count=3)
 
 
 def test_pdf_bundle_card_audit_and_export(tmp_path):

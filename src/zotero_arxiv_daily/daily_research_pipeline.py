@@ -280,12 +280,18 @@ def _require_relevant_top3(
     direct_eligible = [paper for paper in eligible if _direct_research_anchor_score(paper) >= 1]
     direct_strong = [paper for paper in strong if _direct_research_anchor_score(paper) >= 1]
     required_strong = min(2, count)
-    if len(direct_eligible) < count or len(direct_strong) < required_strong:
+    if not direct_eligible:
         raise RuntimeError(
-            "insufficient_relevant_candidates: "
+            "no_relevant_candidates: "
             f"Qwen found {len(direct_strong)} direct strong candidates (>=5) and {len(direct_eligible)} direct usable candidates (>=4); "
-            f"required {required_strong} direct strong and {count} direct usable candidates; "
-            "refusing to deep-read or upload weakly related papers"
+            "refusing to deep-read or upload unrelated papers"
+        )
+    if len(direct_eligible) < count or len(direct_strong) < required_strong:
+        logger.warning(
+            "Proceeding with partial high-relevance selection: "
+            f"Qwen found {len(direct_strong)} direct strong candidates (>=5) and "
+            f"{len(direct_eligible)} direct usable candidates (>=4); target was "
+            f"{required_strong} direct strong and {count} direct usable candidates."
         )
     return direct_eligible
 
@@ -2841,7 +2847,7 @@ def run_full_research_radar_pipeline(
         "top20_target": top20_count,
         "selected_target": selected_count,
         "embedding_model": embedding_model,
-        "zotero_upload_attempted_for": "selected_top3_only",
+        "zotero_upload_attempted_for": "selected_high_relevance_only",
         "candidate_or_top20_zotero_uploads": 0,
         "fallbacks_used": [],
     }
@@ -2963,6 +2969,16 @@ def run_full_research_radar_pipeline(
             })
 
         relevant_top20 = _require_relevant_top3(reranked_for_selection, llm_scores, selected_count)
+        if len(relevant_top20) < selected_count:
+            partial_selection = (
+                f"partial_high_relevance_selection:{len(relevant_top20)}/{selected_count}; "
+                "not padding with weakly related papers"
+            )
+            daily_audit["fallbacks_used"].append(partial_selection)
+            if selection_fallback:
+                selection_fallback = f"{selection_fallback}; {partial_selection}"
+            else:
+                selection_fallback = partial_selection
         selected = select_papers_for_deep_read(relevant_top20, count=selected_count, llm_scores=llm_scores)
         write_selected_papers(selected, output_dir)
         write_llm_selection_audit(selected, top20, output_dir, summary=llm_summary, fallback=selection_fallback)
@@ -3009,7 +3025,8 @@ def run_full_research_radar_pipeline(
                     deep_card_model_calls += 1
         write_json(output_dir / "card_quality.json", card_reports)
 
-        card_gate_passed = len(selected) == selected_count and all(
+        actual_selected_count = len(selected)
+        card_gate_passed = actual_selected_count > 0 and len(card_reports) == actual_selected_count and all(
             item["audit"].get("status") in {"pass", "warning"} for item in card_reports
         )
         if not card_gate_passed:
@@ -3073,7 +3090,7 @@ def run_full_research_radar_pipeline(
                 })
 
         write_json(output_dir / "quick-look-quality.json", quick_look_reports)
-        quick_look_gate_passed = len(quick_look_reports) == selected_count and all(
+        quick_look_gate_passed = actual_selected_count > 0 and len(quick_look_reports) == actual_selected_count and all(
             item["audit"].get("status") == "pass" for item in quick_look_reports
         )
         if not quick_look_gate_passed:
