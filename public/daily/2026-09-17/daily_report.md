@@ -3,7 +3,7 @@
 ## Summary
 
 - Raw candidates: 49
-- Candidates kept: 40
+- Candidates kept: 42
 - Top20 count: 20
 - Selected count: 3
 - PDF success: 3
@@ -13,9 +13,9 @@
 
 ## Freshness
 
-- latest_48h: 36
+- latest_48h: 39
 - recent_7d: 1
-- recent_30d: 3
+- recent_30d: 2
 - backfill: 0
 - unknown: 0
 
@@ -23,33 +23,33 @@
 
 ### 1. STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images
 
-- arXiv ID: 2609.05956v1
-- URL: http://arxiv.org/abs/2609.05956v1
-- Score: 98.0
+- arXiv ID: 2609.05956
+- URL: https://arxiv.org/abs/2609.05956
+- Score: 96.0
 - Role: best_match
-- Reason: Selected as best_match; LLM total=98.0/100. 直接面向virtual ST，含大规模benchmark、跨平台数据、统一编码框架与下游验证 Risk: 聚焦预测而非cell state表征或perturbation
+- Reason: Selected as best_match; LLM total=96.0/100. 直击虚拟ST核心问题，含大规模benchmark、跨平台数据、可复现代码，覆盖domain segmentation与cross-modal alignment Risk: 虚拟预测的生物学有效性仍需湿实验验证
 
-### 2. OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning
+### 2. MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics
 
-- arXiv ID: 2608.22785v2
-- URL: http://arxiv.org/abs/2608.22785v2
-- Score: 97.0
+- arXiv ID: 2609.13665
+- URL: https://arxiv.org/abs/2609.13665
+- Score: 85.0
 - Role: method_inspiration
-- Reason: Selected as method_inspiration; LLM total=97.0/100. 首创LLM+KAN-GCN多模态闭环聚类，覆盖spatial multi-omics、domain discovery与可靠性量化 Risk: LLM推理模块可能影响可复现性与计算开销
+- Reason: Selected as method_inspiration; LLM total=85.0/100. 聚焦subcellular ST中细胞分割瓶颈，提出consensus-aware监督范式，支撑cell state representation基础 Risk: 未明确开源代码或模型权重
 
-### 3. MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics
+### 3. VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online
 
-- arXiv ID: 2609.13665v1
-- URL: http://arxiv.org/abs/2609.13665v1
-- Score: 87.0
+- arXiv ID: 2609.04658
+- URL: https://arxiv.org/abs/2609.04658
+- Score: 69.0
 - Role: trend_signal
-- Reason: Selected as trend_signal; LLM total=87.0/100. 解决SST中cell segmentation基础问题，consensus-aware设计契合domain segmentation需求 Risk: 未显式建模cell state或跨模态对齐
+- Reason: Selected as trend_signal; LLM total=69.0/100. 多视角联动框架支持single-cell/spatial/genetic跨模态对齐，具工具链整合潜力 Risk: 摘要未提具体算法或可验证新idea，偏工程系统
 
 ## Audit
 
 - Top20 from candidates: True
 - Top3 from Top20: True
 - Candidate/Top20 Zotero uploads: 0
-- Retrieval sources: {"api": 40}
-- Retrieval fallback sources: {}
+- Retrieval sources: {"html_topic": 3, "rss_category": 39}
+- Retrieval fallback sources: {"html_topic": 3, "rss_category": 39}
 - Fallbacks: none

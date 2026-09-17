@@ -1,36 +1,36 @@
-## MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics
+## VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online
 
 **标题与发布时间**  
-MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics（2026-09-12T02:48:36+00:00）
+VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online（2026-09-03T00:00:00+00:00）
 
 **作者和机构**  
-Xinyu Shu, Andrew Zhang, Jean Yang, Jinman Kim
+Card未提供
 
 **发表状态**  
 arXiv 预印本
 
 **研究背景**  
-SST 细胞分割难在：边界模糊、无可靠真值标注、现有质量评估方法不适用。多方法（Cellpose-SAM/BIDCell/ProSeg/Xenium）结果互补但冲突；共识方法（如多数投票）有效但需重复运行全部流程，计算昂贵。
+单细胞与空间组学数据爆发，但分析工具割裂：Seurat、ArchR、SPARK等各自处理单一模态，QTL和GWAS需另跑工具。研究者天然以基因、细胞类型等生物实体提问，现有工具却以数据类型或图表形式组织界面。
 
 **核心假设或问题**  
-如何不依赖人工标注、也不实际运行多个分割模型，就能评估单个候选掩码在 subcellular SST 中的可靠性？如何融合 DAPI 形态与转录本密度信息，提升对模糊边界的判别能力？
+能否构建一个轻量级、URL可寻址的前端框架，让生物实体（如基因、细胞类型、变异）成为导航锚点，支持“从一个基因出发→查其细胞表达→定位空间分布→追溯调控变异→链接GWAS位点”的闭环探索？
 
 **方法逻辑**  
-输入是单个候选掩码 + 对应 DAPI 图 + 转录本密度图；核心是训练一个 U-Net 模型，直接回归该掩码在“留一法”多方法共识中的像素级支持度；输出是连续值共识图及其细胞级平均得分，推理只需一次前向。
+输入已预处理的多组学数据（sc/snRNA-seq、Visium/Xenium/MERFISH、scATAC-seq、QTL、GWAS），按统一schema（含gene_symbol、cell_type_id、spatial_x_y、variant_id等字段）注入后端；前端通过URL参数动态加载视图组件，自动联动不同视图——点击基因即触发关联的细胞表达、空间热图、变异信息。
 
 **主要结果**  
-在 Xenium 肾癌数据上，预测共识图与真实 leave-one-method-out 共识的平均 Dice 达 0.9002；细胞级支持得分排序与共识排序高度一致（Spearman ρ = 0.7905），可用于自动筛选低置信细胞。
+在Parkinson’s Cell Atlas（含13个数据集）上部署成功，集成snRNA-seq、Visium、scATAC-seq和QTL数据；用户可通过同一域名访问基因、细胞类型、空间、基因组区域等6类视图，并实现跨视图语义跳转。
 
 **真正贡献**  
-提出首个专用于 SST 的共识感知质量评估模型；用 leave-one-method-out 伪标签 + 形态-转录联合输入 + foreground-union 损失，实现免多管道执行的可扩展评估。
+提出以生物实体为第一公民的可视化架构；实现schema驱动的视图编排与URL可寻址导航；提供Docker化部署方案与领域定制能力。
 
 **与你研究方向的关系**  
-直接面向 subcellular spatial transcriptomics（如 Xenium）的细胞分割质控；整合形态与分子信号，适用于空间多组学中依赖配准图像与点模式数据的任务。
+支持空间转录组（Visium/Xenium/MERFISH）数据接入，但不执行空间统计；与单细胞、多组学方法属弱连接——可展示基础模型输出（如scGPT embedding），但未实现；不涉及图神经网络或算法创新。
 
 **局限性**  
-作者明确：仅在单数据集（Xenium 肾癌）验证；共识本身是代理真值，无法修正多方法共有的系统偏差；所有候选方法共享同一数据源，误差可能相关。
+作者明确：不执行数据整合、不替代上游分析、不推断因果关系；依赖用户预处理质量；若不同数据中实体命名不一致（如大小写/拼写差异），跨视图链接将失效。
 
 **是否值得精读**  
-值得精读 —— 提供了 SST 领域首个可落地的、免多模型推理的质量评估方案，且实验充分验证了其在像素与细胞两级的共识逼近能力。
+值得精读：它用工程化方式解决多组学可视化中的真实断点——生物直觉与技术栈之间的鸿沟，且已在真实疾病图谱中验证可行性。
 
-**原文 PDF**：https://arxiv.org/pdf/2609.13665v1
+**原文 PDF**：https://arxiv.org/pdf/2609.04658

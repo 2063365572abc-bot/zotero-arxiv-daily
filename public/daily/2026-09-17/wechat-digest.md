@@ -6,14 +6,11 @@
 
 > 晨光初照，问题已在，答案尚远。
 
-
-今日首次从 arXiv 抓取 49 篇候选论文，最终精选 3 篇。
-
 ---
 
 ## 今日主线
 
-今日精选聚焦空间组学三大瓶颈：virtual ST评估失范、多模态聚类缺乏可靠性与可解释性、subcellular分割无真值下的质量判别。三篇工作分别构建标准化基准、引入证据约束LLM协同优化、提出形态-转录联合的共识回归模型，共同指向一个趋势：空间分析正从“输出结果”转向“输出可信结果”。
+虚拟空间转录组评估正从“模型比拼”转向“能力测绘”，STP-BENCH 首次剥离编码器混淆、量化基因可推断性边界；MARC 则将共识质量建模为形态-分子联合回归任务，实现免多pipeline的像素级QC；VizIt 以生物实体为导航锚点，用schema驱动与URL寻址弥合多组学分析与生物学直觉间的断层——三者共同指向一个趋势：可复现、可解释、可交互，正成为空间组学工具链的新基线。
 
 ---
 
@@ -22,124 +19,124 @@
 **发布时间 · 来源**  
 2026-09-05 · arXiv
 
-> **速读判断**：首次系统暴露virtual ST领域评估混乱本质——图像编码器主导性能，多数复杂模型不增益；基因可预测性由形态-转录耦合决定，非模型可塑。
+> **速读判断**：它首次用统一编码器+多粒度验证框架，暴露出当前虚拟ST模型性能排序严重受图像编码器主导，而非架构本身；并实证揭示HMHVG基因预测存在不可逾越的形态学天花板。
 
 **作者和机构**  
-Youngmin Chung, Ji Hun Ha, Andrew H. Song, Cristina Almagro-Pérez, Chaeyoung Seo, Won Jun Suh, Jeong Won Beom, Kyoung Bin Oh, Eytan Ruppin, Faisal Mahmood, Joo Sang Lee
+Youngmin Chung, Ji Hun Ha, Andrew H. Song, et al.（Card未提供具体机构）
 
 **发表状态**  
 arXiv 预印本
 
 **研究背景**  
-空间转录组实验成本高，催生从H&E图像预测基因表达的virtual ST方法；但现有评估数据小、编码器不统一、指标仅看整体相关性，忽略基因级可靠性与下游可用性。
+虚拟ST因实验成本高而兴起，但现有方法分属回归式、双模态对齐式、生成式三类；早期评估受限于小数据、不统一编码器、单一指标，导致模型比较不可靠。
 
 **核心假设或问题**  
-如何公平评估virtual ST模型的真实架构贡献？哪些基因能被H&E可靠恢复？预测结果能否支撑Cell2location等下游分析？模型在跨平台场景下是否鲁棒？
+若剥离图像编码器差异，模型架构的真实贡献有多大？哪些基因或通路能被形态学可靠推断？这种推断能否支撑细胞类型反卷积等下游任务？模型在跨医院、跨癌种、跨平台场景下是否鲁棒？
 
 **方法逻辑**  
-输入H&E图像块；固定UNIv2编码器提取特征，接入21种预测模型；输出基因级PCC/MAE/SSIM、细胞类型丰度重建效果、空间结构域识别准确率及跨平台泛化表现。
+输入是H&E组织切片图像块；强制使用UNIv2等统一patch编码器提取特征，再系统评估21种模型在spot、基因、通路、细胞、组织五个层级的表现，并测试跨机构/癌种/平台迁移稳定性；输出是一张多粒度性能地形图。
 
 **主要结果**  
-UNIv2线性探针是强基线，TRIPLEX和DeepSpot因多尺度形态建模最优；基因可预测性排序跨模型高度一致；预测结果支持主流下游工具，但对stromal/immune基因提升有限。
+CFANet在统一编码器下排名从第16升至第6；HMHVG基因预测PCC天花板显著低于TME标记基因；8–85个基因在特定队列中PCC≥0.4；Visium→Xenium跨平台迁移稳定，但Xenium→Visium未验证；基因层PCC排序在所有模型间高度一致。
 
 **真正贡献**  
-发布首个大规模、多平台、标准化virtual ST基准；证实图像编码器性能主导模型表现，挑战“架构越复杂越优”的默认假设；揭示形态-转录耦合是预测上限的根本约束。
+构建首个大规模、多平台、统一编码的虚拟ST基准STP-BENCH，支持21模型在基因可解释性、下游生物学效用、域偏移鲁棒性三方面受控比较。
 
 **与你研究方向的关系**  
-虽聚焦spot-level，但其发现的内在耦合性提示单细胞虚拟ST可能面临更严苛理论上限；Xenium平台验证结果强化了技术选型对virtual ST效能的关键影响。
+其“统一编码器+多粒度验证”范式可迁移到单细胞基础模型评估；跨组织泛化失败提示图神经网络需引入组织不变图构建；鲁棒性分析框架适用于扰动预测等跨模态任务。
 
 **局限性**  
-仅覆盖6种癌症与Visium/Xenium平台，缺罕见肿瘤、正常组织及Stereo-seq；基因集限于200个HMVHG和16个TME标记；线性基线含Softplus/log1p，或影响公平比较。
+仅覆盖6种癌症和Visium/Xenium两种平台；基因分析限于HMHVG和16个TME标记；未检验低表达基因、非编码RNA或Xenium→Visium反向迁移。
 
 **是否值得精读**  
-值得精读——系统暴露评估失范，并提供可复现框架与反直觉实证结论。
+值得精读——它首次系统暴露虚拟ST评估中的混淆因素，并提供可复现的多层级验证管道，所有结论均基于控制变量实证。
 
-[原文 PDF](https://arxiv.org/pdf/2609.05956v1) · [下载 Paper Card](https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-09-17/paper-1-card.pdf)
+[原文 PDF](https://arxiv.org/pdf/2609.05956) · [下载 Paper Card](https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-09-17/paper-1-card.pdf)
 
 ---
 
-# 02｜OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning
+# 02｜MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics
 
 **发布时间 · 来源**  
-2026-08-24 · arXiv
+2026-09-11 · arXiv
 
-> **速读判断**：首次将不确定性估计、MoE路由与LLM自然语言解释耦合进空间多组学聚类流程，实现聚类结果自带置信度与可审计解释。
-
-**作者和机构**  
-Rabeya Tus Sadia, Qiang Ye, Qiang Cheng；University of Kentucky 计算机科学与数学系
-
-**发表状态**  
-arXiv 预印本
-
-**研究背景**  
-现有空间多组学聚类方法只输出硬标签，缺乏可靠性量化与可解释性；单细胞中LLM应用尚未与空间聚类模型耦合；OmicSync首次将不确定性估计与MoE路由用于该任务。
-
-**核心假设或问题**  
-如何在无真实标注的FFPE数据上，同步输出软聚类、三类可靠性信号（置信度/不确定性/模态权重），并用这些信号约束LLM生成逐点可验证解释？能否用推理质量反馈反向优化聚类？
-
-**方法逻辑**  
-输入每个spot的RNA、ADT、H&E图像块与空间坐标；KAN-GCN与CrossModalTransformer融合模态；UncertaintyMoE通过MC Dropout估计模态路由权重与不确定性；ClusteringHead输出软聚类与置信度；LLM仅基于模型内生五类证据生成解释；OmicSync-R用REINFORCE以推理质量为reward优化聚类分配。
-
-**主要结果**  
-在四个10x CytAssist FFPE数据集上综合九项指标平均排名第一（如Tonsil为1.44）；Stepwise解释策略在GR/CA/SC三项忠实性指标达1.00，属特定设计。
-
-**真正贡献**  
-将可靠性建模设为模型原生输出；构建证据约束的LLM解释框架；实现无需梯度传播的推理-聚类协同优化；建立面向FFPE数据的跨数据集鲁棒评估协议。
-
-**与你研究方向的关系**  
-直接连接空间转录组（替代BayesSpace/GraphST）、多组学融合（扩展SpatialGlue/MISO）、单细胞基础模型（适配UNI/KAN-GCN）及LLM可信推理。
-
-**局限性**  
-基础版OmicSync为后验解释，不优化聚类；OmicSync-R训练开销大；LLM仅见采样域证据，存在确认偏误；所有结果基于伪标签，无真实细胞类型标注验证。
-
-**是否值得精读**  
-值得精读：首次系统整合可靠性建模、证据约束LLM与空间多组学聚类，且在多个FFPE基准上验证有效。
-
-[原文 PDF](https://arxiv.org/pdf/2608.22785v2) · [下载 Paper Card](https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-09-17/paper-2-card.pdf)
-
----
-
-# 03｜MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics
-
-**发布时间 · 来源**  
-2026-09-12 · arXiv
-
-> **速读判断**：跳过昂贵多模型共识计算，用U-Net直接回归单掩码在leave-one-method-out共识中的像素级支持度，首次实现SST细胞分割质量的免执行评估。
+> **速读判断**：它跳过传统共识计算的显式多pipeline执行，直接用U-Net回归每个像素在多方法共识中的支持强度，首次实现免运行其他模型的空间分割质量评估，且在像素与细胞级均给出强量化证据。
 
 **作者和机构**  
 Xinyu Shu, Andrew Zhang, Jean Yang, Jinman Kim
 
 **发表状态**  
+arXiv 预印本（cs.CV）
+
+**研究背景**  
+SST 细胞分割错误会直接扭曲 transcript-to-cell 分配，引发下游生物学误读；多种 SST 专用方法输出互补但冲突的边界；显式共识需运行全部 pipeline，计算不可扩展。
+
+**核心假设或问题**  
+在无真值、不访问模型内部的前提下，能否对任意 SST 候选掩码做可扩展的共识感知质量评估？作者假设：多方法一致性是最可行的代理监督信号，且其支持强度可由形态与分子上下文回归预测。
+
+**方法逻辑**  
+输入是候选掩码、DAPI 形态图和转录密度图；用 U-Net 回归每个像素在其余方法共识中的支持程度；输出是连续共识支持图，单次前向即可生成，无需运行其他分割方法。
+
+**主要结果**  
+MARC 预测显式 leave-one-method-out 共识的平均 Dice 达 0.9002，L1 误差 0.0981，细胞级 Spearman 相关系数 ρ=0.7905；支持自动识别低共识细胞用于复核，或作下游分析的置信度加权因子。
+
+**真正贡献**  
+提出首个将共识质量评估建模为形态与分子感知的密集回归任务的方法；设计 FUCL 损失聚焦前景与分歧区；实现免执行多 pipeline 的空间可解释 QC。
+
+**与你研究方向的关系**  
+框架可迁移到单细胞基础模型的质量控制（如多 imputation 方法共识）；FUCL 设计启发图神经网络在空间组学中的应用；输入融合方式体现多组学图像级整合思路。
+
+**局限性**  
+仅在 Xenium 肾癌数据集验证；共识是代理目标，不能保证生物学正确性；Card未提供对面积/形状偏差的消融验证。
+
+**是否值得精读**  
+值得精读：首次实现免多 pipeline 执行的高保真共识回归，且在像素与细胞级均给出量化证据。
+
+[原文 PDF](https://arxiv.org/pdf/2609.13665) · [下载 Paper Card](https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-09-17/paper-2-card.pdf)
+
+---
+
+# 03｜VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online
+
+**发布时间 · 来源**  
+2026-09-03 · arXiv
+
+> **速读判断**：它不追求算法创新，而是用schema驱动+URL可寻址前端，让“从一个基因出发→查其细胞表达→定位空间分布→追溯调控变异→链接GWAS位点”成为一键可达的操作，直击多组学工具割裂的工程痛点。
+
+**作者和机构**  
+Card未提供
+
+**发表状态**  
 arXiv 预印本
 
 **研究背景**  
-SST细胞分割难在边界模糊、无可靠真值、现有评估方法不适用；多方法结果互补但冲突；共识方法（如多数投票）有效但需重复运行全部流程，计算昂贵。
+单细胞与空间组学数据爆发，但分析工具割裂：Seurat、ArchR、SPARK等各自处理单一模态，QTL和GWAS需另跑工具。研究者天然以基因、细胞类型等生物实体提问，现有工具却以数据类型或图表形式组织界面。
 
 **核心假设或问题**  
-如何不依赖人工标注、也不实际运行多个分割模型，就能评估单个候选掩码在subcellular SST中的可靠性？如何融合DAPI形态与转录本密度信息，提升对模糊边界的判别能力？
+能否构建一个轻量级、URL可寻址的前端框架，让生物实体（如基因、细胞类型、变异）成为导航锚点，支持“从一个基因出发→查其细胞表达→定位空间分布→追溯调控变异→链接GWAS位点”的闭环探索？
 
 **方法逻辑**  
-输入单个候选掩码 + 对应DAPI图 + 转录本密度图；训练U-Net直接回归该掩码在leave-one-method-out共识中的像素级支持度；输出连续值共识图及其细胞级平均得分，推理只需一次前向。
+输入已预处理的多组学数据（sc/snRNA-seq、Visium/Xenium/MERFISH、scATAC-seq、QTL、GWAS），按统一schema注入后端；前端通过URL参数动态加载视图组件，自动联动不同视图——点击基因即触发关联的细胞表达、空间热图、变异信息。
 
 **主要结果**  
-在Xenium肾癌数据上，预测共识图与真实leave-one-method-out共识平均Dice达0.9002；细胞级支持得分排序与共识排序高度一致（Spearman ρ = 0.7905），可用于自动筛选低置信细胞。
+在Parkinson’s Cell Atlas（含13个数据集）上部署成功，集成snRNA-seq、Visium、scATAC-seq和QTL数据；用户可通过同一域名访问基因、细胞类型、空间、基因组区域等6类视图，并实现跨视图语义跳转。
 
 **真正贡献**  
-提出首个专用于SST的共识感知质量评估模型；用leave-one-method-out伪标签 + 形态-转录联合输入 + foreground-union损失，实现免多管道执行的可扩展评估。
+提出以生物实体为第一公民的可视化架构；实现schema驱动的视图编排与URL可寻址导航；提供Docker化部署方案与领域定制能力。
 
 **与你研究方向的关系**  
-直接面向subcellular spatial transcriptomics（如Xenium）的细胞分割质控；整合形态与分子信号，适用于空间多组学中依赖配准图像与点模式数据的任务。
+支持空间转录组（Visium/Xenium/MERFISH）数据接入，但不执行空间统计；与单细胞、多组学方法属弱连接——可展示基础模型输出（如scGPT embedding），但未实现；不涉及图神经网络或算法创新。
 
 **局限性**  
-仅在单数据集（Xenium肾癌）验证；共识本身是代理真值，无法修正多方法共有的系统偏差；所有候选方法共享同一数据源，误差可能相关。
+作者明确：不执行数据整合、不替代上游分析、不推断因果关系；依赖用户预处理质量；若不同数据中实体命名不一致（如大小写/拼写差异），跨视图链接将失效。
 
 **是否值得精读**  
-值得精读——提供了SST领域首个可落地的、免多模型推理的质量评估方案，且实验充分验证了其在像素与细胞两级的共识逼近能力。
+值得精读：它用工程化方式解决多组学可视化中的真实断点——生物直觉与技术栈之间的鸿沟，且已在真实疾病图谱中验证可行性。
 
-[原文 PDF](https://arxiv.org/pdf/2609.13665v1) · [下载 Paper Card](https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-09-17/paper-3-card.pdf)
+[原文 PDF](https://arxiv.org/pdf/2609.04658) · [下载 Paper Card](https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-09-17/paper-3-card.pdf)
 
 ---
 
 ## 今日精读顺序
 
-01 → 03 → 02。STP-BENCH奠定评估范式，是理解后续工作的前提；MARC解决SST最急迫的质控瓶颈，工程落地性强；OmicSync方法新颖但依赖LLM微调与REINFORCE，适合在前两者基础上深入机制探索。
+01 → 02 → 03。STP-BENCH 提供评估范式根基，是理解后续方法有效性的前提；MARC 在该范式下延伸出可落地的质量控制新路径；VizIt 则将二者产出无缝嵌入生物学家工作流——三者构成“评估→质控→交互”完整闭环，今日首次从 arXiv 抓取 49 篇候选论文，最终精选 3 篇。

@@ -10,22 +10,26 @@
   "fallbacks_used": [],
   "incomplete_zotero_corpus_excluded_count": 12,
   "retrieval_sources": {
-    "api": 40
+    "html_topic": 3,
+    "rss_category": 39
   },
-  "retrieval_fallback_sources": {},
+  "retrieval_fallback_sources": {
+    "html_topic": 3,
+    "rss_category": 39
+  },
   "raw_arxiv_count": 49,
-  "candidate_50_count": 40,
-  "excluded_previously_promoted_count": 9,
+  "candidate_50_count": 42,
+  "excluded_previously_promoted_count": 7,
   "top20_count": 20,
   "selected_count": 3,
   "embedding_audit": {
     "embedding_model": "text-embedding-v4",
     "zotero_embedding_count": 29,
-    "candidate_embedding_count": 192,
+    "candidate_embedding_count": 232,
     "zotero_cache_hit_count": 17,
     "zotero_api_create_count": 0,
-    "candidate_cache_hit_count": 40,
-    "candidate_api_create_count": 0,
+    "candidate_cache_hit_count": 2,
+    "candidate_api_create_count": 40,
     "embedding_missing_count": 0
   },
   "llm_model_calls": 4,
@@ -35,13 +39,14 @@
   "three_card_digest_model_calls": 1,
   "card_quality": [
     {
-      "arxiv_id": "2609.05956v1",
+      "arxiv_id": "2609.05956",
       "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
       "folder": "outputs/daily/2026-09-17/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
       "audit": {
         "status": "warning",
         "errors": [],
         "warnings": [
+          "missing_paper_provenance_label",
           "missing_hypothesis_provenance",
           "source_excerpted_for_context_limit"
         ],
@@ -52,73 +57,73 @@
       }
     },
     {
-      "arxiv_id": "2608.22785v2",
-      "title": "OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
-      "folder": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
+      "arxiv_id": "2609.13665",
+      "title": "MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
+      "folder": "outputs/daily/2026-09-17/paper-2/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
       "audit": {
         "status": "warning",
         "errors": [],
         "warnings": [
-          "tables_not_covered:['Table 4']",
-          "equations_not_covered:['Equation 5', 'Equation 6', 'Equation 14', 'Equation 21', 'Equation 22']",
+          "missing_paper_provenance_label",
           "missing_hypothesis_provenance"
         ],
-        "card_path": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning/paper-card.md",
-        "source_bundle_path": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning/source_bundle.json",
-        "source_page_count": 21,
-        "source_character_count": 71084
+        "card_path": "outputs/daily/2026-09-17/paper-2/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-17/paper-2/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/source_bundle.json",
+        "source_page_count": 8,
+        "source_character_count": 30011
       }
     },
     {
-      "arxiv_id": "2609.13665v1",
-      "title": "MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
-      "folder": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
+      "arxiv_id": "2609.04658",
+      "title": "VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online",
+      "folder": "outputs/daily/2026-09-17/paper-3/VizIt A multi-view framework for exploring single-cell, spatial, and genetic data online",
       "audit": {
         "status": "warning",
         "errors": [],
         "warnings": [
+          "card_not_chinese_research_note_style",
           "missing_hypothesis_provenance"
         ],
-        "card_path": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/paper-card.md",
-        "source_bundle_path": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/source_bundle.json",
-        "source_page_count": 8,
-        "source_character_count": 30011
+        "card_path": "outputs/daily/2026-09-17/paper-3/VizIt A multi-view framework for exploring single-cell, spatial, and genetic data online/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-17/paper-3/VizIt A multi-view framework for exploring single-cell, spatial, and genetic data online/source_bundle.json",
+        "source_page_count": 9,
+        "source_character_count": 19230
       }
     }
   ],
   "quick_look_quality": [
     {
-      "arxiv_id": "2609.05956v1",
+      "arxiv_id": "2609.05956",
       "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
       "path": "outputs/daily/2026-09-17/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/paper-quick-look.md",
       "audit": {
         "schema_version": "1.0",
         "status": "pass",
-        "character_count": 1413,
+        "character_count": 1231,
         "errors": [],
         "warnings": []
       }
     },
     {
-      "arxiv_id": "2608.22785v2",
-      "title": "OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
-      "path": "outputs/daily/2026-09-17/paper-2/OmicSync Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning/paper-quick-look.md",
-      "audit": {
-        "schema_version": "1.0",
-        "status": "pass",
-        "character_count": 1423,
-        "errors": [],
-        "warnings": []
-      }
-    },
-    {
-      "arxiv_id": "2609.13665v1",
+      "arxiv_id": "2609.13665",
       "title": "MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics",
-      "path": "outputs/daily/2026-09-17/paper-3/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/paper-quick-look.md",
+      "path": "outputs/daily/2026-09-17/paper-2/MARC Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics/paper-quick-look.md",
       "audit": {
         "schema_version": "1.0",
         "status": "pass",
-        "character_count": 1254,
+        "character_count": 1200,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.04658",
+      "title": "VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online",
+      "path": "outputs/daily/2026-09-17/paper-3/VizIt A multi-view framework for exploring single-cell, spatial, and genetic data online/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1233,
         "errors": [],
         "warnings": []
       }
@@ -132,15 +137,15 @@
   },
   "wechat_digest": {
     "status": "three_card_digest",
-    "prompt_chars": 7250,
-    "digest_chars": 4400,
+    "prompt_chars": 6800,
+    "digest_chars": 4368,
     "model": "qwen-plus-latest",
     "report_date": "2026-09-17",
     "repair_attempted": false,
     "audit": {
       "schema_version": "1.0",
       "status": "pass",
-      "character_count": 4400,
+      "character_count": 4368,
       "errors": [],
       "warnings": []
     },
@@ -148,9 +153,9 @@
     "daily_quote_model_calls": 1
   },
   "freshness_distribution": {
-    "latest_48h": 36,
+    "latest_48h": 39,
     "recent_7d": 1,
-    "recent_30d": 3,
+    "recent_30d": 2,
     "backfill": 0,
     "unknown": 0
   },

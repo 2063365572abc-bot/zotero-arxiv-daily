@@ -1,38 +1,36 @@
-## OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning
+## MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics
 
 **标题与发布时间**  
-OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning（2026-08-24T04:15:39+00:00）
+MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics（2026-09-11T00:00:00+00:00）
 
 **作者和机构**  
-Rabeya Tus Sadia, Qiang Ye, Qiang Cheng；University of Kentucky 计算机科学与数学系
+Xinyu Shu, Andrew Zhang, Jean Yang, Jinman Kim
 
 **发表状态**  
-arXiv 预印本
+arXiv 预印本（cs.CV）
 
 **研究背景**  
-现有空间多组学聚类方法（如 SpatialGlue、MISO）只输出硬聚类标签，缺乏可靠性量化、可解释性与模态归因。单细胞领域虽有LLM应用，但未与空间聚类模型耦合。OmicSync首次将不确定性估计与MoE路由结合用于空间多组学。
+SST 细胞分割错误会直接扭曲 transcript-to-cell 分配，引发下游生物学误读；多种 SST 专用方法（Cellpose-SAM、BIDCell、ProSeg、Xenium）输出互补但冲突的边界；显式共识需运行全部 pipeline，计算不可扩展。
 
 **核心假设或问题**  
-如何在无真实标注的临床FFPE数据上，同时输出聚类结果与可靠性信号，并用这些信号约束LLM生成可审计的逐点自然语言解释？能否用非可微推理质量反馈优化聚类隐空间？
+在无真值、不访问模型内部的前提下，能否对任意 SST 候选掩码做可扩展的共识感知质量评估？作者假设：多方法一致性是最可行的代理监督信号，且其支持强度可由形态与分子上下文回归预测。
 
 **方法逻辑**  
-输入：每个spot的RNA、ADT、H&E图像块和空间坐标。  
-核心方法：用KAN-GCN和CrossModalTransformer融合多模态；SpatialPositionEncoder注入位置信息；UncertaintyMoE通过MC Dropout估计模态路由权重与不确定性；ClusteringHead输出软聚类与置信度；LLM仅基于模型内生的五类证据生成解释；OmicSync-R用REINFORCE将推理质量作为reward反向优化聚类分配。  
-输出：共享隐表示、软聚类、三类可靠性信号（置信度、不确定性、模态权重）、结构化自然语言解释。
+输入是候选掩码、DAPI 形态图和转录密度图；核心是用 U-Net 回归每个像素在其余方法共识中的支持程度；输出是连续共识支持图，单次前向即可生成，无需运行其他分割方法。
 
 **主要结果**  
-在四个10x CytAssist FFPE数据集（Human Tonsil等）上，OmicSync平均排名最优（如Tonsil为1.44），综合九项指标（ARI/NMI/FMI等）。Stepwise解释策略在GR/CA/SC三项忠实性指标上达1.00，但属特定设计，不意味全面最优。
+MARC 预测显式 leave-one-method-out 共识的平均 Dice 达 0.9002，L1 误差 0.0981，细胞级 Spearman 相关系数 ρ=0.7905；支持自动识别低共识细胞用于复核，或作下游分析的置信度加权因子。
 
 **真正贡献**  
-提出可靠性作为模型原生输出；构建证据约束的LLM解释框架；实现无需梯度传播的推理-聚类协同优化；建立面向FFPE数据的跨数据集鲁棒评估协议。
+提出首个将共识质量评估建模为形态与分子感知的密集回归任务的方法；设计 FUCL 损失聚焦前景与分歧区；实现免执行多 pipeline 的空间可解释 QC。
 
 **与你研究方向的关系**  
-连接空间转录组（替代BayesSpace/GraphST）、多组学融合（扩展SpatialGlue/MISO）、单细胞基础模型（适配UNI/KAN-GCN）、以及LLM在生物医学中的可信推理。
+框架可迁移到单细胞基础模型的质量控制（如多 imputation 方法共识）；FUCL 设计启发图神经网络在空间组学中的应用；输入融合方式体现多组学图像级整合思路。
 
 **局限性**  
-基础版OmicSync为后验解释，不优化聚类；OmicSync-R训练开销大；LLM仅见采样域的证据，存在确认偏误风险；所有结果均基于伪标签，无真实细胞类型标注验证。
+仅在 Xenium 肾癌数据集验证；共识是代理目标，不能保证生物学正确性；Card未提供对面积/形状偏差的消融验证。
 
 **是否值得精读**  
-值得精读：首次系统整合可靠性建模、证据约束LLM与空间多组学聚类，且在多个FFPE基准上验证有效。
+值得精读：首次实现免多 pipeline 执行的高保真共识回归，且在像素与细胞级均给出量化证据。
 
-**原文 PDF**：https://arxiv.org/pdf/2608.22785v2
+**原文 PDF**：https://arxiv.org/pdf/2609.13665

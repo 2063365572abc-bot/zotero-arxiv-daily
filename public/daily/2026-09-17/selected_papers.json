@@ -16,52 +16,24 @@
       "Joo Sang Lee"
     ],
     "abstract": "Spatial transcriptomics (ST) provides unprecedented insights into tumor heterogeneity by capturing spatially resolved gene expression, yet its high experimental cost hinders large-scale adoption. Consequently, computational approaches that predict spatial gene expression directly from hematoxylin and eosin slides, termed virtual ST, have rapidly emerged. Despite this progress, assessing advances in the field remains difficult due to insufficient benchmarking: prior studies rely on small, heterogeneous datasets, inconsistent training and inference pipelines, and limited evaluation of biological interpretability and model robustness. To address these gaps, we present STP-BENCH, a standardized benchmark for virtual ST models. STP-BENCH comprises six cancer types spanning two ST platforms (Visium and Xenium), with each training dataset containing more than 30,000 spots and at least 15 slides to ensure statistical reliability. We evaluate 21 predictive approaches, re-implemented with a unified pathology foundation model as the morphological encoder when architecturally applicable. Beyond conventional benchmarks that report average predictive accuracy on highly variable genes, we systematically examine which genes and gene sets are recoverable from histomorphology. We further evaluate the downstream biological utility of predicted profiles through cell-type deconvolution and spatial domain identification, and assess model reliability under domain shifts and data scaling. Notably, unified morphological encoding substantially re-orders model rankings established in prior studies, indicating that architectural innovations and image encoding have been conflated in previous evaluations. We publicly release STP-BENCH to support reproducibility and serve as a community benchmark at https://github.com/NEXGEM/STP-Bench.",
-    "url": "http://arxiv.org/abs/2609.05956v1",
-    "pdf_url": "https://arxiv.org/pdf/2609.05956v1",
-    "score": 98.0,
+    "url": "https://arxiv.org/abs/2609.05956",
+    "pdf_url": "https://arxiv.org/pdf/2609.05956",
+    "score": 96.0,
     "role": "best_match",
     "scoring": {
       "relevance": 10.0,
       "method_novelty": 9.0,
-      "evidence_quality": 10.0,
+      "evidence_quality": 9.0,
       "transferability": 10.0,
       "resource_value": 10.0,
       "trend_value": 10.0,
-      "total": 98.0,
+      "total": 96.0,
       "role": "best_match",
       "needs_llm_scoring": false
     },
-    "selection_reason": "Selected as best_match; LLM total=98.0/100. 直接面向virtual ST，含大规模benchmark、跨平台数据、统一编码框架与下游验证 Risk: 聚焦预测而非cell state表征或perturbation",
-    "arxiv_id": "2609.05956v1",
-    "published_date": "2026-09-05T07:43:36+00:00"
-  },
-  {
-    "source": "arxiv",
-    "title": "OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning",
-    "authors": [
-      "Rabeya Tus Sadia",
-      "Qiang Ye",
-      "Qiang Cheng"
-    ],
-    "abstract": "Spatial multi-omics technologies jointly profile gene expression, surface proteins, and histology at each tissue spot, yet most spatial domain discovery methods provide only cluster assignments, without indicating assignment reliability, modality contributions, or why a domain decision should be trusted. We present OmicSync, a reliability-aware spatial multi-omics framework that couples unsupervised domain clustering with evidence-constrained LLM reasoning using model-derived per-spot signals, including assignment confidence, epistemic routing uncertainty, and modality-routing weights. These signals are converted into structured evidence dictionaries and used to generate standard, stepwise, counterfactual, contrastive, and uncertainty-focused explanations. OmicSync integrates a KAN-GCN backbone with spatial encoding, cross-modal fusion, uncertainty-aware routing, cell-type supervision, and missing-modality imputation. We further introduce OmicSync-R, which closes the reasoning-clustering loop by using automatically computed reasoning-quality scores as REINFORCE rewards, allowing reasoning coherence to shape the latent structure without backpropagating through the language model. Across four 10x CytAssist FFPE spatial proteomics benchmarks, OmicSync achieves the best average rank on Human Tonsil (1.44), Glioblastoma (1.78), and Tonsil Add-on (1.22), and second-best on Human Breast Cancer (2.33). OmicSync-R further improves ARI on Human Breast Cancer from 45.73 to 46.72 and outperforms existing methods on six of nine clustering metrics. Together, OmicSync and OmicSync-R enable reliability-aware, spot-level auditable spatial domain discovery guided by evidence-constrained reasoning.",
-    "url": "http://arxiv.org/abs/2608.22785v2",
-    "pdf_url": "https://arxiv.org/pdf/2608.22785v2",
-    "score": 97.0,
-    "role": "method_inspiration",
-    "scoring": {
-      "relevance": 10.0,
-      "method_novelty": 10.0,
-      "evidence_quality": 9.0,
-      "transferability": 10.0,
-      "resource_value": 8.0,
-      "trend_value": 10.0,
-      "total": 97.0,
-      "role": "method_inspiration",
-      "needs_llm_scoring": false
-    },
-    "selection_reason": "Selected as method_inspiration; LLM total=97.0/100. 首创LLM+KAN-GCN多模态闭环聚类，覆盖spatial multi-omics、domain discovery与可靠性量化 Risk: LLM推理模块可能影响可复现性与计算开销",
-    "arxiv_id": "2608.22785v2",
-    "published_date": "2026-08-24T04:15:39+00:00"
+    "selection_reason": "Selected as best_match; LLM total=96.0/100. 直击虚拟ST核心问题，含大规模benchmark、跨平台数据、可复现代码，覆盖domain segmentation与cross-modal alignment Risk: 虚拟预测的生物学有效性仍需湿实验验证",
+    "arxiv_id": "2609.05956",
+    "published_date": "2026-09-05T00:00:00+00:00"
   },
   {
     "source": "arxiv",
@@ -73,23 +45,59 @@
       "Jinman Kim"
     ],
     "abstract": "Accurate cell segmentation remains a major bottleneck in subcellular spatial transcriptomics (SST), in which morphological images and spatially resolved RNA transcripts are used to partition tissues into individual cellular instances. As segmentation serves as the foundation for constructing cell-level representations, boundary errors can lead to incorrect transcript assignments and compromise downstream analyses. However, reliable ground-truth boundaries are unavailable because they must be inferred from incomplete morphological and transcript signals. Furthermore, manual annotation of a large number of cells is time-consuming. Agreement among complementary segmentation methods provides a practical surrogate for identifying well-supported and ambiguous regions, but explicit consensus construction requires executing multiple computationally intensive pipelines. In this study, we propose MARC (Morphology-Aware Regression of Consensus), a framework that predicts a multi-method consensus-support map for SST segmentation. MARC is trained with leave-one-method-out consensus pseudo-targets and a Foreground-Union Consensus Loss that focuses supervision on candidate and consensus foreground. We evaluated MARC on 4,642 held-out tiles from Xenium kidney tissue, achieving a mean Dice score of 0.90, a mean intersection-over-union of 0.82, and a mean cell-level Spearman correlation of 0.79 against explicitly computed cross-method consensus maps. We demonstrate that the predicted consensus maps localise weakly supported regions while preserving consensus-based rankings and identifying low-consensus cells for manual review. These results show that MARC closely approximates explicit cross-method consensus without multi-method inference and therefore has the potential to facilitate robust, consensus-aware evaluation of cell segmentation in large-scale SST studies.",
-    "url": "http://arxiv.org/abs/2609.13665v1",
-    "pdf_url": "https://arxiv.org/pdf/2609.13665v1",
-    "score": 87.0,
-    "role": "trend_signal",
+    "url": "https://arxiv.org/abs/2609.13665",
+    "pdf_url": "https://arxiv.org/pdf/2609.13665",
+    "score": 85.0,
+    "role": "method_inspiration",
     "scoring": {
       "relevance": 9.0,
       "method_novelty": 8.0,
-      "evidence_quality": 9.0,
+      "evidence_quality": 8.0,
       "transferability": 9.0,
       "resource_value": 7.0,
       "trend_value": 9.0,
-      "total": 87.0,
+      "total": 85.0,
+      "role": "method_inspiration",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as method_inspiration; LLM total=85.0/100. 聚焦subcellular ST中细胞分割瓶颈，提出consensus-aware监督范式，支撑cell state representation基础 Risk: 未明确开源代码或模型权重",
+    "arxiv_id": "2609.13665",
+    "published_date": "2026-09-11T00:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online",
+    "authors": [
+      "Chenhang Christopher Zhang",
+      "Yanqing Lou",
+      "Jie Yuan",
+      "Mingming Lu",
+      "Jacob Parker",
+      "Himanshu Chintalapudi",
+      "Zechuan Lin",
+      "Clemens R. Scherzer",
+      "Yuxuan Hu",
+      "Ruifeng Hu",
+      "Xianjun Dong"
+    ],
+    "abstract": "Multi-omic studies increasingly require data to be examined from complementary biological perspectives, yet interactive exploration remains fragmented across modalities and tools. We present VizIt, an open-source framework for multi-view exploration of single-cell and spatial transcriptomic, epigenomic and genetic data. VizIt connects gene-, cell type-, condition-, spatial-, genomic region- and variant-centered views, enabling seamless navigation across biological perspectives. We demonstrate VizIt through the Parkinson's Cell Atlas, a customizable interactive multi-omic resource.",
+    "url": "https://arxiv.org/abs/2609.04658",
+    "pdf_url": "https://arxiv.org/pdf/2609.04658",
+    "score": 69.0,
+    "role": "trend_signal",
+    "scoring": {
+      "relevance": 7.0,
+      "method_novelty": 6.0,
+      "evidence_quality": 6.0,
+      "transferability": 8.0,
+      "resource_value": 8.0,
+      "trend_value": 8.0,
+      "total": 69.0,
       "role": "trend_signal",
       "needs_llm_scoring": false
     },
-    "selection_reason": "Selected as trend_signal; LLM total=87.0/100. 解决SST中cell segmentation基础问题，consensus-aware设计契合domain segmentation需求 Risk: 未显式建模cell state或跨模态对齐",
-    "arxiv_id": "2609.13665v1",
-    "published_date": "2026-09-12T02:48:36+00:00"
+    "selection_reason": "Selected as trend_signal; LLM total=69.0/100. 多视角联动框架支持single-cell/spatial/genetic跨模态对齐，具工具链整合潜力 Risk: 摘要未提具体算法或可验证新idea，偏工程系统",
+    "arxiv_id": "2609.04658",
+    "published_date": "2026-09-03T00:00:00+00:00"
   }
 ]
