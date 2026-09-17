@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: resource<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>MARC: Morphology-Aware Regression of Consensus for Cell Segmentation in Subcellular Spatial Transcriptomics</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint (cs.CV)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Publication date</td><td>2026-09-12</td><td>[Paper meta]</td></tr>
+<tr><td>Authors</td><td>Xinyu Shu, Andrew Zhang, Jean Yang, Jinman Kim</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Core task</td><td>Pixel-level consensus-support regression for SST cell segmentation quality estimation</td><td>[Paper] [Paper: PDF p. 1–2, Fig 1b]</td></tr>
+<tr><td>Input modalities</td><td>Candidate mask $F_k$, DAPI morphology $D$, transcript-density map $T$</td><td>[Eq. 2, Paper: PDF p. 3]</td></tr>
+<tr><td>Output</td><td>Dense consensus-support map $\hat{C}_k \in [0,1]^{H\times W}$ → cell-level score $S_{k,c}$</td><td>[Eq. 3, Eq. 8, Paper: PDF p. 3, 5]</td></tr>
+<tr><td>Training supervision</td><td>Leave-one-method-out mean consensus $C^{(-k)}$ (pseudo-target)</td><td>[Eq. 5, Paper: PDF p. 3]</td></tr>
+<tr><td>Loss function</td><td>Foreground-Union Consensus Loss (FUCL)</td><td>[Eq. 7, Paper: PDF p. 4]</td></tr>
+<tr><td>Evaluation dataset</td><td>Xenium FFPE human renal cell carcinoma (spatially held-out tiles)</td><td>[Paper] [Paper: PDF p. 5]</td></tr>
+<tr><td>Candidate methods</td><td>Cellpose-SAM, BIDCell, ProSeg, Xenium 10x onboard</td><td>[Paper] [Paper: PDF p. 5, Table 1]</td></tr>
+<tr><td>Key metrics</td><td>Pixel-level Dice ↑ / L1 ↓; Cell-level Spearman ρ ↑</td><td>[Table 1, Paper: PDF p. 4]</td></tr>
+<tr><td>Code/data availability</td><td>Not reported in text; “未开源代码” noted in selection reason</td><td>[Selection reason]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>该论文提出 MARC（Morphology-Aware Regression of Consensus），一个无需多方法集成推理即可预测亚细胞空间转录组（SST）中候选细胞分割掩码的跨方法共识支持度的回归框架。它通过将候选掩码、DAPI形态与转录密度三通道融合输入 U-Net 架构，以 leave-one-method-out 平均共识为伪标签、Foreground-Union Consensus Loss（FUCL）为监督目标进行训练，在 Xenium 肾癌数据上实现了像素级 Dice 0.90 和细胞级 Spearman 相关性 0.79，显著优于仅用候选掩码或单模态输入的基线。其核心价值在于将原本计算密集的显式共识构建（需运行全部4种分割流程）压缩为单次前向推理，为大规模 SST 分析提供了可扩展的质量控制范式；但该共识仍是代理指标（surrogate），不等价于生物学真值边界。</p>
+<h2>03 研究问题</h2>
+<p>SST 细胞分割质量评估缺乏可靠 ground truth：手动标注成本过高且边界本身存在生物学模糊性 [Paper] [Paper: PDF p. 1]；而现有监督/不确定性方法依赖专家标注或模型内部状态，无法泛化至外部生成的异构候选掩码 [Paper] [Paper: PDF p. 1–2]。因此，如何在<strong>无真值、无模型访问权限、跨方法异构输入</strong>条件下，对任意 SST 分割结果进行<strong>高效、一致、空间可解释的质量量化</strong>？论文将此问题重构为：能否从单一候选掩码及其配套形态与分子信号中，直接回归出该掩码在多方法共识空间中的像素级支持强度？</p>
+<h2>04 研究背景与发展路径</h2>
+<p>传统图像分割质量评估依赖人工标注（如 SegQC [19]）或模型内不确定性估计（如 Bayesian dropout [7,12]），但二者均不适用于 SST 场景：前者因细胞密度过高、标注主观性强而不可扩展 [Paper] [Paper: PDF p. 1–2]；后者要求访问生成该掩码的原始模型参数与推理路径，而实际中用户常仅持有黑盒输出掩码 [Paper] [Paper: PDF p. 2]。共识方法（如 STAPLE [21]、多数投票）虽能规避真值依赖，却需完整执行所有参与方法的 pipeline（含各自 SST 输入预处理），导致计算开销随方法数线性增长，难以用于千级 tile 的常规质控 [Paper] [Paper: PDF p. 2, Fig 1a]。MARC 的发展路径是：<strong>放弃“运行共识” → 转向“学习共识”</strong>：将共识视为可建模的隐变量，利用 leave-one-method-out 伪标签将其蒸馏为一个轻量回归任务，使共识能力内化于单模型中。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>No scalable ground truth</strong></td><td>Manual annotation is prohibitively time-consuming for large SST datasets; boundaries are biologically ambiguous even for experts</td><td>SST boundaries must be inferred from incomplete morphological and transcript signals; dense packing and weak contrast exacerbate ambiguity</td><td>[Paper] [Paper: PDF p. 1, &quot;However, reliable ground-truth boundaries are unavailable...&quot;]</td></tr>
+<tr><td><strong>Incompatibility of existing QC methods</strong></td><td>Supervised QC requires expert masks; uncertainty-based QC requires internal model access</td><td>Existing approaches were not developed specifically for SST; they assume either full annotation access or white-box model deployment</td><td>[Paper] [Paper: PDF p. 1–2, &quot;Conventional segmentation quality-assessment approaches were not developed specifically for SST...&quot;]</td></tr>
+<tr><td><strong>Computational bottleneck of explicit consensus</strong></td><td>Multi-method consensus construction is computationally intensive and difficult to scale</td><td>Requires configuring and running all contributing pipelines with their method-specific SST inputs (e.g., different preprocessing, alignment)</td><td>[Paper] [Paper: PDF p. 2, Fig 1a caption; &quot;making consensus construction computationally intensive&quot;]</td></tr>
+<tr><td><strong>Lack of spatially resolved, cross-method quality signal</strong></td><td>Candidate masks lack per-pixel reliability estimates; cell-level scores cannot prioritize ambiguous regions for review</td><td>Prior work focuses on generating better masks, not evaluating externally generated candidates; no framework produces dense consensus-support maps usable for spatial filtering</td><td>[Paper] [Paper: PDF p. 2, &quot;Most existing work focuses on generating improved masks rather than evaluating the reliability of an externally generated candidate mask.&quot;]</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>论文的核心洞察是：<strong>共识不是必须被“计算”的结果，而是可以被“感知”的上下文模式</strong>。当多个互补的 SST 分割方法（如 morphology-driven Cellpose-SAM 与 transcript-aware ProSeg）对同一组织区域产生分歧时，其分歧模式本身携带了关于局部信号质量（如核形态清晰度、转录富集强度、邻近细胞重叠程度）的强判别信息。MARC 的核心思想即：将候选掩码 $F_k$ 视为查询（query），将 DAPI 形态 $D$ 与转录密度 $T$ 视为支撑证据（evidence），联合建模三者之间的几何-分子一致性关系，从而在像素级预测该候选区域获得其余 $K-1$ 种方法共同支持的概率。这本质上是将共识建模为一种<strong>跨模态、跨方法的条件置信度场</strong>，而非离散的二值集成输出。</p>
+<h2>07 方法总览</h2>
+<p>MARC 将 SST 分割质量评估解耦为两个阶段：<strong>（1）像素级共识支持回归</strong>：以三通道输入 $X_k = \text{concat}(D, T, F_k)$ 经 U-Net 编码-解码，输出连续值 $\hat{C}_k \in [0,1]^{H\times W}$，表示每个像素属于跨方法共识前景的概率；<strong>（2）细胞级分数聚合</strong>：利用原始标签掩码 $M_k$ 对 $\hat{C}_k$ 进行实例平均，得到每个候选细胞 $c$ 的标量支持分 $S_{k,c}$。训练目标为 Foreground-Union Consensus Loss（FUCL），仅在候选前景 $F_k$ 或 leave-one-method-out 共识前景 $C^{(-k)}$ 覆盖的并集区域 $U_k$ 内计算 L1 误差，强制模型聚焦于最具判别力的争议区域（如候选延伸至背景、或遗漏真实核区）。整个流程完全避免在推理时调用其他分割方法，实现 O(1) 推理复杂度。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>Three-channel input fusion</strong></td><td>Concatenates DAPI morphology $D$, transcript density $T$, and candidate foreground $F_k$ into $X_k \in \mathbb{R}^{3\times H\times W}$</td><td>Enables joint modeling of geometric, structural, and molecular cues; avoids modality silos that would miss cross-signal inconsistencies</td><td>Input: $D, T, F_k$ (all $H\times W$); Output: $X_k$</td><td>[Eq. 2, Paper: PDF p. 3]; Ablation in Table 2 shows +DAPI/+transcripts boost Dice &amp; ρ</td><td>Removal reduces Dice by ~4.4% (mask-only→mask+DAPI) and ρ by ~0.33 (mask-only→mask+DAPI), proving morphology is critical for ranking [Paper] [Paper: PDF p. 6, Table 2]</td></tr>
+<tr><td><strong>U-Net encoder-decoder backbone</strong></td><td>Extracts hierarchical features and regresses dense $\hat{C}_k$ via skip connections</td><td>Captures multi-scale context (e.g., nuclear shape at high-res, tissue architecture at low-res); skip connections preserve boundary detail crucial for pixel-level support</td><td>Input: $X_k$; Output: logit map $Z_k$ → $\hat{C}_k = \sigma(Z_k)$</td><td>[Sec 3.2, Paper: PDF p. 3]; Fig 2 shows architecture</td><td>Without skip connections, boundary localization degrades → lower Dice/IoU; FUCL’s foreground focus would under-constrain such a model</td></tr>
+<tr><td><strong>Foreground-Union Consensus Loss (FUCL)</strong></td><td>Computes L1 loss only over union $U_k = F_k \cup C^{(-k)}$ of candidate and consensus foreground</td><td>Focuses gradient updates on regions where candidate and consensus disagree (i.e., ambiguous boundaries), preventing background noise from dominating training</td><td>Input: $\hat{C}_k, C^{(-k)}, U_k$; Output: scalar loss $L^{(k)}_{\text{FU}}$</td><td>[Eq. 6–7, Paper: PDF p. 4]; Defined as mean absolute error clamped to $U_k$</td><td>Using full-image L1 would dilute gradients on critical disagreement pixels → lower Dice &amp; poorer cell-level correlation (as implied by FUCL’s design rationale [Paper] [Paper: PDF p. 4])</td></tr>
+<tr><td><strong>Cell-level aggregation (Eq. 8)</strong></td><td>Averages $\hat{C}_k$ over pixels assigned to each instance $c$ in $M_k$: $S_{k,c} = \frac{1}{\</td><td>M_k=c\</td><td>}\sum_{(x,y):M_k(x,y)=c} \hat{C}_k(x,y)$</td><td>Converts dense spatial support into actionable, instance-level QC scores for manual review or downstream filtering</td><td>Input: $\hat{C}_k, M_k$; Output: vector $\{S_{k,c}\}$</td><td>[Eq. 8, Paper: PDF p. 5]; Used for Spearman ρ calculation and Fig 3/4 visualization</td><td>Without aggregation, no cell-level ranking possible; candidate-copy baseline has constant $S_{k,c}$ → undefined ρ [Table 2, *]</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>论文未给出显式“算法公式”，但明确定义了以下关键符号与可核验公式：</p>
+<ul>
+<li>$M_k$: 候选方法 $k$ 输出的带标签掩码（$H\times W$ 整数矩阵），$M_k(x,y)=c$ 表示像素 $(x,y)$ 属于细胞实例 $c$ [Eq. 1, Paper: PDF p. 3]。</li>
+<li>$F_k$: $M_k$ 的二值前景图，$F_k(x,y)=1$ iff $M_k(x,y)&gt;0$ [Eq. 1]。</li>
+<li>$D, T$: 对齐的 DAPI 形态图与转录密度图（均为 $H\times W$ 实值图）[Paper] [Paper: PDF p. 3]。</li>
+<li>$X_k = \text{concat}(D, T, F_k)$: 三通道模型输入 [Eq. 2]。</li>
+<li>$\hat{C}_k = f_\theta(X_k) = \sigma(Z_k)$: 模型输出的连续共识支持图，经 sigmoid 映射至 $[0,1]$ [Eq. 3–4]。</li>
+<li>$C^{(-k)} = \frac{1}{K-1}\sum_{j\neq k} F_j$: leave-one-method-out 共识伪目标（$K=4$，故为其余3法平均）[Eq. 5]。</li>
+<li>$U_k(x,y) = \mathbb{I}[F_k(x,y)=1 \lor C^{(-k)}(x,y)&gt;0]$: 前景并集掩码，定义 FUCL 作用域 [Eq. 6]。</li>
+<li>$L^{(k)}_{\text{FU}} = \frac{1}{\|U_k\|_1}\sum_{x,y} U_k(x,y)\cdot|\hat{C}_k(x,y)-C^{(-k)}(x,y)|$: Foreground-Union Consensus Loss [Eq. 7]。</li>
+<li>$S_{k,c} = \frac{1}{|\{(x,y):M_k(x,y)=c\}|}\sum_{(x,y):M_k(x,y)=c} \hat{C}_k(x,y)$: 细胞 $c$ 的共识支持分 [Eq. 8]。</li>
+</ul>
+<p><em>Note</em>: 无公式 (7) 在文本中缺失（跳过编号7），但 FUCL 定义完整见 Eq. 7；Equation 8 是唯一明确写出的聚合公式。</p>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>Main evaluation (Table 1)</strong></td><td>MARC predicts explicit consensus targets ($C^{(-k)}$) with high fidelity</td><td>MARC vs. explicit $C^{(-k)}$ across 4 candidate methods; metrics: L1, Dice, IoU, Sensitivity, Precision, Cell Spearman ρ</td><td>Avg. Dice=0.9002, Avg. ρ=0.7905; best per-metric bolded</td><td>MARC closely approximates explicit cross-method consensus at both pixel and cell levels</td><td>MARC recovers biological ground truth (not claimed; authors explicitly state consensus is a surrogate [Paper] [Paper: PDF p. 7])</td><td>[Table 1, Paper: PDF p. 4]; [Paper] [Paper: PDF p. 5, &quot;MARC achieved mean...indicating that MARC closely reproduces the explicit consensus&quot;]</td></tr>
+<tr><td><strong>Input ablation (Table 2)</strong></td><td>DAPI morphology and transcript density provide complementary, non-redundant signals beyond candidate geometry</td><td>MARC variants: mask-only, mask+DAPI, mask+DAPI+transcripts; all trained/tested on same $C^{(-k)}$ targets</td><td>Adding DAPI boosts avg. Dice from 0.8565→0.8866 and ρ from 0.4228→0.7564; adding transcripts further to 0.9002/0.7905</td><td>Morphology is the primary driver for cell-level ranking; transcripts add molecular specificity for pixel-level refinement</td><td>DAPI alone suffices for high-quality ranking (false: ρ=0.7564 &lt; 0.7905 with transcripts)</td><td>[Table 2, Paper: PDF p. 6]; [Paper] [Paper: PDF p. 6, &quot;The substantial increase in cell-level correlation after adding DAPI indicates that morphology provides the main additional signal...&quot;]</td></tr>
+<tr><td><strong>Target ablation (Sec 4.3)</strong></td><td>Mean-consensus supervision is more effective than STAPLE for preserving cell-level rankings</td><td>Two MARC models: mean-$C^{(-k)}$ vs. STAPLE-$C^{(-k)}$ targets; identical inputs/architecture/loss</td><td>Mean target: higher sensitivity (0.9168 vs 0.8860) and ρ (0.7905 vs 0.7491); STAPLE: higher precision (0.9128 vs 0.8843)</td><td>Mean consensus better captures fraction-of-support intuition and preserves ordering; STAPLE trades recall for precision</td><td>STAPLE is objectively more accurate (not supported: models evaluated against different targets)</td><td>[Paper] [Paper: PDF p. 5–6, &quot;Mean-consensus and STAPLE supervision produced similar average Dice scores...but different trade-offs&quot;]</td></tr>
+<tr><td><strong>Qualitative analysis (Fig 4)</strong></td><td>MARC localises weakly supported regions spatially</td><td>Visual inspection of predicted $\hat{C}_k$ and $S_{k,c}$ on held-out test tiles</td><td>Bright $\hat{C}_k$ aligns with nuclear morphology &amp; transcript density; dim regions correspond to candidate extensions into background or method-specific artifacts</td><td>MARC produces spatially varying, interpretable support maps that highlight ambiguity for review</td><td>MARC’s low-score regions perfectly match biological ground truth errors (Not assessable from supplied material; no ground truth provided)</td><td>[Fig 4, Paper: PDF p. 6]; [Paper] [Paper: PDF p. 7, &quot;Lower consensus was observed where candidate masks extended into the background...&quot;]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>MARC 的核心结论是：<strong>在 SST 场景下，跨方法共识支持度是一个可被 U-Net 从候选掩码+形态+转录三元组中有效回归的稠密场，且该回归结果在像素重叠（Dice 0.90）和细胞排序（ρ 0.79）上高度逼近显式计算的 leave-one-method-out 共识</strong>。这意味着：（1）共识蕴含的可靠性信号具有足够强的统计规律性，能被端到端模型捕获；（2）形态与分子上下文是解码该信号的关键，远超候选掩码自身几何信息；（3）FUCL 的前景并集约束是有效的训练偏置，引导模型关注歧义边界。但必须强调：该共识是<strong>方法论共识（methodological agreement）</strong>，非生物学共识（biological truth）；其价值在于提供一种<strong>可扩展、可解释、与下游分析解耦的质量代理指标</strong>，而非替代真值。</p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Consensus as surrogate, not ground truth</strong></td><td>Failure modes common to multiple segmentation methods may be reinforced in the consensus target, leading to systematic bias</td><td>Acknowledge it&#x27;s a pragmatic alternative to manual annotation; suggest orthogonal validation with membrane/protein markers</td><td>[Paper] [Paper: PDF p. 7, &quot;A key limitation...failure modes across segmentation methods may be reinforced...incorporate orthogonal membrane or protein markers for validation&quot;]</td></tr>
+<tr><td><strong>Limited generalisability</strong></td><td>Evaluated only on Xenium renal cell carcinoma data; candidate methods share inputs from same assay, reducing independence</td><td>Future work will evaluate on additional tissues, platforms, and segmentation methods</td><td>[Paper] [Paper: PDF p. 7, &quot;Another limitation is that the MARC was evaluated on a single Xenium renal cell carcinoma dataset...evaluate additional tissues, platforms, and segmentation methods&quot;]</td></tr>
+<tr><td><strong>Platform/method dependence</strong></td><td>Current setup assumes aligned DAPI and transcript maps; performance may degrade with poor registration or noisy transcript data</td><td>Not explicitly stated, but implied by reliance on &quot;aligned&quot; inputs in Methods [Sec 3.1] and ablation showing transcript density improves performance</td><td>[Paper] [Paper: PDF p. 3, &quot;Let D ∈ R^{H×W} denote the aligned DAPI morphology image and T ∈ R^{H×W} the transcript-density image.&quot;; Table 2 shows transcript addition improves metrics]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td>MARC’s high cell-level Spearman ρ (0.79) relies on the <em>same</em> leave-one-method-out protocol for both training targets ($C^{(-k)}$) and evaluation reference ($C^{(-k)}$)</td><td>This creates an optimistic bias: the model is optimized to mimic a target defined by the very ensemble it’s meant to replace; real-world utility requires generalisation to unseen method combinations or new assays</td><td>Overstates practical deployability; if a new segmentation method is added, retraining MARC with updated $C^{(-k)}$ may be needed, reintroducing computational cost</td><td>Train MARC on subset of methods (e.g., 3 out of 4), then test its prediction against consensus including the held-out method; measure ρ drop</td><td>[Paper] [Paper: PDF p. 3, &quot;For candidate method k, the consensus target is calculated as the mean binary foreground prediction of the remaining K−1 methods&quot;; Table 1 evaluates exactly this same setup]</td></tr>
+<tr><td>FUCL restricts loss to foreground union $U_k$, but $C^{(-k)}$ is a soft probability map (mean of binaries), while $\hat{C}_k$ is a sigmoid output — the L1 loss treats them as equally calibrated continuous values</td><td>The soft target $C^{(-k)} \in [0,1]$ represents fractional support, but FUCL’s L1 assumes linear correspondence; a KL divergence or focal loss might better handle the confidence calibration mismatch</td><td>Poor calibration could harm downstream tasks like active learning where absolute $\hat{C}_k$ thresholds matter (e.g., filtering cells with $\hat{C}_k&lt;0.3$)</td><td>Compare FUCL with KL-divergence loss on same setup; calibrate $\hat{C}_k$ using isotonic regression against $C^{(-k)}$; report ECE (Expected Calibration Error)</td><td>[Eq. 5 defines $C^{(-k)}$ as arithmetic mean; Eq. 4 defines $\hat{C}_k$ as sigmoid; FUCL uses L1 without calibration discussion]</td></tr>
+<tr><td>Input ablation shows transcript density boosts performance, but Table 2 reports lower ρ for BIDCell (0.6251) vs others (&gt;0.81) despite using same transcript input</td><td>BIDCell itself is transcript-aware [Paper] [Paper: PDF p. 3], so its candidate mask $F_k$ may already encode transcript information, making the additional transcript channel $T$ redundant or even conflicting for this method</td><td>Suggests MARC’s modality fusion isn’t universally optimal; method-specific input gating or attention might improve robustness across heterogeneous candidates</td><td>Implement modality-gating modules per candidate method; ablate $T$ only for BIDCell input and compare to full model</td><td>[Paper] [Paper: PDF p. 3, &quot;BIDCell uses biologically informed self-supervised learning to integrate morphological and transcript information&quot;; Table 2 shows BIDCell row has lowest ρ=0.6251]</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>共识可学习性</strong>：跨方法分割共识并非必须显式计算的刚性集成，而是一种可被深度网络从多模态上下文中回归的稠密语义场，其可学习性源于方法间错误的互补性（morphology vs. transcript errors）。</li>
+<li><strong>FUCL 的设计智慧</strong>：聚焦前景并集的损失函数是处理“弱监督代理目标”的关键——它将优化目标锚定在最具信息量的歧义区域（candidate-background boundary, candidate-overlap zone），避免背景噪声稀释梯度。</li>
+<li><strong>形态的不可替代性</strong>：在 SST 中，DAPI 形态对细胞级质量排序的贡献（Δρ≈0.33）远超转录密度（Δρ≈0.03），证实核结构仍是细胞身份与边界的最稳健先验，分子信号起校准与细化作用。</li>
+<li><strong>伪标签的脆弱性</strong>：leave-one-method-out 协议虽巧妙规避真值需求，但其有效性高度依赖候选方法的独立性；当方法共享底层假设（如均基于 Xenium 数据）时，共识可能收敛至局部最优而非全局可靠解。</li>
+<li><strong>空间可解释性即生产力</strong>：dense $\hat{C}_k$ 图不仅用于打分，其像素级热图可直接指导人工校正（如 Fig 4 中红框细胞的低支持区域），将 QC 从“整体可信度判断”升级为“精准干预定位”。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：MARC 的 leave-one-method-out 伪标签范式与 self-training、noisy student 等半监督方法同源，但创新点在于将“student”目标定义为跨方法共识而非单模型自洽；FUCL 的前景聚焦策略与医学图像分割中常用的 foreground-weighted Dice loss [18] 一脉相承，但更进一步限定于“candidate ∪ consensus”交集。</li>
+<li><strong>候选连接/方法论连接</strong>：其三通道输入（mask+DAPI+transcripts）与 multi-omics 表征学习中常见的模态拼接（如 scRNA+ATAC）思路一致，但 SST 的 spatial alignment 约束使其更接近 spatial omics 特定架构（如 SPATA [16]）；U-Net 结构选择印证了 biomedical AI 中编码器-解码器对空间关系建模的普适优势。</li>
+<li><strong>候选连接/方法论连接</strong>：cell-level aggregation (Eq. 8) 本质是 instance-aware pooling，与 graph neural networks 中的 readout 函数（如 sum/mean pooling over node features）功能相似，暗示可将候选细胞视为图节点，$\hat{C}_k$ 像素为邻居特征，探索 GNN-based consensus refinement。</li>
+<li><strong>弱连接/方法论连接</strong>：single-cell foundation models 通常面向 profile-level embedding，而 MARC 聚焦 segmentation-level spatial QC；但其输出 $\hat{C}_k$ 可作为细胞表型的 spatial reliability prior，注入 foundation model 的 spatial tokenization 阶段。</li>
+<li><strong>弱连接/方法论连接</strong>：perturbation prediction 在 SST 中常需 clean segmentation；MARC 提供的低共识细胞列表可作为 perturbation target 的 quality filter，避免在模糊边界上建模虚假扰动效应。</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Consensus-Guided Active Learning for SST Annotation</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Authors note consensus is a surrogate and manual annotation is expensive [Paper] [Paper: PDF p. 1,7]; MARC identifies low-consensus cells (Fig 4) but doesn’t leverage them for annotation efficiency. <strong>core hypothesis</strong>: Querying human annotators <em>only</em> on cells with MARC-predicted low consensus ($S_{k,c}&lt;\tau$) yields higher annotation ROI than random or uncertainty-based sampling. <strong>delta from paper</strong>: MARC is passive QC; this integrates it into an active loop where low-consensus predictions directly drive annotation budget allocation. <strong>initial method</strong>: On Xenium data, simulate annotation budget B; compare: (a) random cell selection, (b) top-B cells by MARC’s $1-S_{k,c}$, (c) top-B by model uncertainty (if available). Measure annotation time saved &amp; downstream task (e.g., cell-type clustering) accuracy gain. <strong>validation</strong>: Annotation time per cell (expert timing), clustering ARI before/after adding B annotations. <strong>failure modes</strong>: If low-consensus cells are systematically un-annotatable (e.g., due to imaging artifacts), ROI drops; if consensus correlates poorly with true difficulty, sampling is inefficient. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Cross-Platform Consensus Distillation</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Authors admit limited generalisability to other platforms [Paper] [Paper: PDF p. 7]; MARC trained on Xenium may fail on Visium/Slide-seq due to resolution/signal differences. <strong>core hypothesis</strong>: A small set of platform-aligned consensus targets (e.g., 100 tiles from Visium) can distill Xenium-trained MARC’s consensus knowledge to new platforms via feature-level adaptation, avoiding full retraining. <strong>delta from paper</strong>: MARC is platform-specific; this proposes a lightweight transfer strategy leveraging its learned consensus representation. <strong>initial method</strong>: Freeze MARC encoder; add platform-specific adapter (e.g., small CNN) before decoder; train adapter + decoder head on Visium consensus targets using FUCL; compare to full Visium retraining. <strong>validation</strong>: Dice/ρ on Visium test set; parameter count/flops of adapter vs. full model. <strong>failure modes</strong>: If platform shifts break fundamental morphology-transcript relationships (e.g., Visium’s spot-level vs Xenium’s subcellular resolution), adapter fails; if no Visium consensus targets exist, distillation impossible. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Graph-Augmented Consensus Refinement</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: MARC treats each candidate cell in isolation (Eq. 8); but SST cell boundaries are relational—consensus for cell c depends on neighbors’ morphology/transcript overlap [Paper] [Paper: PDF p. 1]. <strong>core hypothesis</strong>: Modeling candidate cells as nodes in a spatial graph (edges = proximity/overlap) and passing $\hat{C}_k$ messages enables contextual refinement of consensus scores, especially for touching cells. <strong>delta from paper</strong>: MARC is CNN-based and local; this injects explicit relational reasoning via GNN. <strong>initial method</strong>: Replace Eq. 8 aggregation with GNN readout: node features = $\{\text{mean}(\hat{C}_k \text{ on } c), \text{area}_c, \text{DAPI\_intensity}_c\}$; edges = spatial distance &lt; r; output refined $S&#x27;_{k,c}$. Train end-to-end with FUCL. <strong>validation</strong>: Dice/ρ on test set; visual inspection of touching cell pairs in Fig 4—do refined scores better separate merged instances? <strong>failure modes</strong>: Graph construction sensitive to distance threshold r; if cell instances are highly irregular, fixed-radius graphs misrepresent topology; adds inference latency. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>
