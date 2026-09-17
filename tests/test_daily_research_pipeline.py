@@ -25,6 +25,7 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     generate_paper_card_markdown,
     canonical_arxiv_id,
     deduplicate_papers,
+    normalize_yiduo_card_markdown,
     paper_identity_key,
     public_report_file_url,
     rank_candidates_with_llm,
@@ -543,6 +544,21 @@ def test_full_card_prompt_requires_yiduo_chinese_provenance_style(tmp_path):
     assert "中文科研笔记为主体" in prompt
     assert "[Paper] [Paper: PDF p. 1]" in prompt
     assert "01 用表格：Field | Value | Source" in prompt
+
+
+def test_yiduo_card_normalization_adds_missing_provenance_labels():
+    markdown = (
+        "## 01 基本信息\n\n"
+        "事实来自论文。[Paper: PDF p. 1]\n\n"
+        "## 16 研究想法\n\n"
+        "- idea from limitation [Paper: PDF p. 2]"
+    )
+
+    normalized = normalize_yiduo_card_markdown(markdown)
+
+    assert "[Paper] [Paper: PDF p. 1]" in normalized
+    assert "[Paper] [Paper: PDF p. 2]" in normalized
+    assert "[Hypothesis]" in normalized
 
 
 def test_markdown_html_export_preserves_card_tables_and_quotes(tmp_path):

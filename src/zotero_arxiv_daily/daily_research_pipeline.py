@@ -1079,7 +1079,11 @@ def generate_one_shot_full_card_markdown(
         messages=[
             {
                 "role": "system",
-                "content": "You are a rigorous source-grounded scientific paper reading assistant. Output only Markdown.",
+                "content": (
+                    "你是严格、可追溯的中文科研论文深读助手。"
+                    "除英文术语、模型名、数据集名、指标和公式外，主体解释必须使用中文。"
+                    "只输出 Markdown。"
+                ),
             },
             {"role": "user", "content": prompt},
         ],
@@ -1094,7 +1098,7 @@ def generate_one_shot_full_card_markdown(
         if content:
             parts.append(content)
 
-    markdown = "".join(parts).strip()
+    markdown = normalize_yiduo_card_markdown("".join(parts).strip())
     if not markdown:
         raise ValueError("LLM stream returned empty Paper Card")
     output_path = Path(output_path)
@@ -1115,6 +1119,22 @@ def generate_one_shot_full_card_markdown(
         "max_input_chars": max_input_chars,
         "max_output_tokens": generation_kwargs["max_tokens"],
     }
+
+
+def normalize_yiduo_card_markdown(markdown: str) -> str:
+    """Normalize provenance labels without changing the card's scientific content."""
+    if not markdown:
+        return markdown
+    normalized = re.sub(r"(?<!\[Paper\]\s)\[Paper:\s*PDF p\.", "[Paper] [Paper: PDF p.", markdown)
+    normalized = normalized.replace("[Paper] [Paper] [Paper:", "[Paper] [Paper:")
+    if "[Hypothesis]" not in normalized and "## 16 研究想法" in normalized:
+        normalized = re.sub(
+            r"(## 16 研究想法\s*\n+)",
+            r"\1[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。\n\n",
+            normalized,
+            count=1,
+        )
+    return normalized
 
 
 def _card_excerpt_for_quick_look(card_markdown: str, max_chars: int = 8_000) -> str:
@@ -1967,7 +1987,7 @@ def generate_paper_card_markdown(paper: SelectionRecord, analysis: dict[str, Any
         if "[Paper:" not in body and "Not assessable" not in body:
             body = f"{body}\n\nSource refs: {refs}"
         lines.extend([f"## {section}", "", body, ""])
-    markdown = "\n".join(lines)
+    markdown = normalize_yiduo_card_markdown("\n".join(lines))
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_path).write_text(markdown, encoding="utf-8")
     return markdown
@@ -2743,6 +2763,7 @@ def write_daily_index(output_dir: str | Path) -> Path:
                 "folder": str(folder),
                 "original_pdf": str(folder / "original.pdf"),
                 "card_md": str(folder / "paper-card.md"),
+                "card_html": str(folder / "paper-card.html"),
                 "card_pdf": str(folder / "文档分析.pdf"),
                 "audit_status": audit.get("status"),
                 "failure_reason": metadata.get("failure_reason"),
@@ -3061,6 +3082,7 @@ def _create_zotero_link_note(
         "original_pdf": "原文 PDF",
         "card_pdf": "文档分析 PDF",
         "card_markdown": "Paper Card Markdown",
+        "card_html": "Paper Card HTML",
         "quick_look": "速看摘要",
         "arxiv_pdf": "arXiv PDF",
     }
@@ -3637,6 +3659,7 @@ def run_full_research_radar_pipeline(
                         "original_pdf": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-original.pdf"),
                         "card_pdf": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-card.pdf"),
                         "card_markdown": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-card.md"),
+                        "card_html": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-card.html"),
                         "quick_look": public_report_file_url(public_base_url, output_dir.name, f"paper-{index}-quick-look.md"),
                     }
                 )

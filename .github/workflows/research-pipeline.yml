@@ -123,6 +123,7 @@ jobs:
             cp "$folder/original.pdf" "$target/paper-$idx-original.pdf"
             cp "$folder/文档分析.pdf" "$target/paper-$idx-card.pdf"
             cp "$folder/paper-card.md" "$target/paper-$idx-card.md"
+            cp "$folder/paper-card.html" "$target/paper-$idx-card.html" || true
             cp "$folder/paper-quick-look.md" "$target/paper-$idx-quick-look.md"
             copied=$((copied + 1))
           done
