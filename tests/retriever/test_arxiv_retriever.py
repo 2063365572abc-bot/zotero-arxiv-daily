@@ -338,20 +338,21 @@ def test_arxiv_retriever_recent_category_rss_fallback_keeps_recent_candidates(co
 def test_arxiv_retriever_html_fallback_parses_recent_matching_result(config, monkeypatch):
     from omegaconf import open_dict
 
-    html = """
+    submitted_date = datetime.now(timezone.utc).strftime("%d %B, %Y")
+    html = f"""
     <html><body><ol>
       <li class="arxiv-result">
         <p class="title is-5 mathjax">Spatial Transcriptomics with Graph Learning</p>
         <p class="list-title"><a href="https://arxiv.org/abs/2609.00007">arXiv:2609.00007</a></p>
         <p class="abstract mathjax">Abstract: We use graph learning to analyze spatial transcriptomics.</p>
-        <p class="is-size-7">Submitted 15 September, 2026; originally announced September 2026.</p>
+        <p class="is-size-7">Submitted {submitted_date}; originally announced September 2026.</p>
         <p class="authors">Authors: <a href="/search/?searchtype=author&amp;query=Test%2C+A">Test Author</a></p>
       </li>
       <li class="arxiv-result">
         <p class="title is-5 mathjax">Spatial Transcriptomics without Machine Learning</p>
         <p class="list-title"><a href="https://arxiv.org/abs/2609.00008">arXiv:2609.00008</a></p>
         <p class="abstract mathjax">Abstract: We study spatial transcriptomics data.</p>
-        <p class="is-size-7">Submitted 15 September, 2026; originally announced September 2026.</p>
+        <p class="is-size-7">Submitted {submitted_date}; originally announced September 2026.</p>
       </li>
     </ol></body></html>
     """

@@ -8,6 +8,7 @@ from pathlib import Path
 import json
 import os
 import re
+import subprocess
 import time
 from typing import Any
 from urllib.parse import quote
@@ -977,14 +978,16 @@ def build_one_shot_full_card_prompt(
 
 硬性要求：
 - 只输出 Markdown，不要解释你将如何做。
-- 中文解释，保留英文技术名词、模型名、数据集名、指标、公式符号。
+- 输出风格必须贴近用户本地“一多科研”成功样例：中文科研笔记为主体，像给研究者复盘论文逻辑，不是英文论文摘要。
+- 中文解释，保留英文技术名词、模型名、数据集名、指标、公式符号；不要整段英文输出。
 - 不要夸大，不要伪造。
-- 每个实质性论文事实都带来源指针，例如 [Paper: PDF p. 1]；页码必须来自输入文本的页码标记。
-- 你的判断用 [Analysis]，研究想法用 [Hypothesis]。
+- 每个实质性论文事实都必须同时体现证据属性和来源指针，例如 [Paper] [Paper: PDF p. 1]；页码必须来自输入文本的页码标记。
+- 你的判断必须标 [Analysis]，研究想法必须标 [Hypothesis]，不能把模型判断伪装成论文原文。
 - 不足以判断就写 Not assessable from supplied material。
 - 作者明确限制和你的批判性分析分开。
 - 必须完整覆盖输入中的主要 Figure、Table、Equation，并在相关章节中明确提及。
 - 不要凭标题或常识补写作者机构、正式发表信息、代码地址或数据地址；这些信息不在本文证据中时写未核验。
+- 重点写清“论文为什么这样设计、每个模块解决什么问题、实验证据如何支撑结论、哪些思路可迁移到用户研究”，让用户能快速借鉴到自己的论文设计。
 
 开头必须包含：
 > Source coverage: Full paper / Partial paper
@@ -1014,12 +1017,17 @@ def build_one_shot_full_card_prompt(
 ## 16 研究想法
 
 其中：
+- 01 用表格：Field | Value | Source
+- 02 必须是 2-4 句中文，第一句讲清论文做了什么，后面讲清为什么重要和边界。
+- 03-07 需要按“问题 -> 假设/洞察 -> 方法路径”的逻辑展开，不要只罗列。
 - 05 用表格：Pain point | Manifestation | Cause or author explanation | Evidence from the paper
 - 08 用表格：Module | Function | Why needed | Input and output | Supporting evidence | Known or expected effect of removal
+- 09 如果没有明确公式，说明没有可核验公式，并提取关键符号/变量/指标；不要硬造公式。
 - 10 用表格：Experiment | Claim tested | Comparison and conditions | Result | Supported conclusion | Unsupported stronger conclusion | Source
 - 12 用表格：Limitation | Specific manifestation | Future direction proposed by authors | Source
 - 13 用表格：[Analysis] Observation | Potential issue or alternative explanation | Why it matters | How to test it | Basis
 - 16 每个 idea 包含：name、originating limitation/observation、core hypothesis、delta from paper、initial method、validation、failure modes、innovation status: unverified。
+- 15 如果没有外部核验，只写“候选连接/方法论连接”，不能编造与外部论文或机构的事实关系。
 
 用户研究方向连接：single-cell foundation models、spatial transcriptomics、graph neural networks、multi-omics、biomedical AI、perturbation prediction、cell state representation、cross-modal alignment。没有直接关系时说明“弱连接/方法论连接”。
 
@@ -1994,6 +2002,9 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
         source_pointer_count = card.count("[Paper:")
         if source_pointer_count < 10:
             warnings.append("fewer_than_10_source_refs")
+        chinese_character_count = len(re.findall(r"[\u4e00-\u9fff]", card))
+        if chinese_character_count < 1000:
+            warnings.append("card_not_chinese_research_note_style")
         if "Source coverage: Full paper" not in card:
             warnings.append("card_does_not_claim_full_paper_coverage")
         if "Extraction confidence: Low" in card:
@@ -2031,6 +2042,8 @@ def audit_paper_card(folder: str | Path) -> dict[str, Any]:
                     logger.debug(f"Card covers all inventoried {key}: {len(items)}")
         if "[Analysis]" not in card:
             warnings.append("missing_analysis_provenance")
+        if "[Paper]" not in card:
+            warnings.append("missing_paper_provenance_label")
         if "[Hypothesis]" not in card:
             warnings.append("missing_hypothesis_provenance")
         analysis_path = folder / "paper_analysis.json"
@@ -2181,7 +2194,7 @@ def _wrap_pdf_text(text: str, max_units: float) -> list[str]:
     return lines or [""]
 
 
-def export_markdown_to_pdf(markdown_path: str | Path, pdf_path: str | Path) -> None:
+def _export_markdown_to_pdf_with_pymupdf(markdown_path: str | Path, pdf_path: str | Path) -> None:
     markdown_path = Path(markdown_path)
     pdf_path = Path(pdf_path)
     text = markdown_path.read_text(encoding="utf-8")
@@ -2369,6 +2382,349 @@ def export_markdown_to_pdf(markdown_path: str | Path, pdf_path: str | Path) -> N
     extracted = "\n".join(page.get_text() for page in pymupdf.open(pdf_path))
     normalized_extracted = re.sub(r"\s+", " ", extracted.replace("\u00a0", " ")).strip()
     if "01 基本信息" not in normalized_extracted or len(normalized_extracted) < 200:
+        raise RuntimeError(f"PDF export verification failed for {pdf_path}: extracted text is incomplete.")
+
+
+def _markdown_inline_to_html(text: str) -> str:
+    placeholders: list[str] = []
+
+    def stash(value: str) -> str:
+        placeholders.append(value)
+        return f"@@HTML_PLACEHOLDER_{len(placeholders) - 1}@@"
+
+    escaped = html.escape(text)
+    escaped = re.sub(
+        r"!\[([^\]]*)\]\(([^)]+)\)",
+        lambda match: stash(
+            f'<img alt="{html.escape(match.group(1), quote=True)}" '
+            f'src="{html.escape(match.group(2), quote=True)}">'
+        ),
+        escaped,
+    )
+    escaped = re.sub(
+        r"\[([^\]]+)\]\(([^)]+)\)",
+        lambda match: stash(
+            f'<a href="{html.escape(match.group(2), quote=True)}">{match.group(1)}</a>'
+        ),
+        escaped,
+    )
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", escaped)
+    for index, value in enumerate(placeholders):
+        escaped = escaped.replace(f"@@HTML_PLACEHOLDER_{index}@@", value)
+    return escaped
+
+
+def _is_markdown_table_row(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("|") and stripped.endswith("|") and "|" in stripped[1:-1]
+
+
+def _is_markdown_table_separator(line: str) -> bool:
+    return bool(re.match(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$", line))
+
+
+def _split_markdown_table_row(line: str) -> list[str]:
+    return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+
+def _render_markdown_table_html(table_lines: list[str]) -> str:
+    rows = [_split_markdown_table_row(line) for line in table_lines if not _is_markdown_table_separator(line)]
+    rows = [row for row in rows if any(cell for cell in row)]
+    if not rows:
+        return ""
+    header = rows[0]
+    body = rows[1:]
+    head_html = "".join(f"<th>{_markdown_inline_to_html(cell)}</th>" for cell in header)
+    body_html = "\n".join(
+        "<tr>" + "".join(f"<td>{_markdown_inline_to_html(cell)}</td>" for cell in row) + "</tr>"
+        for row in body
+    )
+    return f"<table><thead><tr>{head_html}</tr></thead><tbody>{body_html}</tbody></table>"
+
+
+def _markdown_to_html_body(markdown: str) -> str:
+    lines = markdown.splitlines()
+    parts: list[str] = []
+    index = 0
+    in_code = False
+    code_lines: list[str] = []
+    list_stack: list[str] = []
+
+    def close_lists() -> None:
+        while list_stack:
+            parts.append(f"</{list_stack.pop()}>")
+
+    def flush_code() -> None:
+        nonlocal code_lines
+        parts.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+        code_lines = []
+
+    while index < len(lines):
+        line = lines[index].rstrip()
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            if in_code:
+                flush_code()
+                in_code = False
+            else:
+                close_lists()
+                in_code = True
+                code_lines = []
+            index += 1
+            continue
+        if in_code:
+            code_lines.append(line)
+            index += 1
+            continue
+
+        if not stripped:
+            close_lists()
+            index += 1
+            continue
+
+        if _is_markdown_table_row(stripped):
+            close_lists()
+            table_lines: list[str] = []
+            while index < len(lines) and (
+                _is_markdown_table_row(lines[index]) or _is_markdown_table_separator(lines[index])
+            ):
+                table_lines.append(lines[index])
+                index += 1
+            table_html = _render_markdown_table_html(table_lines)
+            if table_html:
+                parts.append(table_html)
+            continue
+
+        heading_match = re.match(r"^(#{1,6})\s+(.+)$", stripped)
+        if heading_match:
+            close_lists()
+            level = min(len(heading_match.group(1)), 4)
+            parts.append(f"<h{level}>{_markdown_inline_to_html(heading_match.group(2))}</h{level}>")
+            index += 1
+            continue
+
+        if stripped.startswith(">"):
+            close_lists()
+            quote_lines = []
+            while index < len(lines) and lines[index].strip().startswith(">"):
+                quote_lines.append(lines[index].strip().lstrip(">").strip())
+                index += 1
+            quote_html = "<br>".join(_markdown_inline_to_html(item) for item in quote_lines)
+            parts.append(f"<blockquote>{quote_html}</blockquote>")
+            continue
+
+        bullet_match = re.match(r"^\s*[-*]\s+(.+)$", line)
+        ordered_match = re.match(r"^\s*(\d+)[.)]\s+(.+)$", line)
+        if bullet_match or ordered_match:
+            list_type = "ol" if ordered_match else "ul"
+            if not list_stack or list_stack[-1] != list_type:
+                close_lists()
+                parts.append(f"<{list_type}>")
+                list_stack.append(list_type)
+            body = ordered_match.group(2) if ordered_match else bullet_match.group(1)
+            parts.append(f"<li>{_markdown_inline_to_html(body)}</li>")
+            index += 1
+            continue
+
+        close_lists()
+        paragraph_lines = [stripped]
+        index += 1
+        while index < len(lines):
+            next_line = lines[index].strip()
+            if (
+                not next_line
+                or next_line.startswith("#")
+                or next_line.startswith(">")
+                or next_line.startswith("```")
+                or _is_markdown_table_row(next_line)
+                or re.match(r"^\s*[-*]\s+", lines[index])
+                or re.match(r"^\s*\d+[.)]\s+", lines[index])
+            ):
+                break
+            paragraph_lines.append(next_line)
+            index += 1
+        parts.append(f"<p>{_markdown_inline_to_html(' '.join(paragraph_lines))}</p>")
+
+    if in_code:
+        flush_code()
+    close_lists()
+    return "\n".join(parts)
+
+
+def export_markdown_to_html(markdown_path: str | Path, html_path: str | Path) -> Path:
+    markdown_path = Path(markdown_path)
+    html_path = Path(html_path)
+    markdown = markdown_path.read_text(encoding="utf-8")
+    title_match = re.search(r"^#\s+(.+)$", markdown, flags=re.MULTILINE)
+    title = title_match.group(1).strip() if title_match else markdown_path.stem
+    body = _markdown_to_html_body(markdown)
+    document = f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>{html.escape(title)}</title>
+<style>
+@page {{ size: A4; margin: 18mm 15mm; }}
+* {{ box-sizing: border-box; }}
+body {{
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}}
+h1 {{
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}}
+h2 {{
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}}
+h3, h4 {{
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}}
+p {{ margin: 0 0 7pt; }}
+blockquote {{
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}}
+table {{
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}}
+th, td {{
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}}
+th {{
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}}
+tr {{ break-inside: avoid; }}
+ul, ol {{ margin: 0 0 8pt 17pt; padding: 0; }}
+li {{ margin: 0 0 3pt; }}
+code {{
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}}
+pre {{
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}}
+a {{ color: #1d4ed8; text-decoration: none; }}
+img {{ max-width: 100%; }}
+</style>
+</head>
+<body>
+{body}
+</body>
+</html>
+"""
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(document, encoding="utf-8")
+    return html_path
+
+
+def find_browser_executable() -> Path | None:
+    configured = os.getenv("DAILY_PIPELINE_BROWSER")
+    candidates = [
+        configured,
+        "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+        "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
+        "C:/Program Files/Google/Chrome/Application/chrome.exe",
+        "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if path.exists():
+            return path
+    return None
+
+
+def _export_html_to_pdf_with_browser(html_path: Path, pdf_path: Path) -> bool:
+    browser = find_browser_executable()
+    if browser is None:
+        return False
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        str(browser),
+        "--headless",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--no-sandbox",
+        f"--print-to-pdf={pdf_path}",
+        html_path.resolve().as_uri(),
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=120, check=False)
+    if result.returncode != 0:
+        logger.warning(
+            f"Browser PDF export failed with {browser}: returncode={result.returncode} "
+            f"stderr={result.stderr[-500:]}"
+        )
+        return False
+    return pdf_path.exists() and pdf_path.stat().st_size > 0
+
+
+def _pdf_export_text_is_complete(pdf_path: Path) -> bool:
+    extracted = "\n".join(page.get_text() for page in pymupdf.open(pdf_path))
+    normalized_extracted = re.sub(r"\s+", " ", extracted.replace("\u00a0", " ")).strip()
+    return "01 基本信息" in normalized_extracted and len(normalized_extracted) >= 200
+
+
+def export_markdown_to_pdf(markdown_path: str | Path, pdf_path: str | Path) -> None:
+    markdown_path = Path(markdown_path)
+    pdf_path = Path(pdf_path)
+    html_path = markdown_path.with_suffix(".html")
+    export_markdown_to_html(markdown_path, html_path)
+    used_browser = _export_html_to_pdf_with_browser(html_path, pdf_path)
+    if used_browser and not _pdf_export_text_is_complete(pdf_path):
+        logger.warning("Browser PDF export text verification failed; falling back to PyMuPDF renderer.")
+        used_browser = False
+    if not used_browser:
+        logger.warning("Browser PDF export unavailable or incomplete; falling back to PyMuPDF renderer.")
+        _export_markdown_to_pdf_with_pymupdf(markdown_path, pdf_path)
+
+    if not _pdf_export_text_is_complete(pdf_path):
         raise RuntimeError(f"PDF export verification failed for {pdf_path}: extracted text is incomplete.")
 
 

@@ -13,6 +13,8 @@ from zotero_arxiv_daily.daily_research_pipeline import (
     audit_paper_card,
     audit_paper_quick_look,
     audit_three_card_digest,
+    build_one_shot_full_card_prompt,
+    export_markdown_to_html,
     export_markdown_to_pdf,
     extract_source_bundle,
     filter_previously_promoted_candidates,
@@ -367,13 +369,17 @@ def test_llm_enriched_card_passes_audit(tmp_path):
         scoring={"total": 9.0},
         selection_reason="Highly relevant.",
     )
+    rich_cn = (
+        "这段内容用中文解释论文逻辑：作者先界定单细胞表示学习中的核心问题，再把方法模块、"
+        "实验对照、结论边界和可迁移启发连接起来，便于研究者复盘为什么这样设计以及哪些地方能借鉴。"
+    )
     sections = {
         key: (
-            f"[Analysis] [Paper: PDF p. 1] {key} content."
+            f"[Analysis] [Paper] [Paper: PDF p. 1] {key} {rich_cn}"
             if key == "13 批判性分析"
-            else f"[Hypothesis] [Paper: PDF p. 1] {key} content."
+            else f"[Hypothesis] [Paper] [Paper: PDF p. 1] {key} {rich_cn}"
             if key == "16 研究想法"
-            else f"[Paper: PDF p. 1] {key} content."
+            else f"[Paper] [Paper: PDF p. 1] {key} {rich_cn}"
         )
         for key in CARD_SECTIONS
     }
@@ -401,6 +407,7 @@ def test_llm_enriched_card_passes_audit(tmp_path):
     assert "Analysis status: llm_enriched" in markdown
 
     export_markdown_to_pdf(tmp_path / "paper-card.md", tmp_path / "文档分析.pdf")
+    assert (tmp_path / "paper-card.html").exists()
     exported_text = "\n".join(page.get_text() for page in pymupdf.open(tmp_path / "文档分析.pdf"))
     exported_text = " ".join(exported_text.replace("\u00a0", " ").split())
     assert "01 基本信息" in exported_text
@@ -426,6 +433,10 @@ def test_one_shot_full_card_streaming_passes_audit(tmp_path):
         scoring={"total": 9.0},
         selection_reason="Highly relevant.",
     )
+    rich_cn = (
+        "这段内容用中文解释论文逻辑：研究问题、方法模块、实验证据和结论边界之间形成清晰链条，"
+        "能够帮助用户判断这篇论文是否值得精读，以及哪些设计可以迁移到空间转录组和多组学研究。"
+    )
     markdown = "\n\n".join(
         [
             "> Source coverage: Full paper\n> Extraction confidence: High\n> Locator mode: page-grounded\n> Primary analytical lens: methods\n> Secondary analytical lens: None\n> Context verification: Paper-only\n> Card completeness: Complete relative to supplied source",
@@ -433,7 +444,7 @@ def test_one_shot_full_card_streaming_passes_audit(tmp_path):
                     f"## {section}\n\n"
                     + ("[Analysis] " if section == "13 批判性分析" else "")
                     + ("[Hypothesis] " if section == "16 研究想法" else "")
-                    + f"[Paper: PDF p. 1] {section} content."
+                    + f"[Paper] [Paper: PDF p. 1] {section} {rich_cn}"
                     for section in CARD_SECTIONS
                 ],
         ]
@@ -491,7 +502,7 @@ def test_card_inventory_coverage_gaps_are_warnings_not_blockers(tmp_path):
                 f"## {section}\n\n"
                 + ("[Analysis] " if section == "13 批判性分析" else "")
                 + ("[Hypothesis] " if section == "16 研究想法" else "")
-                + "[Paper: PDF p. 1] Figure 1 and Equation 1 are central evidence."
+                + "[Paper] [Paper: PDF p. 1] Figure 1 and Equation 1 are central evidence."
                 for section in CARD_SECTIONS
             ],
         ]
@@ -504,6 +515,58 @@ def test_card_inventory_coverage_gaps_are_warnings_not_blockers(tmp_path):
     assert report["errors"] == []
     assert any("figures_not_covered" in warning for warning in report["warnings"])
     assert any("equations_not_covered" in warning for warning in report["warnings"])
+
+
+def test_full_card_prompt_requires_yiduo_chinese_provenance_style(tmp_path):
+    paper = SelectionRecord(
+        source="arxiv",
+        title="Prompt Test Paper",
+        authors=["A"],
+        abstract="A paper about spatial transcriptomics and graph representation learning.",
+        url="https://arxiv.org/abs/2601.00005",
+        pdf_url="https://arxiv.org/pdf/2601.00005",
+        score=9.0,
+        role="best_match",
+        scoring={},
+        selection_reason="test",
+        arxiv_id="2601.00005",
+    )
+    bundle = {
+        "source_text": "[PDF p. 1]\nThis is a short source page.",
+        "pages": [{"page": 1, "text": "This is a short source page."}],
+        "evidence_inventory": {"figures": [], "tables": [], "equations": []},
+    }
+
+    prompt = build_one_shot_full_card_prompt(paper, bundle, max_input_chars=5000, require_full_source=False)
+
+    assert "一多科研" in prompt
+    assert "中文科研笔记为主体" in prompt
+    assert "[Paper] [Paper: PDF p. 1]" in prompt
+    assert "01 用表格：Field | Value | Source" in prompt
+
+
+def test_markdown_html_export_preserves_card_tables_and_quotes(tmp_path):
+    markdown = tmp_path / "paper-card.md"
+    html_path = tmp_path / "paper-card.html"
+    markdown.write_text(
+        "# 测试卡片\n\n"
+        "> Source coverage: Full paper\n\n"
+        "## 01 基本信息\n\n"
+        "| Field | Value | Source |\n"
+        "| --- | --- | --- |\n"
+        "| Title | 测试论文 | [Paper] [Paper: PDF p. 1] |\n\n"
+        "## 02 一句话总结\n\n"
+        "[Paper] [Paper: PDF p. 1] 这是一段中文说明。\n",
+        encoding="utf-8",
+    )
+
+    export_markdown_to_html(markdown, html_path)
+    html_text = html_path.read_text(encoding="utf-8")
+
+    assert "<blockquote>" in html_text
+    assert "<table>" in html_text
+    assert "Noto Sans CJK SC" in html_text
+    assert "测试论文" in html_text
 
 
 def test_three_card_digest_requires_exact_date_and_all_titles(tmp_path):
