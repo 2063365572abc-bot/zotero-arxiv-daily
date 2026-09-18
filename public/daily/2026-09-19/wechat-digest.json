@@ -1,0 +1,20 @@
+{
+  "status": "generated",
+  "prompt_chars": 6851,
+  "card_count": 3,
+  "card_chars": [
+    1167,
+    1357,
+    1167
+  ],
+  "model": "qwen-plus-latest",
+  "report_date": "2026-09-19",
+  "repair_attempted": false,
+  "audit": {
+    "schema_version": "1.0",
+    "status": "pass",
+    "character_count": 3683,
+    "errors": [],
+    "warnings": []
+  }
+}
