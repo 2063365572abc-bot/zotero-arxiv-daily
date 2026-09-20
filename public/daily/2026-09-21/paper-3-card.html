@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: resource<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>VizIt: A multi-view framework for exploring single-cell, spatial, and genetic data online</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint (2026-09-04)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Chenhang Christopher Zhang et al. (12 authors, including Xianjun Dong as corresponding)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Core contribution</td><td>Multi-view interactive web framework for cross-perspective navigation across single-cell, spatial, epigenomic and genetic data</td><td>[Paper] [Paper: PDF p. 2–3]</td></tr>
+<tr><td>Target modalities</td><td>sc/snRNA-seq, sc/snATAC-seq, spatial transcriptomics (Visium, Xenium, MERFISH), RNA-ATAC multiome, eQTL/caQTL, GWAS summary statistics</td><td>[Paper] [Paper: PDF p. 2, p. 7]</td></tr>
+<tr><td>Deployment model</td><td>Self-hostable Docker backend + browser-based frontend; supports local standalone or institutional multi-user portal</td><td>[Paper] [Paper: PDF p. 4, p. 8]</td></tr>
+<tr><td>Empirical validation</td><td>Parkinson’s Cell Atlas (PD5D + PMDBS collections): 13 datasets across 5 assay types, 3 brain regions, QTLs, spatial ST</td><td>[Paper] [Paper: PDF p. 5–6, Table 1, Figure 1]</td></tr>
+<tr><td>Openness</td><td>Open-source (Zenodo archive), documentation at https://thedonglab.github.io/VizIt/, live portal at https://pd5d.yale.edu/</td><td>[Paper] [Paper: PDF p. 6–7]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>VizIt 是一个开源、可自托管的交互式多视图框架，支持用户在基因、细胞类型、疾病条件、空间位置、基因组区域和遗传变异等六类生物学视角间无缝跳转，统一探索已处理的单细胞、空间转录组与遗传数据。它不执行计算分析（如聚类或整合），而是将上游分析结果（如 UMAP、marker genes、QTL 显著性）组织为可导航的语义视图，从而弥合计算输出与生物学解释之间的鸿沟。其边界明确：仅作可视化与导航层，不替代 Seurat/Scanpy/ArchR 等分析工具，也不包含 foundation model、GNN 或 perturbation modeling 等建模组件 [Paper] [Paper: PDF p. 4, p. 5]。</p>
+<h2>03 研究问题</h2>
+<p>如何使研究者能以<strong>生物学问题驱动</strong>（而非工具/模态驱动）的方式，对已处理的多组学数据进行交互式探索？现有工具要么要求编程能力（Seurat/Scanpy），要么局限于单一模态或中心化托管（CELLxGENE、Single Cell Portal），导致跨视角推理断裂——例如从一个 GWAS 位点出发，无法直接定位其在特定细胞类型中的靶基因、该基因的空间表达模式、以及对应染色质开放区域；反之亦然 [Paper] [Paper: PDF p. 2–3]。VizIt 将此问题重构为：<strong>能否构建一个通用视图接口，使同一数据集可被不同生物学实体（gene/cell type/variant）作为“锚点”触发关联视图？</strong> 其假设是：生物学问题天然具有多起点、多路径特性，而现有可视化范式强制用户预设分析路径，违背认知逻辑 [Analysis]。</p>
+<h2>04 研究背景与发展路径</h2>
+<p>单细胞与空间组学技术爆发式增长，催生了需跨维度解读数据的需求（如“某基因在帕金森病中哪些细胞类型失调？其空间分布是否富集于黑质？该基因启动子区是否存在疾病相关caQTL？”）[Paper] [Paper: PDF p. 2]。但工具生态呈现三重割裂：（1）分析层（Seurat/Scanpy/ArchR）面向计算专家，输出为静态文件或代码对象；（2）展示层（CELLxGENE、gEAR）提供易用界面但模态封闭或定制性弱；（3）空间专用工具（Vitessce）支持多模态但未深度耦合遗传调控证据 [Paper] [Paper: PDF p. 2–3]。VizIt 的发展路径是<strong>反向工程</strong>：不从算法创新出发，而是逆向解构生物学家提问逻辑（gene → cell type → condition → spatial location → variant），将每类实体定义为可激活的“视图入口”，再通过标准化数据 schema 和前端路由机制实现视图间双向链接 [Paper] [Paper: PDF p. 3–4]。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td>Fragmented interactive exploration</td><td>Researchers must switch between separate tools/plots to answer multi-perspective questions (e.g., gene expression → cell-type markers → spatial localization → variant associations)</td><td>“These questions are biologically interconnected, yet their visualization often remains fragmented across separate plots, datasets and modality-specific tools”</td><td>[Paper] [Paper: PDF p. 2]</td></tr>
+<tr><td>Tooling mismatch for biological reasoning</td><td>Analysis frameworks require programming; accessible portals lack cross-modal linking; no tool supports reciprocal navigation (e.g., gene ↔ variant ↔ peak)</td><td>“Existing platforms address important aspects… but were developed with different objectives”; “there remains a need for a readily deployable framework that can be organized diverse processed omics datasets around interconnected biological views”</td><td>[Paper] [Paper: PDF p. 2]</td></tr>
+<tr><td>Static outputs impede hypothesis generation</td><td>Visualization is treated as “final stage”, not part of iterative analysis — observing a pattern in one view doesn’t trigger immediate access to related evidence in other views</td><td>“Interactive visualization also participates in the analytical process… VizIt was developed to make these transitions straightforward”</td><td>[Paper] [Paper: PDF p. 5]</td></tr>
+<tr><td>Lack of customizable, self-hostable multi-omic infrastructure</td><td>Centralized portals cannot accommodate project-specific curation or private data; ad-hoc Shiny/Vitessce apps lack unified biological semantics</td><td>“VizIt was designed not as a single centrally hosted repository but as a generalized framework that research groups can deploy for their own data collections”</td><td>[Paper] [Paper: PDF p. 4–5]</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>VizIt 的核心思想是<strong>将生物学实体（gene/cell type/variant/etc.）升格为第一等公民（first-class entity）的视图锚点</strong>，而非将数据按技术模态（scRNA-seq vs ATAC-seq）或文件格式（H5AD vs BED）组织。每个锚点对应一组预计算的、语义一致的视图（如 gene-centered view = expression heatmap across clusters + associated variants + genomic locus track），且所有锚点间通过预定义关系（gene↔cell_type, variant↔peak, cell_type↔spatial_location）双向链接。这种设计使用户可从任意生物学起点发起探索（“从GWAS位点出发找靶细胞类型”，或“从空间异常区域反推驱动基因”），形成闭环推理链 [Paper] [Paper: PDF p. 3–4]。其本质是构建一个<strong>生物学语义图谱（biological semantic graph）的可视化前端</strong>，边由领域知识（如 gene→regulates→peak）和数据连接性（如 snRNA-seq cluster ID matches caQTL cell-type annotation）共同定义 [Analysis]。</p>
+<h2>07 方法总览</h2>
+<p>VizIt 采用<strong>前后端分离架构</strong>：后端负责数据标准化与服务（Docker 部署），前端提供浏览器内交互（React-based）。方法流程分三阶段：（1）<strong>数据摄入</strong>：接收已处理的多组学数据（UMAP coordinates、cluster labels、gene-by-cluster expression matrices、QTL summary stats、spatial coordinates + expression matrices、genome browser tracks），按 VizIt schema 转换为 JSON/Parquet 格式；（2）<strong>视图注册</strong>：为每类生物学实体（gene/cell_type/variant/spatial_region）定义其专属视图组件及跨视图跳转规则（如点击 gene 名称触发 variant view 并高亮其 eQTLs）；（3）<strong>交互路由</strong>：用户操作（点击、悬停、搜索）生成 URL state（如 <code>/gene/APP?cell_type=Microglia&amp;condition=PD</code>），前端据此动态加载并渲染关联视图 [Paper] [Paper: PDF p. 4, p. 8]。关键约束：<strong>所有计算必须前置完成</strong>——VizIt 不运行 PCA、clustering 或 QTL mapping，仅消费结果 [Paper] [Paper: PDF p. 4]。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td>Biological entity router</td><td>Maps user actions (click/search) to URL-based state and triggers corresponding view rendering</td><td>Enables persistent, shareable, bookmarkable navigation across perspectives</td><td>Input: user interaction event; Output: URL path + query params (e.g., <code>/variant/rs334558</code>)</td><td>“Individual views can be represented by URLs, facilitating sharing” [Paper] [Paper: PDF p. 4]; Figure 1a shows bidirectional arrows between entities</td><td>Loss of cross-view traceability; users stuck in siloed views without explicit linkage</td></tr>
+<tr><td>Standardized data adapter</td><td>Converts assay-specific outputs (Seurat objects, ArchR peaks, Visium h5, QTL summary tables) into unified VizIt schema (e.g., <code>gene_expression_matrix</code>, <code>cell_type_metadata</code>, <code>variant_qtl_associations</code>)</td><td>Ensures heterogeneous upstream analyses feed into consistent frontend logic</td><td>Input: processed files (H5AD, TSV, BED); Output: VizIt-structured JSON/Parquet</td><td>“Processed assay-specific data and metadata are standardized for deployment” [Paper] [Paper: PDF p. 8]; Table 1 lists diverse input assays</td><td>Backend fails to load any dataset; framework becomes assay-specific rather than multi-view</td></tr>
+<tr><td>Multi-modal view orchestrator</td><td>Coordinates simultaneous rendering of complementary views (e.g., gene expression heatmap + UMAP + spatial image + genomic track) with synchronized selection</td><td>Supports holistic interpretation — seeing same gene’s behavior across scales</td><td>Input: selected entity ID + context (cell type, condition); Output: coordinated visualizations with linked highlighting</td><td>Figure 1a shows “multi-view exploration across biological perspectives”; caption states “users can navigate across these views” [Paper] [Paper: PDF p. 7]</td><td>Users must manually correlate disjoint plots, defeating the core premise of seamless navigation</td></tr>
+<tr><td>Self-hostable deployment engine</td><td>Packages backend (Python/Flask) and frontend (React) into Docker container with config-driven dataset registration</td><td>Addresses need for customizable, private, institutional-scale portals beyond public repositories</td><td>Input: dataset paths + config YAML; Output: running web server serving VizIt interface</td><td>“Backend can be deployed on local or institutional infrastructure using Docker” [Paper] [Paper: PDF p. 8]; “customizable institutional web portal” [Paper] [Paper: PDF p. 2]</td><td>Framework limited to public demo instances; no support for sensitive or proprietary data</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>No verifiable equations are presented in the supplied text [Paper] [Paper: PDF p. 1–9]. Key symbols/variables/indicators extracted:</p>
+<ul>
+<li><strong>Biological entity types</strong>: <code>gene</code>, <code>cell_type</code>, <code>condition</code> (e.g., PD vs control), <code>spatial_location</code> (x,y coordinates or tissue region), <code>genomic_region</code> (e.g., promoter, enhancer), <code>variant</code> (e.g., rsID) [Paper] [Paper: PDF p. 2–3, p. 7]</li>
+<li><strong>Data modalities</strong>: <code>sc/snRNA-seq</code>, <code>sc/snATAC-seq</code>, <code>spatial transcriptomics</code> (Visium/Xenium/MERFISH), <code>RNA-ATAC multiome</code>, <code>eQTL</code>, <code>caQTL</code>, <code>GWAS</code> [Paper] [Paper: PDF p. 2, p. 7]</li>
+<li><strong>Metrics/outputs consumed</strong>: <code>UMAP/t-SNE embeddings</code>, <code>cluster labels</code>, <code>marker gene lists</code>, <code>differential expression results</code>, <code>QTL significance (p-value, beta)</code>, <code>spatial expression matrices</code> [Paper] [Paper: PDF p. 3–4, p. 6]</li>
+<li><strong>System identifiers</strong>: <code>VizIt schema</code>, <code>URL-based state routing</code>, <code>Docker deployment</code> [Paper] [Paper: PDF p. 4, p. 8]</li>
+</ul>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td>Parkinson’s Cell Atlas deployment</td><td>VizIt enables practical multi-view exploration of real-world Parkinson’s datasets</td><td>Deployed 13 heterogeneous datasets (snRNA-seq, scATAC-seq, Visium, MERFISH, eQTL/caQTL) under unified interface</td><td>Figure 1c shows integrated landing page + cell/cluster/gene/spatial/genomic views; Table 1 lists dataset sources and DOIs</td><td>VizIt framework successfully organizes diverse, large-scale human brain omics data into navigable biological views</td><td>That VizIt improves biological discovery <em>rate</em> or <em>accuracy</em> vs. standard tools — no A/B testing or user study reported</td><td>[Paper] [Paper: PDF p. 5–6, Table 1, Figure 1]</td></tr>
+<tr><td>Cross-view navigation demo (Figure 1a)</td><td>Bidirectional navigation between biological entities is feasible and intuitive</td><td>User starts from gene → explores expression across cell types → clicks cell type → sees marker genes → clicks variant → views associated genes</td><td>Arrows in Figure 1a explicitly show “gene ↔ cell type ↔ variant ↔ genomic region”; caption states “users can navigate across these views”</td><td>The multi-view paradigm enables traversal along biologically meaningful relationships</td><td>That this navigation reduces time-to-hypothesis or increases hypothesis quality — no quantitative usability metrics provided</td><td>[Paper] [Paper: PDF p. 7]</td></tr>
+<tr><td>Deployment flexibility test</td><td>VizIt supports both local standalone and institutional multi-user hosting</td><td>Backend deployed via Docker on local machine vs. Yale institutional server; frontend accessed via browser</td><td>“Can be used locally as a standalone application” and “deployment on institutional infrastructure provides multi-user web access” [Paper] [Paper: PDF p. 5]; Figure 1b shows architecture diagram</td><td>VizIt architecture accommodates varied deployment scales and access models</td><td>That Docker deployment achieves production-grade scalability or security — no load testing or audit details given</td><td>[Paper] [Paper: PDF p. 4–5, p. 8, Figure 1b]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>VizIt 的核心贡献是<strong>工程化实现了一个生物学语义驱动的多视图导航协议</strong>，而非提出新算法或发现新生物学。其有效性证据是：（1）成功集成 13 异构 Parkinson’s datasets into one portal with coherent cross-view links；（2）架构支持从本地单机到机构级部署；（3）视图设计覆盖 gene/cell_type/variant/spatial 等关键实体且可 URL 分享。正确理解是：它解决了“<strong>如何让已有的分析结果被生物学问题自然驱动地访问</strong>”这一基础设施层问题。不应误读为：它执行了跨模态整合（它消费整合结果，不执行整合）、提供了 novel statistical methods（它 displays differential expression, doesn’t compute it）、或证明了 superior biological insight generation（无对照实验）[Paper] [Paper: PDF p. 4–5]。</p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td>No computational integration</td><td>“VizIt does not itself perform computational integration between these datasets; instead, it provides an interactive environment for examining processed results generated by upstream analytical workflows”</td><td>Not stated — authors treat this as intentional design choice, not limitation</td><td>[Paper] [Paper: PDF p. 4]</td></tr>
+<tr><td>Dependency on upstream processing</td><td>Requires fully processed inputs (e.g., pre-clustered scRNA-seq, pre-called peaks, pre-mapped QTLs); no built-in QC or preprocessing</td><td>Not stated — authors position this as enabling “analytical workflows to evolve independently”</td><td>[Paper] [Paper: PDF p. 4]</td></tr>
+<tr><td>No user evaluation</td><td>Lacks usability studies, time-on-task metrics, or expert feedback on workflow efficiency</td><td>Not stated — paper presents implementation and architecture only</td><td>[Paper] [Paper: PDF p. 1–9]</td></tr>
+<tr><td>Limited to structured, processed data</td><td>Cannot handle raw sequencing reads or unprocessed imaging data; assumes standardized metadata and coordinate systems</td><td>Not stated — scope is explicitly “processed omics datasets”</td><td>[Paper] [Paper: PDF p. 2, p. 4]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td>View coupling relies on manual schema alignment</td><td>Cross-view links (e.g., gene↔variant) depend on consistent annotation (e.g., same gene symbol, cell type ontology, genomic build) across datasets; mismatches break navigation</td><td>Causes silent failure — user clicks variant but sees empty gene list, misattributed to data absence rather than annotation drift</td><td>Audit all Parkinson’s Cell Atlas datasets for GRCh38 vs hg19, Ensembl vs NCBI gene IDs, CL vs Uberon cell type terms; log broken links during navigation tracing</td><td>[Paper] [Paper: PDF p. 6] cites Zenodo DOIs but no versioning or schema validation report</td></tr>
+<tr><td>“Biological perspective” is underspecified</td><td>Paper lists 6 entity types but gives no formal definition of what constitutes a “perspective” — is cell subtype (e.g., dopaminergic neuron) a distinct perspective from cell type (neuron)?</td><td>Ambiguity impedes extension — adding new perspectives (e.g., cell state trajectory, pathway activity) requires ad-hoc engineering without principled taxonomy</td><td>Conduct card-sorting study with domain experts to elicit hierarchy of biological abstractions; derive minimal ontology for perspective registration</td><td>[Paper] [Paper: PDF p. 2–3] uses examples but no formalization</td></tr>
+<tr><td>Spatial view lacks cell-type deconvolution</td><td>Spatial transcriptomics views show aggregate expression per spot; no built-in capability to infer cell-type proportions (e.g., via RCTD or SPOTlight) or overlay single-cell reference</td><td>Limits utility for spatially resolved cell-type hypotheses — user cannot ask “which cell types drive APP expression in substantia nigra lesions?”</td><td>Add optional module consuming deconvolution outputs (e.g., <code>cell_type_proportions</code> matrix) and link to cell_type view</td><td>[Paper] [Paper: PDF p. 4] states “gene expression and metadata can be visualized on tissue images” but no mention of decomposition</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>多视图 ≠ 多模态堆叠</strong>：真正有价值的多视图是围绕生物学实体（而非技术模态）组织的语义网络，其价值在于跳转路径的生物学合理性（gene→cell_type→spatial_location），而非同时显示多个图表。</li>
+<li><strong>可视化即分析接口</strong>：当视图间跳转成为一等操作（URL-addressable, click-to-navigate），可视化就从“结果展示”升维为“假设生成引擎”——观察 spatial hotspot 自动触发 gene view，再触发 variant view，形成推理链。</li>
+<li><strong>基础设施层创新可独立于算法层</strong>：VizIt 证明，即使不发明新模型，仅重构数据消费范式（从 file-centric 到 entity-centric），也能显著降低多组学解读门槛。</li>
+<li><strong>自托管框架的关键权衡</strong>：放弃中心化计算（如 CELLxGENE 的在线 clustering）换取部署灵活性与数据主权，但要求用户承担上游分析质量责任。</li>
+<li><strong>Parkinson’s Cell Atlas 作为 blueprint</strong>：其 13-dataset composition (snRNA-seq + scATAC-seq + Visium + MERFISH + QTLs) sets a concrete benchmark for what “integrated neuro-omics” looks like in practice.</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：VizIt 的 entity-centric routing 与 single-cell foundation models 的 prompt engineering思路存在抽象共鸣——两者均将生物学概念（gene/cell type）作为可寻址单元；但 VizIt 是显式 schema，foundation models 是隐式 embedding space，无直接技术继承。</li>
+<li><strong>候选连接/方法论连接</strong>：其 spatial view + cell type view联动需求，凸显了当前 spatial transcriptomics 工具链缺失的环节：现有 GNN-based spatial modeling (e.g., stLearn, SpaGCN) outputs cell-type-aware graphs, but缺乏像 VizIt 这样的交互式探查接口将 graph nodes (spots) 映射回 cell type annotations and gene programs。</li>
+<li><strong>候选连接/方法论连接</strong>：multi-omics alignment 的挑战（e.g., matching scRNA-seq clusters to spatial spots） is orthogonal to VizIt’s scope — it assumes alignment is done upstream, but its success highlights how critical robust alignment is for downstream navigation fidelity.</li>
+<li><strong>弱连接/方法论连接</strong>：perturbation prediction work (e.g., scGen, GeneFormer) produces “what-if” expression matrices, but VizIt has no mechanism to visualize perturbed vs. control states side-by-side — a natural extension would be condition view with toggleable perturbation contexts.</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: VizIt-GNN</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: VizIt’s spatial view shows aggregate spot expression but cannot represent cell-type composition or neighborhood graphs; GNNs excel at modeling spatial cellular neighborhoods but lack interactive exploration interfaces [Paper] [Paper: PDF p. 4] [Analysis] <strong>core hypothesis</strong>: Embedding a lightweight GNN (e.g., GraphSAGE on spot-cell adjacency graph) into VizIt’s backend would enable “cell-type-aware spatial navigation” — clicking a spot triggers GNN-predicted cell-type proportions + neighboring spot interactions <strong>delta from paper</strong>: Adds on-the-fly GNN inference layer (not just static display) while preserving VizIt’s URL-routing and view orchestration <strong>initial method</strong>: Precompute spot adjacency graph from spatial coordinates; train GraphSAGE to predict cell-type proportions using scRNA-seq reference; serve predictions via VizIt API endpoint <strong>validation</strong>: Compare user time-to-identify disease-associated spatial niches (e.g., microglia-enriched lesion borders) with vs. without GNN overlay in Parkinson’s atlas <strong>failure modes</strong>: GNN predictions degrade with low-quality spatial data or poor scRNA-seq reference; adds latency to spot-click response <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: PerturbIt</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: VizIt supports condition view (e.g., PD vs control) but cannot visualize <em>in silico</em> perturbations (e.g., CRISPR knockout, drug treatment) predicted by foundation models — a gap for hypothesis generation [Selection reason: perturbation prediction] <strong>core hypothesis</strong>: Integrating perturbation prediction APIs (e.g., GeneFormer, scLLM) as a “virtual condition” view would let users navigate from gene → predicted perturbation effect → altered cell-type expression → spatial redistribution <strong>delta from paper</strong>: Extends condition view to include model-generated perturbation states alongside empirical conditions <strong>initial method</strong>: Wrap perturbation model as REST API; cache predictions per gene; add “Perturb” tab in gene view showing delta-expression per cell type and spatial location <strong>validation</strong>: Measure if researchers generate more testable hypotheses (e.g., “knock down gene X in microglia should reduce spatial lesion size”) when PerturbIt is enabled <strong>failure modes</strong>: Prediction uncertainty not visualized; model hallucinations mislead navigation; no ground-truth for validation <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: CrossModalAligner</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: VizIt assumes cross-modal alignment is perfect upstream, but real-world alignment (e.g., snRNA-seq clusters ↔ Visium spots) has ambiguity; no mechanism to visualize alignment confidence or alternatives [Analysis] <strong>core hypothesis</strong>: Representing alignment as probabilistic links (e.g., posterior probability of spot belonging to cluster) and exposing them as a “confidence view” would improve trust and debugging of multi-omics navigation <strong>delta from paper</strong>: Adds alignment uncertainty quantification as first-class view, linked to both cell_type and spatial views <strong>initial method</strong>: Consume alignment outputs (e.g., RCTD posterior matrix); render spot-level confidence heatmaps; allow filtering views by min-confidence threshold <strong>validation</strong>: Track if users modify downstream interpretations (e.g., discard low-confidence spatial associations) when confidence view is active <strong>failure modes</strong>: Confidence metrics may be dataset-specific and non-comparable; adds cognitive load without clear benefit for high-confidence alignments <strong>innovation status</strong>: unverified</p>
+</body>
+</html>

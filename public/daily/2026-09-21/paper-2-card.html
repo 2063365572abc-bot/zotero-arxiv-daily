@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: None<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>OmicSync: Reliability-Aware Spatial Multi-Omics Clustering with Evidence-Constrained LLM Reasoning</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Rabeya Tus Sadia, Qiang Ye, Qiang Cheng</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint (v2)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Year</td><td>2026</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Core task</td><td>Spatial domain clustering + per-spot reliability auditing via evidence-constrained LLM reasoning</td><td>[Paper] [Paper: PDF p. 1–2]</td></tr>
+<tr><td>Key model</td><td>KAN-GCN backbone + CrossModalTransformer + UncertaintyMoE + ClusteringHead + CellTypeHead + ImputationHeads</td><td>[Paper] [Paper: PDF p. 4–7]</td></tr>
+<tr><td>LLM component</td><td>Llama-3.3-70B (via Groq API), used <em>post-hoc</em> for reasoning; no fine-tuning or gradient flow</td><td>[Paper] [Paper: PDF p. 9]</td></tr>
+<tr><td>Datasets</td><td>Four 10x CytAssist FFPE spatial proteomics datasets: Human Tonsil, Breast Cancer, Glioblastoma, Tonsil Add-on</td><td>[Paper] [Paper: PDF p. 11]</td></tr>
+<tr><td>Evaluation metrics</td><td>ARI, NMI, FMI, SilC, AMI, Jaccard, CHI, Purity, DBI (Task A); GR, CA, SC (Task C); epistemic routing uncertainty <em>u</em>, modality-routing vector <em>ḡ</em>, assignment confidence <em>c</em></td><td>[Paper] [Paper: PDF p. 11–13, Table 1–5]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>OmicSync 是一个将空间多组学聚类与模型衍生证据驱动的 LLM 推理耦合的框架，它不只输出斑点（spot）所属结构域（domain），还同步输出三个可解释信号：软分配置信度 <em>cᵢ</em>、路由不确定性 <em>uᵢ</em> 和模态权重向量 <em>ḡᵢ</em>；这些信号被结构化为证据字典，输入 Llama-3.3-70B 生成五种策略（Stepwise/Counterfactual/Contrastive/Uncertainty/Standard）的自然语言可靠性报告；其扩展版 OmicSync-R 进一步用自动计算的推理质量分数（GR+CA+SC）作为 REINFORCE 奖励，反向调节聚类头，实现“推理引导聚类”的闭环优化。该工作直击当前空间多组学方法普遍存在的“黑箱分区”缺陷——缺乏对单个斑点分配可靠性的量化、对模态贡献的归因、以及对决策依据的可追溯解释。</p>
+<h2>03 研究问题</h2>
+<p>现有空间多组学域发现方法（如 GROVER、SpatialGlue）仅返回斑点到结构域的硬划分或软概率矩阵，但无法回答三个关键临床/分析级问题：（1）该斑点的分配是否可靠？（2）是 RNA、ADT 还是组织学图像主导了该决策？（3）为什么应信任这一分配？[Paper] [Paper: PDF p. 1] 作者洞察到，这种“不可审计性”会将聚类错误传播至下游分析（如配体-受体推断、细胞状态映射），尤其在组织边界或数据质量退化区域风险极高 [Paper] [Paper: PDF p. 1]。因此，研究问题被明确定义为：如何构建一个端到端框架，在完成无监督空间域聚类的同时，为每个斑点生成<strong>可验证、可归因、可信赖</strong>的解释性输出，并进一步探索该解释性是否能反哺并提升聚类本身的几何质量？</p>
+<h2>04 研究背景与发展路径</h2>
+<p>空间多组学分析已从单模态（RNA-only）[9] 发展为多模态融合（RNA+ADT+H&amp;E）[5–8]，技术演进路径清晰：STAGATE/GraphST 引入图神经网络建模空间邻近性 → SpatialGlue/MISO/GROVER/COSMOS 探索跨模态对齐与表示学习。但所有现有方法均止步于“聚类输出”，未将<strong>可靠性建模</strong>（reliability estimation）和<strong>可解释性生成</strong>（explanation generation）纳入统一架构。OmicSync 的发展路径是：以 GROVER 的 KAN-GCN 图编码器为基座 [Paper] [Paper: PDF p. 3, 6]，叠加五大新组件——空间位置编码（解决同分子异位置混淆）、跨模态 Transformer（增强模态间上下文交互）、不确定性 MoE 路由（同时输出 <em>ḡᵢ</em> 和 <em>uᵢ</em>）、ClusteringHead（Student’s t-kernel 软聚类）、CellTypeHead（伪标签正则化）。这一路径不是替代已有方法，而是通过模块化扩展，在不破坏原有表示能力的前提下，注入可解释性基因。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>Opaque partitioning</strong></td><td>Methods return only flat cluster labels, no indication of per-spot reliability or modality contribution</td><td>Downstream analyses treat all assignments as equally reliable, propagating errors into biological conclusions [Paper] [Paper: PDF p. 1]</td><td>“most spatial domain discovery methods return only a flat partition... without indicating which assignments are reliable, why a spot was assigned... or which molecular modality primarily drove each assignment” [Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td><strong>Unauditable explanations</strong></td><td>Existing explainability (e.g., attention maps, SHAP) reveals influential features but not spot-specific, multi-signal grounded justifications</td><td>No prior work couples LLMs with structured, model-derived evidence (confidence, uncertainty, routing weights) for per-spot reliability reports [Paper] [Paper: PDF p. 3]</td><td>“To our knowledge, however, existing work has not coupled an LLM with a trained spatial clustering model through structured, model-derived evidence” [Paper] [Paper: PDF p. 3]</td></tr>
+<tr><td><strong>Static clustering-reasoning decoupling</strong></td><td>Reasoning is purely post-hoc; explanations cannot influence the latent structure that generated them</td><td>Base OmicSync’s Task C operates after training and does not backpropagate into the clustering objective [Paper] [Paper: PDF p. 18]</td><td>“Base OmicSync’s Task C operates after model training and does not back-propagate into the clustering objective; it explains rather than optimises the partition” [Paper] [Paper: PDF p. 18]</td></tr>
+<tr><td><strong>Dataset-agnostic contrastive learning</strong></td><td>Fixed spatial exclusion radius (<em>n&lt;sub&gt;hops&lt;/sub&gt;</em>) in InfoNCE loss harms performance on heterogeneous tissues (e.g., tumor-stroma boundaries)</td><td>Homogeneous tissue (e.g., tonsil germinal centers) needs broader exclusion (<em>n&lt;sub&gt;hops&lt;/sub&gt;=2</em>), while heterogeneous tissue needs finer resolution (<em>n&lt;sub&gt;hops&lt;/sub&gt;=1</em>) [Paper] [Paper: PDF p. 7]</td><td>“Homogeneous tissue... uses <em>n&lt;sub&gt;hops&lt;/sub&gt;=2</em>... Heterogeneous tissue... uses <em>n&lt;sub&gt;hops&lt;/sub&gt;=1</em>” [Paper] [Paper: PDF p. 7]</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>论文的核心思想是建立一条<strong>从数学信号到自然语言的可审计链路</strong>（auditable chain）：聚类模型内部产生的三个核心可靠性信号（<em>cᵢ</em>, <em>uᵢ</em>, <em>ḡᵢ</em>）并非仅供可视化，而是被严格结构化为 LLM 的唯一输入证据字典；LLM 的生成过程被系统性约束（禁止引入未提供基因名、蛋白名、文献引用），确保每句解释均可回溯至模型自身输出；进而，该解释的质量（GR/CA/SC）又被设计为非可微奖励，通过 REINFORCE 反向调节聚类头的软分配分布 <em>qᵢ</em>，形成“解释质量→聚类质量”的闭环反馈。这超越了传统可解释性（XAI）的被动解释范式，将解释本身升格为一种<strong>主动的、可量化的、可优化的模型内在属性</strong>。</p>
+<h2>07 方法总览</h2>
+<p>OmicSync 是一个端到端训练的多任务框架，其方法路径遵循“<strong>信号提取 → 结构化 → 解释生成 → （可选）闭环优化</strong>”逻辑：首先，通过 KAN-GCN 编码器和 CrossModalTransformer 提取斑点的多模态特征；其次，UncertaintyMoE 模块在 MC-Dropout 下运行，同步输出 <em>ḡᵢ</em>（模态路由均值）和 <em>uᵢ</em>（路由方差），ClusteringHead 输出 <em>qᵢ</em> 和 <em>cᵢ</em>；第三，将 <em>qᵢ</em>, <em>cᵢ</em>, <em>uᵢ</em>, <em>ḡᵢ</em>, 邻域组成、顶部标记等组装为证据字典，输入 Llama-3.3-70B 生成五种策略的解释；最后，OmicSync-R 将 GR/CA/SC 加权和 <em>Rᵢ</em> 作为 REINFORCE 奖励，更新 <em>qᵢ</em> 的采样策略，使高分解释对应的分配概率增大。整个流程中，LLM 始终是冻结的黑盒，梯度仅流经聚类头，保证了训练可行性。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>SpatialPositionEncoder</strong></td><td>Adds sinusoidal 2D positional bias to each modality’s feature vector before GCN</td><td>To distinguish spots with identical molecular profiles but different locations (e.g., germinal center edge vs. center), which molecular data alone cannot capture</td><td>Input: spot coordinate <em>cᵢ</em>; Output: <em>PEₘ(cᵢ)</em> ∈ ℝ&lt;sup&gt;dₘ&lt;/sup&gt; [Paper] [Paper: PDF p. 5]</td><td>“This design allows the model to incorporate spatial context and tissue architecture that are not captured by molecular composition alone” [Paper] [Paper: PDF p. 5]</td><td>Without it, spatially adjacent but molecularly similar spots (e.g., same cell type across region) would have indistinguishable representations, degrading spatial coherence of clusters [Analysis]</td></tr>
+<tr><td><strong>UncertaintyMoE</strong></td><td>Routes cross-modal tokens <em>e′₁, e′₂, e′₃</em> via MC-Dropout gating network to produce fused <em>zᵢ</em>, while estimating <em>ḡᵢ</em> and <em>uᵢ</em></td><td>To jointly provide interpretable modality attribution (<em>ḡᵢ</em>) and quantifiable epistemic uncertainty (<em>uᵢ</em>)—two signals essential for evidence-constrained reasoning</td><td>Input: averaged token <em>ēᵢ</em>; Output: <em>ḡᵢ</em> ∈ [0,1]³, <em>uᵢ</em> ∈ ℝ≥₀, <em>zᵢ</em> ∈ ℝ&lt;sup&gt;d&lt;/sup&gt; [Paper] [Paper: PDF p. 6]</td><td>“The mean gate values <em>ḡᵢ</em>... are used as an interpretable proxy for the relative contribution... The scalar <em>uᵢ</em>... is defined as the epistemic routing uncertainty” [Paper] [Paper: PDF p. 7]</td><td>Removal eliminates both <em>ḡᵢ</em> and <em>uᵢ</em>, breaking the core evidence chain for Task C; reasoning would lack modality grounding and uncertainty calibration [Paper] [Paper: PDF p. 3]</td></tr>
+<tr><td><strong>ClusteringHead</strong></td><td>Performs soft assignment to <em>K</em> learnable centroids using Student’s t-kernel, outputs <em>qᵢ</em>, <em>ĉᵢ</em>, <em>cᵢ</em></td><td>To generate probabilistic, differentiable cluster assignments required for both evaluation (ARI) and REINFORCE reward weighting</td><td>Input: <em>L²</em>-normalized <em>zᵢ</em>; Output: <em>qᵢ</em> ∈ [0,1]&lt;sup&gt;K&lt;/sup&gt;, <em>cᵢ</em> = maxₖ<em>qᵢₖ</em> [Paper] [Paper: PDF p. 7]</td><td>“The predicted domain for spot <em>i</em> is <em>ĉᵢ</em> = arg maxₖ<em>qᵢₖ</em>, and the assignment confidence is defined as <em>cᵢ</em> = maxₖ<em>qᵢₖ</em>” [Paper] [Paper: PDF p. 7]</td><td>Removal collapses Task A to unsupervised representation learning only; no <em>qᵢ</em> means no <em>cᵢ</em>, no <em>Rᵢ</em> reward, and no basis for domain-level reasoning [Paper] [Paper: PDF p. 3]</td></tr>
+<tr><td><strong>Evidence-Constrained Reasoning Module</strong></td><td>Converts model-derived signals into five types of natural-language reports using fixed Llama-3.3-70B prompts</td><td>To translate quantitative, model-internal signals into human-auditable, faithfulness-constrained explanations, enabling spot-level trust assessment</td><td>Input: evidence dictionary (including <em>ĉᵢ</em>, <em>cᵢ</em>, <em>ḡᵢ</em>, <em>uᵢ</em>, top markers, neighborhood); Output: <em>J⁽ʳ⁾ᵢ</em> ∈ text [Paper] [Paper: PDF p. 8–9]</td><td>“The language model is instructed not to introduce gene names, protein names, spot identifiers, citations, or biological claims that are absent from the supplied evidence” [Paper] [Paper: PDF p. 8]</td><td>Removal reduces OmicSync to a standard clustering method with no interpretability layer; all Task C results (Table 3–5, Fig. 3) vanish [Paper] [Paper: PDF p. 8]</td></tr>
+<tr><td><strong>OmicSync-R REINFORCE Loop</strong></td><td>Uses <em>Rᵢ</em> = <em>w₁GRᵢ + w₂CAᵢ + w₃SCᵢ</em> as reward to update <em>qᵢ</em> via policy gradient, without backpropagating through LLM</td><td>To close the reasoning-clustering loop, allowing explanation quality to shape latent geometry, addressing the static decoupling limitation</td><td>Input: <em>qᵢ</em>, sampled <em>aᵢ</em>, <em>J⁽ʳ⁾ᵢ</em>, <em>Rᵢ</em>; Output: <em>L&lt;sub&gt;reinforce&lt;/sub&gt;</em> for gradient update [Paper] [Paper: PDF p. 9–10]</td><td>“OmicSync-R... feeds automatically computed reasoning-quality scores back into model training, allowing evidence-grounded reasoning coherence to influence the learned latent structure” [Paper] [Paper: PDF p. 2]</td><td>Removal reverts to base OmicSync; the ARI improvement (+0.99) and 8/9 metric gains on Breast Cancer (Table 7) would not occur [Paper] [Paper: PDF p. 17]</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>论文未给出单一主导性公式，但定义了多个关键符号与可核验公式，全部源自原文：</p>
+<ul>
+<li><strong>Assignment confidence</strong>: <em>cᵢ</em> = max&lt;sub&gt;1≤k≤K&lt;/sub&gt; <em>qᵢₖ</em> [Equation 3, PDF p. 4]</li>
+<li><strong>Modality-routing constraint</strong>: Σ&lt;sub&gt;m=1&lt;/sub&gt;&lt;sup&gt;3&lt;/sup&gt; <em>Gᵢₘ</em> = 1, <em>i</em> = 1,...,<em>N</em> [Equation 4, PDF p. 4]</li>
+<li><strong>Spatial encoding</strong>: <em>PEₘ(cᵢ)</em> = <em>W&lt;sup&gt;PE&lt;/sup&gt;&lt;sub&gt;m&lt;/sub&gt;</em>[sin(<em>cᵢ,ₓf</em>), cos(<em>cᵢ,ₓf</em>), sin(<em>cᵢ,ᵧf</em>), cos(<em>cᵢ,ᵧf</em>)]ᵀ ∈ ℝ&lt;sup&gt;dₘ&lt;/sup&gt; [Equation 7, PDF p. 5]</li>
+<li><strong>MC-Dropout routing variance (epistemic uncertainty)</strong>: <em>uᵢ</em> = Σ&lt;sub&gt;m=1&lt;/sub&gt;&lt;sup&gt;3&lt;/sup&gt; Var&lt;sub&gt;t=1,...,T&lt;/sub&gt;[ <em>gᵢₘ,ₜ</em> ] [Equation 13, PDF p. 6]</li>
+<li><strong>Soft assignment (Student’s t-kernel)</strong>: <em>qᵢₖ</em> = (1 + ∥<em>ẑᵢ</em> − <em>μₖ</em>∥²₂)⁻¹ / Σ&lt;sub&gt;k′&lt;/sub&gt;(1 + ∥<em>ẑᵢ</em> − <em>μₖ′</em>∥²₂)⁻¹ [Equation 15, PDF p. 7]</li>
+<li><strong>Grounding Rate (GR)</strong>: <em>GRᵢ</em> = \|<em>Mᵢ</em> ∩ <em>Jᵢ</em>\| / \|<em>Mᵢ</em>\|, where <em>Mᵢ</em> = supplied marker set, <em>Jᵢ</em> = markers mentioned in justification [Equation 18, PDF p. 9]</li>
+<li><strong>REINFORCE reward</strong>: <em>Rᵢ</em> = <em>w₁GRᵢ</em> + <em>w₂CAᵢ</em> + <em>w₃SCᵢ</em>, with <em>w₁</em>=0.5, <em>w₂</em>=0.3, <em>w₃</em>=0.2 [Equation 20, PDF p. 9]</li>
+<li><strong>REINFORCE loss</strong>: <em>L&lt;sub&gt;reinforce&lt;/sub&gt;</em> = −(1/\|<em>S&lt;sub&gt;R&lt;/sub&gt;</em>\|) Σ&lt;sub&gt;i∈S&lt;sub&gt;R&lt;/sub&gt;&lt;/sub&gt; sg(<em>Rᵢ</em> − <em>bₜ</em>) log <em>qᵢ,ₐᵢ</em> [Equation 23, PDF p. 10]</li>
+<li><strong>Extended objective</strong>: <em>L&lt;sub&gt;OmicSync-R&lt;/sub&gt;</em> = <em>L&lt;sub&gt;OmicSync&lt;/sub&gt;</em> + <em>λ&lt;sub&gt;R&lt;/sub&gt;L&lt;sub&gt;reinforce&lt;/sub&gt;</em> [Equation 24, PDF p. 10]</li>
+</ul>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>Task A clustering (Table 1)</strong></td><td>OmicSync achieves superior clustering quality across diverse spatial proteomics datasets</td><td>Compared against GROVER, MISO, SpatialGlue, COSMOS on 4 datasets; k-means applied to <em>Z</em> for <em>K</em>∈{6–10}; best <em>K</em> reported</td><td>Best average rank on Tonsil (1.44), Glioblastoma (1.78), Tonsil Add-on (1.22); 2nd on Breast Cancer (2.33); best ARI on all 4</td><td>OmicSync learns a more discriminative latent space <em>Z</em>, better aligned with curated reference partitions and exhibiting superior intrinsic cluster separation (high CHI, low DBI)</td><td>That OmicSync is universally superior—its Purity on Tonsil (57.71) &lt; GROVER (69.4), indicating a trade-off</td><td>[Paper] [Paper: PDF p. 12, Table 1]</td></tr>
+<tr><td><strong>Task C reasoning quality (Table 3, Fig. 3A)</strong></td><td>Stepwise strategy yields highest joint faithfulness</td><td>All 5 strategies evaluated on identical 40 spots (10/dataset); same evidence dictionary, different prompt templates</td><td>Stepwise: GR=1.00, CA=1.00, SC=0.975; Uncertainty: GR=0.074, CA=1.00</td><td>Structured, step-by-step prompting maximizes grounding in supplied evidence and alignment with uncertainty tiers</td><td>That Stepwise is optimal for all downstream tasks—it sacrifices flexibility for strict faithfulness, potentially limiting counterfactual insight depth</td><td>[Paper] [Paper: PDF p. 13, Table 3; Figure 3A]</td></tr>
+<tr><td><strong>Reliability audit (Table 5, Fig. 3F)</strong></td><td>High-confidence spots exhibit lower uncertainty and higher spatial homogeneity</td><td>Stratified 40 explained spots into High (<em>cᵢ</em>≥0.35, n=9), Medium, Low (<em>cᵢ</em>&lt;0.20, n=8); computed <em>uᵢ</em>, neighborhood homogeneity %</td><td>High group: <em>ū</em>=0.034, homogeneity=75.6%; Low group: <em>ū</em>=0.111 (~3.3×), homogeneity=60.0%</td><td>The three reliability signals (<em>cᵢ</em>, <em>uᵢ</em>, neighborhood) co-vary meaningfully, validating their use as proxies for assignment stability</td><td>That this correlation implies causation—e.g., high <em>cᵢ</em> <em>causes</em> low <em>uᵢ</em>—the paper only reports correlation (<em>r</em>=−0.42) [Figure 3D]</td><td>[Paper] [Paper: PDF p. 15, Table 5; Figure 3F]</td></tr>
+<tr><td><strong>OmicSync-R ablation (Table 7)</strong></td><td>Reasoning-quality reward improves clustering metrics on challenging dataset</td><td>OmicSync-R vs. base OmicSync on Human Breast Cancer at <em>k</em>=10; same <em>Z</em>, only <em>qᵢ</em> updated via REINFORCE</td><td>ARI↑+0.99, FMI↑+1.79, Jaccard↑+3.08, DBI↓−13.46; NMI↓−1.90</td><td>Evidence-grounded reasoning coherence can partially align with and improve geometric clustering quality, even without LLM gradients</td><td>That OmicSync-R generalizes to all datasets—the paper explicitly restricts evaluation to Breast Cancer due to resource cost [Paper] [Paper: PDF p. 10, 17]</td><td>[Paper] [Paper: PDF p. 17, Table 7]</td></tr>
+<tr><td><strong>k-sensitivity test (Section 9.6)</strong></td><td>OmicSync-R benefit is <em>k</em>-dependent</td><td>Reported ARI of OmicSync-R for <em>k</em>=6–9 vs. <em>k</em>=10 on Breast Cancer</td><td><em>k</em>=6–9: ARI=23.68–27.77; <em>k</em>=10: ARI=46.72</td><td>The REINFORCE signal interacts strongly with centroid count; optimization is sensitive to <em>K</em> choice</td><td>That <em>k</em>=10 is globally optimal—the paper does not test other <em>k</em> for baselines, so comparison is incomplete</td><td>[Paper] [Paper: PDF p. 17]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>OmicSync 的核心贡献是<strong>方法论范式创新</strong>，而非单纯性能突破：它首次将空间多组学聚类、可靠性量化（<em>cᵢ</em>, <em>uᵢ</em>, <em>ḡᵢ</em>）、证据结构化、LLM 约束推理、以及推理-聚类闭环（OmicSync-R）整合为一个连贯、可复现、可审计的框架。其结论必须被限定在以下范围内：（1）性能优势体现在特定指标（ARI/CHI/DBI）和特定数据集（Tonsil Add-on 最显著），并非全指标碾压；（2）Task C 的“解释”本质是模型信号的<strong>重述与结构化</strong>，而非生物学发现，其价值在于可验证性（GR/CA/SC）而非 novelty；（3）OmicSync-R 的 +0.99 ARI 是 proof-of-concept，其资源开销（220 LLM calls）和 <em>k</em>-敏感性表明它尚不适合常规部署；（4）所有“模态主导”结论（如 RNA-dominant in Glioblastoma）均为 <em>ḡᵢ</em> 的统计观察，作者明确强调 <em>ḡᵢ</em> 是“proxy”，非因果归因 [Paper] [Paper: PDF p. 13]。</p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Post-hoc nature of base Task C</strong></td><td>Explanations do not backpropagate into clustering objective; they explain but do not optimize the partition</td><td>Introduce OmicSync-R to close the reasoning-clustering loop via REINFORCE [Paper] [Paper: PDF p. 18]</td><td>[Paper] [Paper: PDF p. 18]</td></tr>
+<tr><td><strong>Resource intensity of OmicSync-R</strong></td><td>Requires repeated LLM queries (220 total) and reward computation during training, making it computationally expensive</td><td>Explore amortised reward models, cached reasoning evaluations, and smaller verifier models to reduce cost [Paper] [Paper: PDF p. 18]</td><td>[Paper] [Paper: PDF p. 18]</td></tr>
+<tr><td><strong>k-sensitivity of OmicSync-R</strong></td><td>Benefit concentrated at <em>k</em>=10; ARI drops sharply for <em>k</em>=6–9, suggesting poor generalization across cluster numbers</td><td>Investigate reward annealing or multi-<em>k</em> training to reduce <em>k</em>-sensitivity [Paper] [Paper: PDF p. 18]</td><td>[Paper] [Paper: PDF p. 18]</td></tr>
+<tr><td><strong>Pseudo-label dependency of Task B</strong></td><td>CellTypeHead uses Leiden-derived pseudo-labels from RNA only, not external ground-truth annotations</td><td>Extend framework to additional modalities (ATAC-seq, spatial metabolomics) and higher-resolution platforms (Xenium, MERFISH) [Paper] [Paper: PDF p. 18]</td><td>[Paper] [Paper: PDF p. 18]</td></tr>
+<tr><td><strong>Limited scope of evidence types</strong></td><td>Reasoning is constrained to only 5 evidence types (<em>cᵢ</em>, <em>uᵢ</em>, <em>ḡᵢ</em>, markers, neighborhood); explanations inherit upstream uncertainty in these signals</td><td>Investigate graph-level or neighbourhood-aware reward formulations to improve spatial consistency [Paper] [Paper: PDF p. 18]</td><td>[Paper] [Paper: PDF p. 18]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td><strong>GR metric conflates marker presence with biological relevance</strong></td><td>GR counts exact string matches (e.g., &quot;CD19&quot;) but ignores synonyms (&quot;CD19 antigen&quot;), functional equivalence (&quot;B-cell marker&quot;), or contextual omission (justification says &quot;B-cell surface protein&quot; but omits &quot;CD19&quot; name). This may underestimate true grounding.</td><td>Over-reliance on GR could mislead optimization—e.g., OmicSync-R might learn to force literal name repetition rather than conceptual fidelity.</td><td>Replace GR with a semantic similarity metric (e.g., Sentence-BERT cosine between <em>Mᵢ</em> and <em>Jᵢ</em>) or conduct human expert evaluation of justification quality beyond keyword matching.</td><td>GR definition is purely lexical: <em>GRᵢ</em> = \</td><td><em>Mᵢ</em> ∩ <em>Jᵢ</em>\</td><td>/ \</td><td><em>Mᵢ</em>\</td><td>[Equation 18, PDF p. 9]; no semantic handling is described.</td></tr>
+<tr><td>*<em>UncertaintyMoE&#x27;s </em>uᵢ<em> measures routing instability, not clustering uncertainty</em>*</td><td><em>uᵢ</em> is variance of <em>gᵢₘ,ₜ</em> across MC-Dropout samples, reflecting confidence in <em>which modality to trust</em>, not confidence in <em>which cluster to assign</em>. A spot could have low <em>uᵢ</em> (stable routing) but high <em>qᵢₖ</em> entropy (ambiguous cluster assignment).</td><td>Conflating these two distinct uncertainties (<em>routing</em> vs. <em>assignment</em>) risks misinterpreting <em>uᵢ</em> as a global reliability score. The paper&#x27;s own negative correlation <em>r</em>=−0.42 confirms they are related but non-identical [Figure 3D].</td><td>Compute and report clustering entropy <em>H(qᵢ)</em> = −Σₖ<em>qᵢₖ</em>log<em>qᵢₖ</em> alongside <em>uᵢ</em>, and analyze their joint distribution (e.g., scatter plot) to validate if low <em>uᵢ</em> truly predicts low <em>H(qᵢ)</em>.</td><td>The paper defines <em>uᵢ</em> solely as &quot;epistemic routing uncertainty&quot; [Equation 13, PDF p. 6] and <em>cᵢ</em> as &quot;assignment confidence&quot; [Equation 3, PDF p. 4], treating them as separate signals.</td></tr>
+<tr><td><strong>Stepwise strategy&#x27;s high CA/GR may stem from prompt verbosity, not deeper reasoning</strong></td><td>The 5-step template forces explicit mention of all evidence types, artificially inflating CA (by mandating hedging language when <em>uᵢ</em> is high) and GR (by requiring marker naming in step 1). Simpler strategies may be more concise but less &quot;faithful&quot; by this metric.</td><td>Optimizing for GR/CA/SC may prioritize prompt compliance over explanatory utility—e.g., a clinician might prefer a concise Contrastive explanation over a verbose Stepwise one.</td><td>Conduct a user study with domain experts (pathologists, computational biologists) rating explanations for <em>clinical utility</em>, <em>conciseness</em>, and <em>actionability</em>, independent of GR/CA/SC scores.</td><td>The paper states Stepwise &quot;encourages the language model to explicitly reference...&quot; [Paper] [Paper: PDF p. 13], implying the structure drives the metric gains, not inherent superiority.</td></tr>
+<tr><td><strong>OmicSync-R&#x27;s reward is sparse and noisy</strong></td><td>Only 10 spots (<em>S&lt;sub&gt;R&lt;/sub&gt;</em>) are sampled every 25 epochs for reward computation, making the REINFORCE signal highly stochastic and potentially unrepresentative of the full dataset.</td><td>Sparse sampling could lead to unstable updates or overfitting to the sampled subset, explaining the transient CA degradation at epoch 425 [Table 6].</td><td>Increase *</td><td>S&lt;sub&gt;R&lt;/sub&gt;</td><td><em> and/or sample stratified by confidence tier (</em>cᵢ*) and dataset to ensure balanced representation of reliability regimes during training.</td><td>The paper specifies *</td><td>S&lt;sub&gt;R&lt;/sub&gt;</td><td><em> = 10 and </em>N&lt;sub&gt;R&lt;/sub&gt;* = 25 [Paper] [Paper: PDF p. 9, 11], yielding only 220 total LLM queries for 600 epochs.</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>可靠性信号工程</strong>：一个鲁棒的空间多组学模型需同时输出三类正交信号：<em>assignment confidence</em>（<em>cᵢ</em>, from clustering head softmax/t-kernel）、<em>epistemic uncertainty</em>（<em>uᵢ</em>, from MC-Dropout variance in routing）、<em>modality attribution</em>（<em>ḡᵢ</em>, from MoE gate mean）；三者共同构成可审计的“证据三角”。</li>
+<li><strong>LLM as constrained decoder, not oracle</strong>：将 LLM 用作后处理模块时，必须通过<strong>结构化证据字典 + 严格系统提示 + 自动化 faithfulness metrics</strong>（GR/CA/SC）将其锚定在模型自身输出上，避免幻觉，使其成为信号翻译器而非知识生成器。</li>
+<li><strong>REINFORCE for non-differentiable feedback</strong>：当需要将不可微信号（如文本质量分数）反馈至神经网络时，REINFORCE 是可行方案；关键是设计<strong>轻量级、可计算的 reward</strong>（GR/CA/SC 加权和）和<strong>稳定 baseline</strong>（EMA <em>bₜ</em>），并接受其高方差特性。</li>
+<li><strong>Adaptive spatial contrastive learning</strong>：在 InfoNCE 损失中，<em>n&lt;sub&gt;hops&lt;/sub&gt;</em> 不应是超参，而应基于数据自适应——用 RNA 空间邻域相似度预估组织同质性，动态设置排除半径，可缓解 ARI/SilC 权衡。</li>
+<li><strong>k-sensitivity is a critical failure mode</strong>：任何依赖聚类头（ClusteringHead）的闭环优化都必须验证其对 <em>K</em> 的鲁棒性；OmicSync-R 在 <em>k</em>=10 外性能骤降，警示我们不能默认最优 <em>K</em> 对所有任务一致。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：OmicSync 的 KAN-GCN backbone 直接继承自 GROVER [5]，其图卷积设计（空间+特征邻接矩阵）与用户关注的 <em>graph neural networks</em> 高度契合；UncertaintyMoE 的 MC-Dropout + MoE 架构，与用户研究中的 <em>uncertainty-aware GNNs</em> 方法论同源。</li>
+<li><strong>候选连接/方法论连接</strong>：Task B 的伪标签（Leiden on RNA）与用户 <em>single-cell foundation models</em> 中常用的 self-supervised pretext tasks（如 masked autoencoding）逻辑一致，均利用数据内在结构生成监督信号。</li>
+<li><strong>候选连接/方法论连接</strong>：OmicSync-R 的 REINFORCE loop 为用户 <em>perturbation prediction</em> 任务提供了新思路：若将 perturbation effect（如 gene knockout）视为“reward”，可训练模型预测哪些 latent dimensions are most sensitive, bypassing differentiable simulation.</li>
+<li><strong>候选连接/方法论连接</strong>：五策略推理（尤其是 Counterfactual/Contrastive）与用户 <em>cell state representation</em> 研究中所需的“what-if”分析高度匹配，其结构化 prompt 模板可直接迁移至细胞状态扰动解释。</li>
+<li><strong>弱连接/方法论连接</strong>：虽然论文未涉及 <em>multi-omics</em> beyond RNA/ADT/H&amp;E，但其模态路由（<em>ḡᵢ</em>）和缺失模态插补（ImputationHeads）模块的设计原则（如 UncertaintyMoE、per-modality GCN）可平滑扩展至 ATAC/代谢组等新模态，符合用户 <em>multi-omics</em> 方向。</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: SpatialNeighbourhoodVerifier</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Spatial consistency (SC) is the most unstable component of the REINFORCE reward (Table 6), and OmicSync-R shows declining SC in late training, suggesting neighborhood composition becomes less predictive as soft assignments sharpen [Paper] [Paper: PDF p. 16–17]. <strong>core hypothesis</strong>: Neighborhood-level coherence is better optimized by a graph-aware reward that aggregates evidence across the <em>k</em>-nearest neighbors, rather than scoring individual spots in isolation. <strong>delta from paper</strong>: Replaces spot-level <em>SCᵢ</em> with a graph-level <em>SC&lt;sub&gt;graph&lt;/sub&gt;</em> = mean(SCᵢ) over a local subgraph, and incorporates neighborhood homogeneity directly into the reward weight. <strong>initial method</strong>: For each sampled spot <em>i</em>, construct its 5-neighbor subgraph <em>Gᵢ</em>. Compute <em>SC&lt;sub&gt;graph&lt;/sub&gt;</em> as the fraction of neighbors in <em>Gᵢ</em> assigned to the same domain as <em>i</em>. Use <em>SC&lt;sub&gt;graph&lt;/sub&gt;</em> × <em>cᵢ</em> as the reward weight for <em>i</em>&#x27;s <em>Rᵢ</em>. <strong>validation</strong>: Train OmicSync-R with this new reward on Breast Cancer; compare SC trajectory (Table 6) and final clustering metrics (Table 7) against original. <strong>failure modes</strong>: Increased computational cost per reward step; potential over-smoothing if <em>k</em> is too large. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: CrossModalAlignmentAdapter</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: The CrossModalTransformer fuses modalities <em>before</em> routing (Fig. 1, Sec 4.4), but UncertaintyMoE routes <em>after</em> fusion, potentially diluting modality-specific signals needed for precise attribution [Paper] [Paper: PDF p. 6]. <strong>core hypothesis</strong>: Performing cross-modal attention <em>within</em> each modality&#x27;s graph encoder (i.e., letting RNA nodes attend to ADT neighbors) will create richer, more aligned cross-modal features, leading to more stable and biologically meaningful <em>ḡᵢ</em>. <strong>delta from paper</strong>: Modifies KAN-GCN encoders (Sec 4.3) to include cross-modal adjacency matrices (e.g., <em>A&lt;sup&gt;s&lt;/sup&gt;&lt;sub&gt;RNA→ADT&lt;/sub&gt;</em>) and intra-modality attention layers that attend across modalities. <strong>initial method</strong>: For RNA modality, compute <em>e&lt;sup&gt;s&lt;/sup&gt;&lt;sub&gt;RNA&lt;/sub&gt;</em> = KAN(<em>A&lt;sup&gt;s&lt;/sup&gt;&lt;sub&gt;RNA&lt;/sub&gt;X₁W&lt;sup&gt;GCN&lt;/sup&gt;&lt;sub&gt;1&lt;/sub&gt;</em>) and <em>e&lt;sup&gt;s&lt;/sup&gt;&lt;sub&gt;RNA→ADT&lt;/sub&gt;</em> = KAN(<em>A&lt;sup&gt;s&lt;/sup&gt;&lt;sub&gt;RNA→ADT&lt;/sub&gt;X₂W&lt;sup&gt;GCN&lt;/sup&gt;&lt;sub&gt;2&lt;/sub&gt;</em>); merge via attention. Repeat for other modality pairs. <strong>validation</strong>: Compare <em>ḡᵢ</em> stability (variance across MC-Dropout) and GR scores on Task C against base OmicSync. <strong>failure modes</strong>: Risk of over-fusion blurring modality distinctions; increased parameter count. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: PerturbativeReasoningReward</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: OmicSync-R uses static, model-derived evidence, but user research focuses on <em>perturbation prediction</em>; a reasoning module that explains <em>why a perturbation changes a domain assignment</em> would be more actionable. <strong>core hypothesis</strong>: Training a reasoning module to generate counterfactual explanations for <em>in silico</em> perturbations (e.g., &quot;if CD19 expression were zeroed, assignment shifts to Stroma&quot;) can yield a more robust and causal latent space. <strong>delta from paper</strong>: Extends Task C to include <em>perturbed evidence dictionaries</em> (e.g., <em>ḡᵢ</em> recalculated after masking ADT features) and trains OmicSync-R with a reward <em>R&lt;sub&gt;pert&lt;/sub&gt;</em> = <em>w₁GR&lt;sub&gt;pert&lt;/sub&gt;</em> + <em>w₂CA&lt;sub&gt;pert&lt;/sub&gt;</em> + <em>w₃SC&lt;sub&gt;pert&lt;/sub&gt;</em>. <strong>initial method</strong>: For each <em>i</em> in <em>S&lt;sub&gt;R&lt;/sub&gt;</em>, apply random ADT/RNA masking (10% prob), recompute <em>ḡᵢ</em>, <em>uᵢ</em>, <em>cᵢ</em>, and neighborhood; feed perturbed dictionary to Llama; compute <em>R&lt;sub&gt;pert&lt;/sub&gt;</em>. <strong>validation</strong>: On a simulated perturbation dataset (e.g., scRNA-seq + CRISPR screen), measure if <em>R&lt;sub&gt;pert&lt;/sub&gt;</em>-guided model better predicts true perturbation outcomes than base OmicSync. <strong>failure modes</strong>: Requires high-fidelity perturbation simulation; LLM may hallucinate unsupported mechanisms. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>
