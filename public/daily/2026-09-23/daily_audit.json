@@ -1,0 +1,170 @@
+{
+  "status": "complete",
+  "run_date": "2026-09-23",
+  "candidate_target": 50,
+  "top20_target": 20,
+  "selected_target": 3,
+  "embedding_model": "text-embedding-v4",
+  "zotero_upload_attempted_for": "selected_high_relevance_only",
+  "candidate_or_top20_zotero_uploads": 0,
+  "fallbacks_used": [],
+  "incomplete_zotero_corpus_excluded_count": 13,
+  "retrieval_sources": {
+    "html_topic": 5,
+    "rss_category": 36,
+    "rss_keyword": 2
+  },
+  "retrieval_fallback_sources": {
+    "html_topic": 5,
+    "rss_category": 36,
+    "rss_keyword": 2
+  },
+  "raw_arxiv_count": 49,
+  "candidate_50_count": 43,
+  "excluded_previously_promoted_count": 6,
+  "top20_count": 20,
+  "selected_count": 3,
+  "embedding_audit": {
+    "embedding_model": "text-embedding-v4",
+    "zotero_embedding_count": 32,
+    "candidate_embedding_count": 380,
+    "zotero_cache_hit_count": 19,
+    "zotero_api_create_count": 1,
+    "candidate_cache_hit_count": 3,
+    "candidate_api_create_count": 40,
+    "embedding_missing_count": 0
+  },
+  "llm_model_calls": 4,
+  "deep_card_model_calls": 3,
+  "quick_look_model_calls": 4,
+  "daily_quote_model_calls": 1,
+  "three_card_digest_model_calls": 1,
+  "card_quality": [
+    {
+      "arxiv_id": "2609.05956",
+      "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+      "folder": "outputs/daily/2026-09-23/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "source_excerpted_for_context_limit"
+        ],
+        "card_path": "outputs/daily/2026-09-23/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-23/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/source_bundle.json",
+        "source_page_count": 52,
+        "source_character_count": 165402
+      }
+    },
+    {
+      "arxiv_id": "2609.20008",
+      "title": "Dynamic Generalized Gromov-Wasserstein Optimal Transport",
+      "folder": "outputs/daily/2026-09-23/paper-2/Dynamic Generalized Gromov-Wasserstein Optimal Transport",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 2', 'Figure 3', 'Figure 4', 'Figure 6', 'Figure 8']",
+          "tables_not_covered:['Table 4', 'Table 6']",
+          "equations_not_covered:['Equation 5', 'Equation 6', 'Equation 14', 'Equation 15', 'Equation 17', 'Equation 19', 'Equation 20', 'Equation 24', 'Equation 26', 'Equation 28', 'Equation 29', 'Equation 30', 'Equation 31', 'Equation 32', 'Equation 33', 'Equation 34', 'Equation 35', 'Equation 36', 'Equation 37', 'Equation 38', 'Equation 42', 'Equation 43', 'Equation 44', 'Equation 48', 'Equation 49', 'Equation 50', 'Equation 51', 'Equation 52', 'Equation 54', 'Equation 55', 'Equation 56', 'Equation 57', 'Equation 61', 'Equation 62', 'Equation 66', 'Equation 67', 'Equation 68', 'Equation 71', 'Equation 72', 'Equation 73', 'Equation 74', 'Equation 76', 'Equation 77', 'Equation 78', 'Equation 79', 'Equation 80', 'Equation 81', 'Equation 82', 'Equation 83', 'Equation 86', 'Equation 87', 'Equation 88', 'Equation 89', 'Equation 90', 'Equation 91', 'Equation 92', 'Equation 93', 'Equation 94', 'Equation 96', 'Equation 97', 'Equation 98', 'Equation 99', 'Equation 100', 'Equation 101', 'Equation 103', 'Equation 104', 'Equation 105', 'Equation 106', 'Equation 107', 'Equation 108', 'Equation 109', 'Equation 110', 'Equation 111', 'Equation 113', 'Equation 115', 'Equation 116', 'Equation 118', 'Equation 119', 'Equation 120', 'Equation 122', 'Equation 123', 'Equation 125', 'Equation 127', 'Equation 128', 'Equation 129', 'Equation 130', 'Equation 131', 'Equation 132', 'Equation 133', 'Equation 134']"
+        ],
+        "card_path": "outputs/daily/2026-09-23/paper-2/Dynamic Generalized Gromov-Wasserstein Optimal Transport/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-23/paper-2/Dynamic Generalized Gromov-Wasserstein Optimal Transport/source_bundle.json",
+        "source_page_count": 41,
+        "source_character_count": 107950
+      }
+    },
+    {
+      "arxiv_id": "2609.23325v1",
+      "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+      "folder": "outputs/daily/2026-09-23/paper-3/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 1']"
+        ],
+        "card_path": "outputs/daily/2026-09-23/paper-3/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-23/paper-3/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/source_bundle.json",
+        "source_page_count": 9,
+        "source_character_count": 48772
+      }
+    }
+  ],
+  "quick_look_quality": [
+    {
+      "arxiv_id": "2609.05956",
+      "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+      "path": "outputs/daily/2026-09-23/paper-1/STP-BENCH A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1147,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.20008",
+      "title": "Dynamic Generalized Gromov-Wasserstein Optimal Transport",
+      "path": "outputs/daily/2026-09-23/paper-2/Dynamic Generalized Gromov-Wasserstein Optimal Transport/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1169,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.23325v1",
+      "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+      "path": "outputs/daily/2026-09-23/paper-3/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1488,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "daily_quote": {
+    "status": "generated",
+    "quote": "晨光初照，问题已在，答案尚远。",
+    "model": "qwen-plus-latest",
+    "prompt_chars": 73
+  },
+  "wechat_digest": {
+    "status": "three_card_digest",
+    "prompt_chars": 6938,
+    "digest_chars": 4140,
+    "model": "qwen-plus-latest",
+    "report_date": "2026-09-23",
+    "repair_attempted": false,
+    "audit": {
+      "schema_version": "1.0",
+      "status": "pass",
+      "character_count": 4140,
+      "errors": [],
+      "warnings": []
+    },
+    "quick_look_model_calls": 4,
+    "daily_quote_model_calls": 1
+  },
+  "freshness_distribution": {
+    "latest_48h": 38,
+    "recent_7d": 2,
+    "recent_30d": 3,
+    "backfill": 0,
+    "unknown": 0
+  },
+  "top20_from_candidates": true,
+  "top3_from_top20": true,
+  "pdf_success_count": 3,
+  "card_success_count": 3,
+  "zotero_upload_success_count": 0,
+  "zotero_upload_linked_count": 3,
+  "zotero_upload_partial_count": 0,
+  "zotero_upload_failure_count": 0
+}
