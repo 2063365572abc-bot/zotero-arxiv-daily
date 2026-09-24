@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: None<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>Discover, Falsify, Revise: Auditing Input-Use Claims from Source Code to Predictive Contribution in Agent-Discovered Cell Models</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Mengran Li, Bo Li, Chengyang Zhang, Yang Yan, Jinfeng Xu, Zhenchao Tang</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>URL</td><td>https://arxiv.org/abs/2609.27234</td><td>[Paper metadata]</td></tr>
+<tr><td>PDF URL</td><td>https://arxiv.org/pdf/2609.27234v1</td><td>[Paper metadata]</td></tr>
+<tr><td>Publication date</td><td>2026-09-24</td><td>[Paper metadata]</td></tr>
+<tr><td>Core method name</td><td>CELLAUDIT</td><td>[Paper] [Paper: PDF p. 1–2]</td></tr>
+<tr><td>Primary task</td><td>Perturbation response prediction (chemical &amp; genetic) under multimodal readouts (morphology + transcriptomics)</td><td>[Paper] [Paper: PDF p. 1–2, Fig 1A]</td></tr>
+<tr><td>Key datasets</td><td>BBBC036/BBBC047 (Cell Painting + L1000), LINCS–Pilot1, LKCP Batch 2, sci-Plex3, Norman CRISPRa (GSE133344)</td><td>[Paper] [Paper: PDF p. 5, 8, 31; Table 2, 27]</td></tr>
+<tr><td>Evaluation metric (primary)</td><td>Global Pearson correlation coefficient (Global PCC) on concatenated morphology–transcriptomics responses</td><td>[Paper] [Paper: PDF p. 5, Table 1, Table 21]</td></tr>
+<tr><td>Input-use evidence metrics</td><td>Factorial PCC effect $E_{\text{cmpd}}$, target-loss gain $\Delta L_{\text{cmpd}}$, compound-shuffle PCC drop, scaffold-aware intervals</td><td>[Paper] [Paper: PDF p. 4, 6, 25; Eq 4–6; Table 1, 16, 47]</td></tr>
+<tr><td>Code/model release status</td><td>Project page provided (https://limengran98.github.io/CellAudit/); no explicit GitHub or model weights in text</td><td>[Paper] [Paper: PDF p. 1]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>该论文提出 CELLAUDIT 框架，系统性审计由大语言模型代理（如 CellScientist）生成的细胞响应预测器是否真正利用了其声称使用的扰动输入（如化合物身份），而非仅依赖控制背景或数据伪影；它通过三重验证——源码可进入性（source consumption）、拟合预测依赖性（fitted dependence）、目标相关预测增益（target-relevant contribution）——揭示了高预测性能与真实扰动使用之间存在显著gap，并在 BBBC047、sci-Plex 和 Norman 等多个 perturbation prediction 场景中验证了该框架对模型修订和发现质量的提升作用；其核心贡献是将 agentic discovery 的范式从“generate–score–revise”推进至“discover–falsify–revise”，但所有实证均限于离线审计与重训练，未涉及在线闭环干预或生物学机制解释。</p>
+<h2>03 研究问题</h2>
+<p>论文直面 agentic model discovery 中一个被忽视的根本矛盾：当语言模型代理基于 held-out predictive score（如 Global PCC）迭代生成、选择和修订预测器时，该 score 的提升无法保证模型真正利用了其设计声明的扰动输入（如 compound identity），而可能仅通过拟合 control profiles、plate effects 或其他混杂结构实现 [Paper] [Paper: PDF p. 1–2]。这一“prediction–claim gap”导致 discovery 过程缺乏可信度保障，尤其在 perturbation prediction 这类需因果解释的生物任务中风险极高。因此，研究问题聚焦于：<strong>如何构建一个可扩展、可复现、证据链完整的审计流程，以区分“模型声称使用扰动”、“模型输出实际依赖扰动”和“该依赖确实提升了对观测响应的预测”这三个递进层次？</strong> 并进一步追问：该审计能否指导有效修订、提升下游发现质量、并在新数据上泛化其结论？</p>
+<h2>04 研究背景与发展路径</h2>
+<p>背景始于两个并行趋势：一是 AI virtual cell 的兴起（如 CellScientist、CellForge、HarmonyCell），其依赖 LLM 代理自动设计、训练、评估预测器，追求 high-scoring models [Paper] [Paper: PDF p. 1–2]；二是 perturbation prediction 领域对模型可靠性日益增长的质疑，已有工作指出模型常 shortcut 到 control 或 context 而非 perturbation [Paper] [Paper: PDF p. 1, 10]。然而，现有方法（如 saliency maps、permutation tests）多为 post-hoc 行为测试，不追溯至源码声明，亦不区分“依赖”与“有益依赖” [Paper] [Paper: PDF p. 2]。发展路径由此清晰：作者拒绝将 audit 视为单一测试，而是构建一个<strong>证据分层框架</strong>——从注册的 input-use claim 出发（e.g., “compound query attends to morphology features”），经源码静态检查（是否可进入）、冻结 checkpoint 上的行为干预（是否改变预测）、再到目标损失对比（是否提升预测），形成一条从声明到证据的完整链条 [Paper] [Paper: PDF p. 2–4]。该路径直接回应了 agentic discovery 对 scalable, claim-aware validation 的迫切需求，而非仅优化预测本身。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>Prediction–claim gap</strong></td><td>A high-scoring agent-selected predictor (Global PCC=0.3153) is <em>exactly invariant</em> to compound replacement, while a control-only predictor achieves nearly identical performance (0.3142) [Paper] [Paper: PDF p. 1, 5]</td><td>The cited compound-query pathway is mathematically inactive due to singleton key-value attention, blocking information flow [Paper] [Paper: PDF p. 1, 3, 6]</td><td>Figure 1B shows zero compound ΔPCC; Table 1 reports E&lt;sub&gt;cmpd&lt;/sub&gt;=0.0000 for Prediction-score; [Paper] [Paper: PDF p. 6] identifies &quot;one-key attention cannot transmit compound identity&quot; as the root cause.</td></tr>
+<tr><td><strong>Fitted dependence ≠ Target-relevant contribution</strong></td><td>Among 48 generated candidates, 47 show fitted dependence (prediction changes under compound swap) on both folds, but only 20 exhibit positive target-loss scaffold intervals (i.e., loss gain &gt;0) on both folds [Paper] [Paper: PDF p. 2, 6]</td><td>An executable pathway may have negligible effect after fitting, and input dependence may not translate to predictive benefit due to noise, redundancy, or misalignment with target metric [Paper] [Paper: PDF p. 2, 4]</td><td>Figure 2a,b visualizes this divergence; green outlines mark the 20/48 with positive intervals; Table 1 shows only 0/5 reﬁts pass the reference threshold for compound use in Prediction-score.</td></tr>
+<tr><td><strong>Predictive generalization ≠ Claim generalization</strong></td><td>When LINCS-selected designs are refit on independently acquired LKCP, dose contribution persists (+0.0237–+0.0341 Global PCC), but compound-identity contribution vanishes (−0.000070 to +0.0033) [Paper] [Paper: PDF p. 8–9]</td><td>Input-use claims are data- and acquisition-context-dependent; a pathway functional in one assay may be irrelevant or confounded in another due to technical variation (e.g., plate batch, imaging protocol) [Paper] [Paper: PDF p. 9]</td><td>Figure 4a,b separates compound/dose allocations; Table 35–36 report the stark contrast; [Paper] [Paper: PDF p. 9] states &quot;dose contribution persists, whereas support for compound identity does not persist&quot;.</td></tr>
+<tr><td><strong>Manual verification scalability bottleneck</strong></td><td>Agentic discovery generates increasingly numerous and diverse models, making manual code inspection and behavioral testing infeasible [Paper] [Paper: PDF p. 1]</td><td>The combinatorial explosion of candidate architectures, fusion strategies, and readout designs exceeds human capacity for rigorous validation [Paper] [Paper: PDF p. 1]</td><td>Figure 1A–C illustrates the automated pipeline; Section 4.1–4.3 details deterministic source checking and frozen-checkpoint intervention; Table 25 shows path-constrained runs achieve 100% valid candidates via deterministic compilation.</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>论文的核心思想是：<strong>perturbation prediction 模型的可信度不能仅由其预测分数担保，而必须通过一个可分解、可审计、可修订的三阶段证据链来确立——即“声明可进入 → 输出真依赖 → 依赖有增益”。</strong> 这一思想源于对 agentic discovery 本质缺陷的深刻洞察：score-based feedback 是 blind 的，它奖励结果却无视过程。因此，CELLAUDIT 不是设计一个更强的预测器，而是设计一个“元验证器”，它将模型的 input-use claim（如“compound identity modulates FiLM layer”）作为待检验的科学假设，而非设计文档的装饰性描述。其创新在于将软件工程中的“契约式设计”（design by contract）引入生物AI，要求每个 claim 必须附带可执行的、可证伪的测试协议（source check + replacement rule + threshold），并将 falsification 结果（而非仅 score）作为 revision 的核心驱动力，从而将 discovery 过程本身纳入科学方法论的约束之下。</p>
+<h2>07 方法总览</h2>
+<p>CELLAUDIT 方法是一个闭环的、证据驱动的模型审计与修订框架，严格遵循“Discover–Falsify–Revise”范式。其总览分为三个不可分割的阶段：（1）<strong>Discover</strong>：在固定数据划分（Folds 1–3）和评估协议下，LLM 代理（如 CellScientist）执行 agentic search，生成候选模型并基于 Fold-3 score 选择 checkpoint；（2）<strong>Falsify</strong>：对选定的 frozen checkpoint 执行三重审计——① <strong>Source Inspection</strong>：使用 AST checker 验证注册的 input-use statement 是否在代码中被实现（implemented）、被矛盾（implementation-contradicted）或未解析（unresolved）[Paper] [Paper: PDF p. 4]；② <strong>Fitted Dependence Test</strong>：在 held-out folds（4/5）上，对注册输入（如 compound）进行 deterministic replacement（e.g., shuffle within same control group），测量 prediction-space distance（RMS change）；③ <strong>Target-relevant Contribution Test</strong>：在同一 replacement 下，计算 higher-is-better score decrease ($\Delta m_q$) 和 loss increase ($\Delta L_q$)，以量化该依赖是否带来预测增益 [Paper] [Paper: PDF p. 4, Eq 1]；（3）<strong>Revise</strong>：根据 falsification 结果指导修订——若 source 被 contradicted，则强制编译显式通路（path-constrained）；若 dependence 存在但 contribution 弱，则采用 residual learning over control-only baseline（falsification-guided）[Paper] [Paper: PDF p. 4, Eq 2]。整个流程强调“freeze before test”：source、checkpoint、audit rules 在 held-out evaluation 前完全冻结，确保证据无污染。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>Source Code Checker (AST-based)</strong></td><td>Static analysis of registered input-use statements to classify them as <code>implemented</code>, <code>implementation-contradicted</code>, or <code>unresolved</code></td><td>To ground audit in the model&#x27;s actual implementation, not just its claimed behavior; detects structural defects invisible to behavioral tests (e.g., singleton attention)</td><td>Input: Registered input coordinate + cited source location (e.g., <code>cross_attn.compound_query</code>). Output: Classification label + resolved/unresolved status [Paper] [Paper: PDF p. 4]</td><td>Figure 1B identifies &quot;Singleton attention: no query effect&quot;; Table 1 labels the Prediction-score source as &quot;Contradicted&lt;sup&gt;a&lt;/sup&gt;&quot;; [Paper] [Paper: PDF p. 6] explicitly cites &quot;one-key attention cannot transmit compound identity&quot; as the defect.</td><td>Removal would collapse CELLAUDIT into a pure behavioral test, losing the ability to localize <em>why</em> a model fails—e.g., distinguishing a bug in code from a fundamental limitation of the architecture or data.</td></tr>
+<tr><td><strong>Frozen Checkpoint Replacement Engine</strong></td><td>Applies deterministic, response-blind input interventions (e.g., compound shuffle, dose replacement) to a frozen model&#x27;s predictions on held-out data</td><td>To isolate the effect of a single input variable, controlling for all other sources of variation (training dynamics, optimizer state); enables causal-like attribution without retraining</td><td>Input: Frozen checkpoint, held-out data batch, replacement rule (e.g., &quot;shuffle compound within same control vector class&quot;). Output: Interventional predictions $f(x_{-q}, \tilde{x}_q)$ and metrics ($\Delta m_q, \Delta L_q$) [Paper] [Paper: PDF p. 4, 6]</td><td>Table 1 reports exact zero compound ΔPCC for Prediction-score; Figure 2a plots prediction change (RMS) vs. target-loss gain; Table 5 shows compound effects averaged over 32 permutations per reﬁt.</td><td>Removal would make it impossible to attribute prediction changes to specific inputs, conflating compound effects with dose, context, or noise; all quantitative evidence in Tables 1, 5, 11, 47 would vanish.</td></tr>
+<tr><td><strong>Scaffold-Aware Uncertainty Quantifier</strong></td><td>Computes confidence intervals by resampling Murcko scaffold groups (for chemical tasks) or biological groups, treating scaffolds—not individual compounds—as the statistical unit</td><td>To quantify uncertainty over <em>held-out chemical families</em>, not just random compound samples; addresses the reality that generalization failure often occurs at the scaffold level, not per-compound level</td><td>Input: Set of held-out Murcko scaffold labels, 32 fixed replacement maps per reﬁt, 5 paired reﬁts. Output: Scaffold 95% CI (e.g., for $E_{\text{cmpd}}$) [Paper] [Paper: PDF p. 24–25, Table 16]</td><td>Table 16 reports &quot;Scaffold 95% CI&quot; for BBBC047/Fold 5 compound PCC drop as [+0.0024, +0.0079]; [Paper] [Paper: PDF p. 24] states &quot;This preserves within-scaffold response dependence and quantifies uncertainty over held-out chemical families.&quot;</td><td>Removal would revert to standard i.i.d. intervals, grossly underestimating uncertainty for chemical generalization and potentially overstating significance of scaffold-level effects (e.g., falsely claiming compound use generalizes across all scaffolds).</td></tr>
+<tr><td><strong>Falsification-Guided Residual Trainer</strong></td><td>Trains a perturbation-specific residual $h(c,p,a)$ added to a frozen control-only predictor $g(c)$: $\hat{y} = g(c) + \alpha h(c,p,a)$, with $\alpha$ selected on Fold-3</td><td>To directly address the case where dependence exists but contribution is weak, by forcing the model to learn <em>only the perturbation-specific delta</em> over a strong baseline, thus decoupling context modeling from perturbation modeling</td><td>Input: Frozen $g(c)$, perturbation inputs $(p,a)$, Fold-3 data. Output: Residual $h$ and scale $\alpha$ [Paper] [Paper: PDF p. 4, Eq 2]</td><td>Table 1 shows Falsification-guided achieves $E_{\text{cmpd}}=0.0053$ and positive $\Delta L_{\text{cmpd}}$; [Paper] [Paper: PDF p. 6] states it &quot;recovers positive mean compound contributions while retaining predictive gains over the control-proﬁle-only baseline.&quot;</td><td>Removal would leave no mechanism to recover target-relevant contribution when the base model is already highly predictive via context; the &quot;Guided&quot; row in Table 1 would show no improvement over &quot;Control only&quot;.</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>论文中明确给出的可核验公式仅有 Equation 1 和 Equation 2；其余符号/指标虽频繁出现，但未以公式形式定义。关键公式与符号如下：</p>
+<ul>
+<li><strong>Equation 1</strong>（[Paper] [Paper: PDF p. 4]）：定义了输入替换下的预测得分变化 $\Delta m_q$ 和损失变化 $\Delta L_q$：</li>
+</ul>
+<p>$$ \Delta m_q = m(f(x), y) - m(f(x_{-q}, \tilde{x}_q), y), \quad \Delta L_q = L(f(x_{-q}, \tilde{x}_q), y) - L(f(x), y). \tag{1} $$ 其中 $m$ 是 higher-is-better metric（如 Global PCC），$L$ 是 loss（如 MSE），$x_{-q}$ 表示移除第 $q$ 个输入，$\tilde{x}_q$ 是其替换值。</p>
+<ul>
+<li><strong>Equation 2</strong>（[Paper] [Paper: PDF p. 4]）：定义了 falsification-guided discovery 的残差学习形式：</li>
+</ul>
+<p>$$ \hat{y} = g(c) + \alpha h(c, p, a). \tag{2} $$ 其中 $g(c)$ 是在 Folds 1–2 上拟合并冻结的 control-only 预测器，$h(c,p,a)$ 是 perturbation-specific 残差，$\alpha$ 是可学习的缩放因子。</p>
+<ul>
+<li><strong>关键符号/指标</strong>（未以公式形式定义，但全文核心）：</li>
+<li><strong>Global PCC</strong>: 所有后处理行和所有维度上展平后的联合输出与目标之间的 Pearson 相关系数 [Paper] [Paper: PDF p. 22]。</li>
+<li><strong>$E_{\text{cmpd}}$ / $E_{\text{ctrl}}$</strong>: 因子效应（factorial effect），定义为在另一个输入的两个状态（e.g., high/low dose）下，PCC 下降的平均值 [Paper] [Paper: PDF p. 4, Table 1]。</li>
+<li><strong>$\Delta L_{\text{cmpd}}$</strong>: 化合物替换导致的目标损失（MSE）增加量，用于衡量 target-relevant contribution [Paper] [Paper: PDF p. 4, Table 1]。</li>
+<li><strong>Reference threshold $\tau_{j,q}$</strong>: 基于 32 次固定参考值的成对绝对差异的 95th 百分位数，用于判定 effect 是否“supported” [Paper] [Paper: PDF p. 22]。</li>
+<li><strong>Murcko scaffold</strong>: 基于 Bemis-Murcko 算法的化合物骨架分组，用作化学泛化不确定性估计的统计单元 [Paper] [Paper: PDF p. 5, 22]。</li>
+</ul>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>BBBC047 Prediction-score audit</strong></td><td>Does the agent-selected predictor use compound identity?</td><td>Compound shufﬂe vs. correct input on Fold 4/5; 5 paired reﬁts</td><td>$\Delta$PCC = 0.0000 on both folds; $E_{\text{cmpd}} = 0.0000$; all 5 reﬁts fail reference threshold [Table 1]</td><td>The predictor is compound-invariant; its high score (0.3153) is achieved without using compound identity.</td><td>That the model uses <em>no</em> perturbation information — dose and context effects remain strong ($E_{\text{ctrl}} &gt; 0.19$).</td><td>[Paper] [Paper: PDF p. 5–6; Table 1]</td></tr>
+<tr><td><strong>BBBC047 Disjoint control wells</strong></td><td>Does the compound invariance persist when control inputs and targets use physically disjoint wells?</td><td>Shared vs. Disjoint control banks; same model reﬁt on newly constructed data [Paper] [Paper: PDF p. 6]</td><td>Score-selected source remains exactly invariant (0.0000 ΔPCC) in all reﬁts; Guided design shows positive but smaller compound gain [Table 6, 9]</td><td>The mismatch is not an artifact of physical well reuse; it reflects a fundamental design/implementation flaw.</td><td>That <em>all</em> models suffer from this flaw — the Guided design successfully recovers compound use.</td><td>[Paper] [Paper: PDF p. 6; Table 6, 9]</td></tr>
+<tr><td><strong>48-candidate stratiﬁed audit</strong></td><td>Is fitted dependence sufficient evidence for target-relevant contribution?</td><td>48 candidates across BBBC036/047; measure RMS change and $\Delta L_{\text{cmpd}}$ on both folds [Paper] [Paper: PDF p. 2, 6]</td><td>47/48 show fitted dependence (RMS &gt; 0), but only 20/48 have positive $\Delta L_{\text{cmpd}}$ intervals on <em>both</em> folds [Figure 2a,b]</td><td>Fitted dependence and target-relevant contribution are empirically distinct and must be tested separately.</td><td>That the 27 candidates with negative/inconclusive $\Delta L_{\text{cmpd}}$ are useless — they may still provide value in other contexts or with different metrics.</td><td>[Paper] [Paper: PDF p. 2, 6; Figure 2a,b]</td></tr>
+<tr><td><strong>sci-Plex audit-enriched feedback</strong></td><td>Does returning audit diagnostics (not just score) to the agent improve discovery outcomes?</td><td>Audit vs. Score feedback; 5 paired trajectories; same anchor, permissions, budget [Paper] [Paper: PDF p. 7]</td><td>Audit yields higher mean PCC (+0.0024 on Fold 4) and larger mean compound/dose loss gains, but paired CIs include zero [Figure 3b,c; Table 68]</td><td>Audit-enriched feedback <em>tends</em> to improve both prediction and input-use contribution, but the evidence is suggestive, not conclusive, at n=5.</td><td>That audit feedback <em>guarantees</em> improvement — the paper explicitly states &quot;evidence for improved discovery remains suggestive rather than conclusive&quot; [Paper] [Paper: PDF p. 2].</td><td>[Paper] [Paper: PDF p. 7; Figure 3; Table 68]</td></tr>
+<tr><td><strong>LINCS→LKCP transfer</strong></td><td>Does predictive generalization imply claim generalization?</td><td>Refit frozen LINCS-selected designs on LKCP; test compound/dose allocation [Paper] [Paper: PDF p. 8]</td><td>Dose allocation persists (+0.0237/+0.0341), but compound-identity allocation vanishes (−0.000070/+0.0033); none pass compound criterion on LKCP [Figure 4a; Table 35]</td><td>Predictive generalization and input-use claim generalization are dissociable; a claim validated in one acquisition may fail in another.</td><td>That dose is <em>always</em> generalizable — the paper notes LINCS compound-identity criterion passes for 35/50 reﬁts on Fold 4, showing variability even within the same cohort.</td><td>[Paper] [Paper: PDF p. 8–9; Figure 4a; Table 35]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>论文的结论必须严格限定于其证据范围：CELLAUDIT 成功揭示并量化了 agentic discovery 中普遍存在的“prediction–claim gap”，证明了高预测分数（如 Global PCC）与真实扰动输入使用之间不存在必然联系；它提供了一套可操作的、三阶段的审计协议（source → dependence → contribution），并验证了该协议能指导出更可信的模型修订（如 falsification-guided residual learning）；其关于“predictive generalization ≠ claim generalization”的结论，是基于 LINCS→LKCP 这一特定 transfer setting 的实证，表明剂量（dose）贡献比化合物身份（compound identity）贡献更具跨平台鲁棒性。<strong>关键边界在于：所有结论均基于 offline, frozen-checkpoint auditing 和 subsequent retraining，不涉及在线干预、生物学机制推断、或对未见 perturbation 类型（如 novel CRISPR guides）的泛化承诺；其“improved discovery”在 sci-Plex 中仅为趋势性结果（paired CIs span zero），并非统计确证；其方法论价值远大于单个任务上的 SOTA 提升。</strong></p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Paired interval uncertainty in sci-Plex</strong></td><td>The paired t-intervals for Audit–Score differences in PCC and compound/dose contributions across five sci-Plex trajectories all include zero, preventing conclusive claims of improvement [Paper] [Paper: PDF p. 2, 7]</td><td>The authors call for &quot;larger-scale matched comparisons&quot; to achieve conclusive evidence, implying increased trajectory count or more powerful agents as a future step [Paper] [Paper: PDF p. 7]</td><td>[Paper] [Paper: PDF p. 2, 7] (&quot;evidence for improved discovery remains suggestive rather than conclusive&quot;)</td></tr>
+<tr><td><strong>Dose identifiability in BBBC047</strong></td><td>Due to insufficient observed dose variation within compounds, BBBC047 dose testing is &quot;not identiﬁable&quot; — no legal 0.1-log-dose contrast exists on either fold [Paper] [Paper: PDF p. 23]</td><td>The authors propose using &quot;more diverse dose-response data&quot; in future work to enable robust dose-use auditing [Paper] [Paper: PDF p. 23]</td><td>[Paper] [Paper: PDF p. 23] (&quot;Dose is therefore not identiﬁable in the BBBC047 panels (Table 50)&quot;)</td></tr>
+<tr><td><strong>Scaffold-group independence assumption</strong></td><td>The scaffold-aware bootstrap assumes Murcko scaffold groups are independent biological units, but the paper notes &quot;scaffold labels do not ensure fully independent biological groups&quot; [Paper] [Paper: PDF p. 20, 21]</td><td>The authors suggest &quot;developing more biologically grounded grouping criteria&quot; as a future direction to better capture true biological independence [Paper] [Paper: PDF p. 20]</td><td>[Paper] [Paper: PDF p. 20, 21] (&quot;These are source-scaffold, not compound-cluster, intervals; scaffold labels do not ensure fully independent biological groups.&quot;)</td></tr>
+<tr><td><strong>Scope of input-use claims</strong></td><td>CELLAUDIT audits only the <em>registered</em> input-use claims (e.g., &quot;compound identity is used&quot;), not all possible spurious correlations or shortcuts the model might exploit [Paper] [Paper: PDF p. 9]</td><td>The authors state that &quot;observed-support replacements avoid unobserved combinations but do not establish biological exchangeability, mechanism, or causal effects&quot;, pointing to the need for complementary causal inference methods [Paper] [Paper: PDF p. 9]</td><td>[Paper] [Paper: PDF p. 9] (&quot;Observed-support replacements avoid unobserved combinations but do not establish biological exchangeability, mechanism, or causal effects.&quot;)</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td><strong>The &quot;singleton key-value attention&quot; diagnosis is overly specific.</strong> The paper attributes the BBBC047 compound invariance solely to a &quot;singleton key–value attention pathway whose query cannot transmit compound information&quot; [Paper] [Paper: PDF p. 2, 3]. However, the abstract and main text never show the full attention weight matrix or prove that <em>no other pathway</em> (e.g., through dose embedding, context gating, or residual connections) could carry compound signal.</td><td>This risks misdiagnosing a systemic architectural limitation (e.g., insufficient capacity, poor initialization) as a localized coding bug. If the true cause is broader, the &quot;path-constrained&quot; fix (enforcing a compound route) may be insufficient, and the &quot;falsification-guided&quot; fix (residual over control) may merely mask the underlying weakness.</td><td>It matters because the entire revision strategy hinges on the precision of the source diagnosis. An incorrect root cause leads to suboptimal or ineffective revisions, undermining CELLAUDIT&#x27;s utility as a debugging tool.</td><td>To test, one could ablate <em>all</em> potential compound pathways simultaneously (e.g., zero out compound fingerprint input <em>and</em> all derived embeddings) and see if invariance persists. Alternatively, perform gradient-based attribution (e.g., integrated gradients) on the compound input to map its influence across all layers, not just the cited attention module.</td><td>[Paper] [Paper: PDF p. 1, 2, 3, 6] repeatedly cite &quot;singleton attention&quot; as the sole cause, but provide no evidence excluding other routes; Figure 1B shows the diagnosis but no validation of its exclusivity.</td></tr>
+<tr><td><strong>The &quot;reference threshold&quot; for claim qualification is arbitrary and task-dependent.</strong> The threshold $\tau_{j,q}$ is defined as the 95th percentile of absolute pairwise differences among 32 reference scores [Paper] [Paper: PDF p. 22], yet its choice (95th vs. 90th or 99th) is not justified, and its magnitude varies wildly across tasks (e.g., BBBC047 compound effect ~0.005, sci-Plex compound loss gain ~0.022) [Paper] [Paper: PDF p. 7, Table 1].</td><td>This makes cross-task comparison of &quot;support&quot; meaningless and introduces a hidden hyperparameter. A model deemed &quot;unsupported&quot; on BBBC047 might be &quot;supported&quot; on sci-Plex simply due to different noise floors, not better design. It conflates statistical detectability with biological relevance.</td><td>It matters because the paper&#x27;s central narrative — that CELLAUDIT reveals a &quot;gap&quot; — relies on the binary &quot;supported/inconclusive/unsupported&quot; classification. If the threshold is arbitrary, the gap size is ill-defined.</td><td>To test, one could perform sensitivity analysis: vary the percentile (e.g., 90th, 95th, 99th) and report how the fraction of &quot;supported&quot; models changes across all experiments (Tables 1, 33, 38). Additionally, compare against effect-size benchmarks (e.g., Cohen&#x27;s d) normalized by task-specific variance.</td><td>[Paper] [Paper: PDF p. 22] defines $\tau_{j,q}$ but gives no rationale for the 95th percentile; Table 1 and Table 33 show vastly different raw effect magnitudes across tasks, suggesting threshold calibration is essential.</td></tr>
+<tr><td><strong>The &quot;disjoint control wells&quot; experiment does not eliminate all confounding.</strong> While splitting control wells into A/B banks addresses physical overlap, the paper admits this &quot;does not establish that all upstream preprocessing or biological dependence has been removed&quot; [Paper] [Paper: PDF p. 17]. Crucially, the CP targets are still computed as &quot;empirical mid-CDF values relative to the direction’s reference bank&quot;, meaning the <em>same</em> control distribution shapes the target for both shared and disjoint arms.</td><td>This means the &quot;disjoint&quot; arm still shares the <em>statistical properties</em> of the control distribution (e.g., batch effects, plate artifacts), so the persistence of invariance could reflect shared statistical confounds, not a pure test of compound usage. The experiment&#x27;s conclusiveness is overstated.</td><td>It matters because the paper uses this result to claim the mismatch is &quot;fundamental&quot;, not technical. If confounds persist, the revision strategies may be targeting the wrong problem.</td><td>To test, one could construct a truly independent control set (e.g., from a different cell line or passage) and repeat the experiment, or use domain-adversarial training to explicitly remove control-distribution features from the compound representation before feeding it to the model.</td><td>[Paper] [Paper: PDF p. 17] explicitly states the limitation: &quot;This intervention separates physical wells at the reconstructed CP reference layer; it does not establish that all upstream preprocessing or biological dependence has been removed.&quot;</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>审计必须分层</strong>：一个声称“使用化合物”的模型，其可信度需要三层独立证据支撑——源码中该路径必须可执行（source consumption），其输出必须随化合物变化（fitted dependence），且这种变化必须提升对真实响应的预测（target-relevant contribution）。这三层可以全部失败（如 BBBC047 Prediction-score）、部分失败（如 47/48 candidates show dependence but only 20 show contribution），或全部成功（如 Falsification-guided），缺一不可。</li>
+<li><strong>干预设计决定证据强度</strong>：CELLAUDIT 的核心力量来自其 deterministic, response-blind replacement rules（如 compound shuffle within same control group）。这种设计避免了反事实预测的陷阱，使 $\Delta m_q$ 和 $\Delta L_q$ 成为可复现、可比较的因果代理指标，远超 post-hoc attribution 方法。</li>
+<li><strong>不确定性必须匹配问题域</strong>：在化学 perturbation 中，“泛化”意味着对新 scaffold 的鲁棒性，因此 scaffold-aware bootstrap（而非标准 t-test）是量化 claim generalization 的正确方式。忽略此点会导致对模型可靠性的严重误判。</li>
+<li><strong>Revision must be hypothesis-driven</strong>：针对 source contradiction（e.g., singleton attention），应强制编译显式通路（path-constrained）；针对 weak contribution despite dependence，应采用 residual learning over a strong baseline（falsification-guided）。通用的“调参”或“增大模型”无法解决这些结构性问题。</li>
+<li><strong>Predictive success is necessary but insufficient</strong>：BBBC047 的案例（0.3153 vs. 0.3142）是教科书级的警示——两个模型在 held-out performance 上几乎无法区分，但在科学解释性上天壤之别。任何以 prediction score 为唯一优化目标的 discovery 流程都存在根本性盲区。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：CELLAUDIT 与 perturbation prediction 领域的 benchmarking efforts（如 PerturBench [Wu et al., 2025], PertEval-scFM [Wenteler et al., 2025]）形成互补。后者关注“模型能预测多好”，而 CELLAUDIT 关注“模型为何能预测好”，填补了从 performance 到 mechanism 的鸿沟。它也呼应了 Viñas Torné et al. (2026) 提出的 Systema 框架对“systematic variation”的警惕，但提供了更精细的、输入级别的审计工具。</li>
+<li><strong>候选连接/方法论连接</strong>：在可解释性 AI 领域，CELLAUDIT 区别于 saliency-based 方法（如 Sanity Checks [Adebayo et al., 2018]），因为它不依赖梯度或扰动输出，而是基于注册声明进行前向干预；它也区别于 ConceptSMILE [Mollapour et al., 2026]，后者审计概念解释的可靠性，而 CELLAUDIT 审计的是模型架构中对具体生物输入（compound, dose）的硬编码使用。</li>
+<li><strong>候选连接/方法论连接</strong>：在 agentic AI 领域，CELLAUDIT 为 Huang et al. (2025) 提出的“automated hypothesis falsification”提供了首个在生物AI领域的落地实现，将 POPPER-style logic（if claim, then test, else revise）嵌入到 LLM agent 的闭环中，是 scientific agent 的重要演进。</li>
+<li><strong>弱连接/方法论连接</strong>：与 single-cell foundation models（如 scGPT [Cui et al., 2024]）的连接是弱的——CELLAUDIT 是一个通用审计框架，其输入（compound fingerprint, dose log）和输出（morphology + transcriptomics）与 scGPT 的输入（gene expression）和输出（perturbed expression）不同，但其“声明-审计-修订”范式可迁移至 foundation model 的 prompt engineering 或 adapter tuning 中，以验证其是否真正利用了提供的 perturbation context。</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Scaffold-Informed Cross-Modal Alignment Auditor</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: CELLAUDIT reveals that compound-identity claims fail to generalize from LINCS to LKCP (Figure 4a), while dose claims persist. This suggests that cross-modal alignment (e.g., between morphology and transcriptomics) may be scaffold-dependent, but current methods treat all compounds equally. <strong>core hypothesis</strong>: Aligning modalities using scaffold-aware contrastive learning will improve the generalizability of compound-use claims across acquisitions, compared to standard joint embedding. <strong>delta from paper</strong>: CELLAUDIT audits <em>post-hoc</em>; this idea builds a <em>proactive</em> alignment mechanism where the scaffold group is used as a hard constraint during training, not just for evaluation. <strong>initial method</strong>: Modify a multimodal foundation model (e.g., scGPT) to include a scaffold-aware triplet loss: for each compound, pull together its morphology and transcriptomics embeddings, while pushing apart embeddings of compounds from <em>different</em> Murcko scaffolds. Train on BBBC047, then audit compound-use on LKCP. <strong>validation</strong>: Compare scaffold-aware alignment against standard alignment using CELLAUDIT&#x27;s $E_{\text{cmpd}}$ and scaffold 95% CI on LKCP. Success: scaffold-aware model shows higher mean $E_{\text{cmpd}}$ and narrower scaffold CI that remains above zero. <strong>failure modes</strong>: Scaffold groups may be too coarse (missing sub-scaffold biology) or too fine (insufficient samples per group); the triplet loss may overfit to scaffold idiosyncrasies. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Graph-Enhanced Input-Use Falsification for Genetic Perturbations</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: In the Norman CRISPRa task, CELLAUDIT tests the &quot;pair-input bundle&quot; (multi-hot + anchor), but GEARS uses native GO/coexpression graphs [Paper] [Paper: PDF p. 31–32]. This suggests graph structure may encode compound-use logic that flat multi-hot vectors miss. <strong>core hypothesis</strong>: Replacing the pair-input bundle with a graph-structured perturbation representation (e.g., GNN-encoded pair) will yield more robust and interpretable compound-use claims in combinatorial perturbation prediction. <strong>delta from paper</strong>: CELLAUDIT treats inputs as flat vectors; this idea leverages prior biological knowledge (GO, coexpression) to structure the input space, making the &quot;use&quot; of perturbation information more biologically grounded and auditable at the pathway level. <strong>initial method</strong>: Replace the 105-dim multi-hot pair vector in Norman with a GNN encoder (using GEARS&#x27; GO graph) that outputs a dense embedding. Audit this new model using CELLAUDIT&#x27;s bundle replacement protocol on Fold 4/5. <strong>validation</strong>: Compare the new model&#x27;s $E_{\text{pair}}$ and support rate (5/5) against baseline CellScientist and GEARS on Norman. Success: higher $E_{\text{pair}}$ and evidence of pathway-level contributions (e.g., via GNN attention weights). <strong>failure modes</strong>: Graph encoder may over-smooth signals; lack of ground-truth pathway usage makes &quot;correct&quot; contribution ambiguous. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Perturbation-Conditioned Cell State Representation Auditor</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: CELLAUDIT focuses on input-use for <em>prediction</em>, but user research emphasizes <em>cell state representation</em>. The paper shows that control-only predictors can achieve high PCC (0.3142), implying they capture a strong &quot;baseline state&quot;; CELLAUDIT&#x27;s residual learning ($\hat{y} = g(c) + \alpha h(c,p,a)$) implicitly defines a perturbation-conditioned state $h(c,p,a)$. <strong>core hypothesis</strong>: The residual $h(c,p,a)$ learned by CELLAUDIT&#x27;s falsification-guided trainer serves as a high-fidelity, perturbation-conditioned cell state representation, superior to representations from unsupervised models (e.g., scVI) for downstream perturbation prediction tasks. <strong>delta from paper</strong>: CELLAUDIT uses the residual as a means to an end (better prediction); this idea treats the residual <em>itself</em> as the primary output—a reusable, task-specific cell state embedding. <strong>initial method</strong>: Extract $h(c,p,a)$ from a BBBC047 falsification-guided model. Use it as input to a simple classifier for predicting compound MoA (Mechanism of Action) on a held-out dataset (e.g., MoA annotations from LINCS). Compare against scVI latent space and raw gene expression. <strong>validation</strong>: Evaluate MoA classification accuracy (AUC). Success: $h(c,p,a)$ achieves significantly higher AUC than baselines, demonstrating its perturbation-specific discriminative power. <strong>failure modes</strong>: $h(c,p,a)$ may be overfit to the specific prediction task (morphology+transcriptomics) and not generalize to other MoA definitions. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>
