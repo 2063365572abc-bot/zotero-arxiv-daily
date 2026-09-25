@@ -1,0 +1,97 @@
+[
+  {
+    "source": "arxiv",
+    "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+    "authors": [
+      "Youngmin Chung",
+      "Ji Hun Ha",
+      "Andrew H. Song",
+      "Cristina Almagro-Pérez",
+      "Chaeyoung Seo",
+      "Won Jun Suh",
+      "Jeong Won Beom",
+      "Kyoung Bin Oh",
+      "Eytan Ruppin",
+      "Faisal Mahmood",
+      "Joo Sang Lee"
+    ],
+    "abstract": "Spatial transcriptomics (ST) provides unprecedented insights into tumor heterogeneity by capturing spatially resolved gene expression, yet its high experimental cost hinders large-scale adoption. Consequently, computational approaches that predict spatial gene expression directly from hematoxylin and eosin slides, termed virtual ST, have rapidly emerged. Despite this progress, assessing advances in the field remains difficult due to insufficient benchmarking: prior studies rely on small, heterogeneous datasets, inconsistent training and inference pipelines, and limited evaluation of biological interpretability and model robustness. To address these gaps, we present STP-BENCH, a standardized benchmark for virtual ST models. STP-BENCH comprises six cancer types spanning two ST platforms (Visium and Xenium), with each training dataset containing more than 30,000 spots and at least 15 slides to ensure statistical reliability. We evaluate 21 predictive approaches, re-implemented with a unified pathology foundation model as the morphological encoder when architecturally applicable. Beyond conventional benchmarks that report average predictive accuracy on highly variable genes, we systematically examine which genes and gene sets are recoverable from histomorphology. We further evaluate the downstream biological utility of predicted profiles through cell-type deconvolution and spatial domain identification, and assess model reliability under domain shifts and data scaling. Notably, unified morphological encoding substantially re-orders model rankings established in prior studies, indicating that architectural innovations and image encoding have been conflated in previous evaluations. We publicly release STP-BENCH to support reproducibility and serve as a community benchmark at https://github.com/NEXGEM/STP-Bench.",
+    "url": "https://arxiv.org/abs/2609.05956",
+    "pdf_url": "https://arxiv.org/pdf/2609.05956",
+    "score": 96.5,
+    "role": "best_match",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 9.0,
+      "evidence_quality": 10.0,
+      "transferability": 9.0,
+      "resource_value": 10.0,
+      "trend_value": 10.0,
+      "total": 96.5,
+      "role": "best_match",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as best_match; LLM total=96.5/100. 直接面向virtual ST，含多平台/多癌种benchmark、domain segmentation与cross-modal alignment验证，代码公开。 Risk: 聚焦histo-to-ST，未显式建模perturbation或cell state动态。",
+    "arxiv_id": "2609.05956",
+    "published_date": "2026-09-05T00:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Correlation-Guided Flow Matching with Annealed Masking for Spatial Transcriptomics Generation",
+    "authors": [
+      "Yupei Zhang",
+      "Hao Chen",
+      "Li Pan",
+      "Chao Li",
+      "Xiaohan Xing"
+    ],
+    "abstract": "Spatial transcriptomics (ST) provides spatially resolved gene expression profiling but remains expensive, motivating the prediction of ST from histology images. Generative models have emerged as a mainstream paradigm for ST prediction due to their ability to model the conditional distribution of gene expression and capture its inherent stochasticity. However, these methods typically treat genes as independent prediction targets and overlook the intrinsic gene-gene interactions in biological systems, which limits their ability to preserve biologically meaningful co-expression patterns. We argue that gene-gene interactions, which reflect shared pathways and regulatory mechanisms, are essential for generating numerically accurate and biologically coherent ST profiles. In this paper, we propose CorrFlow, a correlation-guided flow matching framework for histology-to-ST prediction that explicitly models gene-gene dependencies through two complementary mechanisms. First, we introduce an annealed masked flow matching strategy, where subsets of genes are progressively masked following a timestep-dependent annealing schedule, encouraging the model to infer masked genes conditioned on the remaining genes and promoting joint conditional modeling beyond per-gene marginal estimation. Second, we devise a gene graph-regularized optimization scheme that integrates prior knowledge from the STRING database and data-driven co-expression estimated by WGCNA to construct a gene affinity graph, which enforces both local consistency and global smoothness in the predicted expression. Extensive experiments across 12 datasets show that CorrFlow achieves the best average PCC and HPCC among evaluated methods, leading to more biologically coherent ST predictions.",
+    "url": "https://arxiv.org/abs/2609.22187",
+    "pdf_url": "https://arxiv.org/pdf/2609.22187",
+    "score": 91.0,
+    "role": "method_inspiration",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 9.0,
+      "evidence_quality": 8.0,
+      "transferability": 9.0,
+      "resource_value": 7.0,
+      "trend_value": 10.0,
+      "total": 91.0,
+      "role": "method_inspiration",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as method_inspiration; LLM total=91.0/100. 直击空间转录组生成，融合gene graph与flow matching，任务与用户强相关 Risk: 未提代码/模型开源，资源价值存疑",
+    "arxiv_id": "2609.22187",
+    "published_date": "2026-09-01T00:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Dynamic Generalized Gromov-Wasserstein Optimal Transport",
+    "authors": [
+      "Junda Ying",
+      "Zhiwei Zeng",
+      "Peijie Zhou",
+      "Lei Zhang"
+    ],
+    "abstract": "Gromov--Wasserstein optimal transport (GW-OT) extends classical optimal transport by introducing structure-aware transport cost. This is particularly relevant for spatial transcriptomics, where dynamical reconstruction should preserve tissue structure in addition to matching expression patterns. While static formulations have been widely used for such structure-aware alignment, a general dynamic formulation for reconstructing continuous trajectories is still missing. We introduce Travelling Pair Dynamical Alignment and Trajectory Estimation (TP-DATE), a theoretical and computational framework to generalize GW-OT dynamically in a simulation-free manner. We formulate a broad class of static and dynamic Quadratic-form OT (QOT) through path actions and prove the static dynamic equivalence. We further develop travelling-pair flow matching, which allows interacting conditional paths and marginalizes their interactions into a single vector field. On synthetic and real spatial transcriptomics data, TP-DATE better preserves spatial structure and improves continuous 3D dynamics reconstruction.",
+    "url": "https://arxiv.org/abs/2609.20008",
+    "pdf_url": "https://arxiv.org/pdf/2609.20008",
+    "score": 86.0,
+    "role": "trend_signal",
+    "scoring": {
+      "relevance": 9.0,
+      "method_novelty": 10.0,
+      "evidence_quality": 7.0,
+      "transferability": 8.0,
+      "resource_value": 6.0,
+      "trend_value": 10.0,
+      "total": 86.0,
+      "role": "trend_signal",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as trend_signal; LLM total=86.0/100. 首创动态GW-OT框架，解决空间结构连续轨迹建模，契合用户domain segmentation需求 Risk: 摘要未说明是否开源实现，证据强度中等",
+    "arxiv_id": "2609.20008",
+    "published_date": "2026-09-24T00:00:00+00:00"
+  }
+]

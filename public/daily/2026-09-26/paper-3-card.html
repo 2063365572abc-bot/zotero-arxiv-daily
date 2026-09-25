@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: discovery<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>Dynamic Generalized Gromov-Wasserstein Optimal Transport</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Junda Ying, Zhiwei Zeng, Peijie Zhou, Lei Zhang</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Year</td><td>2026</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Core method</td><td>TP-DATE (Travelling Pair Dynamical Alignment and Trajectory Estimation)</td><td>[Paper] [Paper: PDF p. 1, 2]</td></tr>
+<tr><td>Key theory</td><td>Dynamic Quadratic-form OT (QOT), travelling-pair flow matching, static-dynamic equivalence</td><td>[Paper] [Paper: PDF p. 4–5, A.1]</td></tr>
+<tr><td>Main datasets</td><td>Synthetic Rotation/Distractor, Mouse Brain (Chen et al., 2022), ARTISTA (Wei et al., 2022), Tumor (Zhang et al., 2026a)</td><td>[Paper] [Paper: PDF p. 8–9, B.5]</td></tr>
+<tr><td>Evaluation metrics</td><td>Spatial W2, Expression W2, SC-eMSE, Balanced fused W2, Spatial MSE, Pair distortion</td><td>[Paper] [Paper: PDF p. 8–9, B.6]</td></tr>
+<tr><td>Code/data availability</td><td>Not stated in text; no URL or repository mentioned</td><td>[Paper] [Paper: PDF p. 1–40]</td></tr>
+<tr><td>Open-source claim</td><td>Not verified — no code link, license, or implementation details beyond architecture (MLP, SiLU, Adam)</td><td>[Paper] [Paper: PDF p. 21]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>本文提出TP-DATE，首个严格意义上的动态Gromov–Wasserstein最优传输（GW-OT）框架，将结构感知的运输从静态耦合推广至连续时间轨迹建模；其核心是通过“行进对”（travelling pair）路径动作与条件流匹配，实现无需仿真的动态QOT求解，在空间转录组学的时空插值与3D重建任务中显著优于OT-CFM、GW-CFM、stVCR等基线；该方法不依赖于预设动力学模型（如NeuralODE），但亦未建模细胞增殖/凋亡等不平衡过程。边界在于：仅处理同构空间（X = Y）、要求d ≥ 2以保证解析解存在、且当前实现未开源。</p>
+<h2>03 研究问题</h2>
+<p>论文直面一个理论与应用双重缺口：<strong>如何为具有内在结构（如空间邻近性）的数据构建可计算、可解释、连续时间的动态最优传输？</strong> 作者观察到，尽管静态GW-OT及其变体（如FGW-OT）已被广泛用于空间转录组学的跨切片对齐，但它们仅输出端点耦合，无法重建中间状态的连续演化轨迹；而现有动态OT方法（如OT-CFM）仅优化点对点动能，忽略配对结构约束；虽有IGW-OT等尝试，但缺乏统一动态QOT理论与高效求解器。因此，论文将问题形式化为：<em>能否建立一个广义动态QOT理论，使其包含GW-OT、IGW-OT等为特例，并设计一种simulation-free算法，使学习到的向量场在保持空间结构的同时，精确重构连续时空轨迹？</em> [Paper] [Paper: PDF p. 1–2, 4]</p>
+<h2>04 研究背景与发展路径</h2>
+<p>研究始于经典OT的两个分支演进：一是Benamou–Brenier（2000）提出的动态OT（BB-form），将Kantorovich问题提升为连续概率流的动能最小化；二是Mémoli（2011）开创的GW-OT，通过比较分布内成对距离（而非点间距离）实现结构保持对齐。二者长期平行发展：前者缺结构感知，后者缺动态建模。近期工作试图弥合——Wang &amp; Zhang（2025）定义了静态QOT统一框架；Zhang et al.（2026b）提出IGW-OT作为特定动态GW变体；但均未给出通用动态QOT理论及可扩展求解器。同时，Flow Matching（Lipman et al., 2023）为simulation-free动态建模提供了新范式，Tong et al.（2024a）已将其用于OT，但其“行进狄拉克”（travelling Dirac）假设粒子独立运动，无法建模配对交互。TP-DATE正是在此交汇点上，将“行进对”概念引入Flow Matching，从而打通从静态结构对齐→动态结构演化→可微分轨迹推断的完整路径。[Paper] [Paper: PDF p. 1–4, D.1–D.3]</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>静态对齐无法建模连续轨迹</strong></td><td>方法仅输出端点耦合γ，无法生成中间时间点的细胞位置与表达状态</td><td>静态QOT（如GW-OT）本质是二次规划问题，不涉及时间演化机制</td><td>[Paper] [Paper: PDF p. 1–2, D.4] “these methods operate at the level of couplings... do not model intermediate time measure paths or dynamical vector fields”</td></tr>
+<tr><td><strong>现有动态方法忽略结构交互</strong></td><td>OT-CFM等学习独立粒子轨迹，导致空间结构坍缩（如图1中直线收缩）</td><td>其条件路径基于单点位移插值xt = (1−t)x₀ + tx₁，未建模x与y的相对运动约束</td><td>[Paper] [Paper: PDF p. 8, Fig. 1 caption] “OT-CFM follows nearly straight paths... shrinks the global structure”；[Paper] [Paper: PDF p. 4] “particles actually move independently”</td></tr>
+<tr><td><strong>动态GW缺乏统一理论与高效求解</strong></td><td>IGW-OT等仅针对特定成本函数，无通用动态QOT框架；stVCR等需NeuralODE仿真，计算昂贵且难扩展</td><td>动态GW的数学基础薄弱；simulation-based方法受ODE求解器精度与步长限制，内存与时间开销大</td><td>[Paper] [Paper: PDF p. 2] “a general dynamic QOT formulation and its theory is still missing... efficient simulation-free algorithm”；[Paper] [Paper: PDF p. 29, Fig. 5] “CytoBridge ran out of memory on 90000”</td></tr>
+<tr><td><strong>结构保持与动力学解耦</strong></td><td>ContextFlow等将空间信息编码进静态耦合，再用于流匹配，结构约束仅作用于端点，不渗透至动力学过程</td><td>结构信息被“压缩”进γ，而流匹配学习的ut(x,t)仍只依赖单点x，未显式建模x-y相对位移演化</td><td>[Paper] [Paper: PDF p. 2, D.7] “ContextFlow incorporates spatial information... into a static OT cost... TP-DATE incorporates spatial structure directly at the dynamical level”</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>论文的核心思想是<strong>将结构保持的动力学建模，从“单点运动”升维至“点对协同运动”</strong>。作者洞察到：空间结构的本质是细胞对之间的相对关系（如距离∥x−y∥、内积⟨x,y⟩），其连续演化应由一对细胞(x,y)的联合轨迹{(xt,yt)}刻画，而非各自独立轨迹。由此提出“行进对”（travelling pair）概念，定义其路径动作A(z,z′) = inf∫L(t,xt,yt,ẋt,ẏt)dt，其中L包含标准动能项与结构交互项Φ(x−y,ẋ−ẏ)。关键突破在于证明：该动作诱导的<strong>静态QOT（对耦合γ积分A）与动态QOT（对联合流πt(x,y)积分L）严格等价</strong>（Theorem 4.1），从而将难以直接优化的动态BB-form（需满足复杂PDE约束）转化为可计算的静态上界优化问题。最终，通过“行进对流匹配”，将高维联合动力学分解为可学习的边际速度场vₜ(x)，实现simulation-free求解。[Paper] [Paper: PDF p. 4–5, A.1, 5.1]</p>
+<h2>07 方法总览</h2>
+<p>TP-DATE是一个三阶段方法论闭环： <strong>(1) 理论建模</strong>：定义动态QOT框架，以Lagrangian L = ½∥ẋ∥² + ½∥ẏ∥² + λΦ(x−y,ẋ−ẏ)为核心，其中Φ控制结构交互强度（如Φ = |d/dt∥x−y∥|²）；证明静态QOT（QOTS）与动态QOT（QOTD）等价，且二者均为BB-form的可计算上界 [Paper] [Paper: PDF p. 4–5, A.1]。 <strong>(2) 路径构造</strong>：针对L，解析求解“行进对”条件路径——通过C-Q分解（ct=(xt+yt)/2, qt=xt−yt）与极坐标变换，获得qt的闭式解（Eq. 47），进而导出xt,yt与速度u¹ₜ,u²ₜ的解析表达 [Paper] [Paper: PDF p. 5, 15–16, A.3]。 <strong>(3) 流匹配求解</strong>：采用条件流匹配（CFM）训练神经网络vθ(x,t)，使其拟合边际速度vt(x) = 𝔼[u¹ₜ(Xt,Yt)∣Xt=x]；损失函数LC(θ)（Eq. 22）通过采样(z,z′)∼γ⊗γ与(x,y)∼πt(x,y∣z,z′)实现，避免直接访问不可行的真实ρt,ut [Paper] [Paper: PDF p. 7, A.9]。整个流程完全免仿真，仅需前向网络评估与梯度更新。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>Travelling Pair Path</strong></td><td>生成满足结构约束的(xt,yt)联合轨迹，其动作A(z,z′)量化配对演化成本</td><td>单点路径无法编码相对结构（如距离、角度）演化；必须建模x与y的耦合运动以保持局部几何</td><td>Input: endpoint pairs z=(x₀,x₁), z′=(y₀,y₁); Output: path {xt,yt}ₜ∈[0,1], action A(z,z′)</td><td>[Paper] [Paper: PDF p. 4–5, Eq. 7–8, A.3] “A(z,z′) = inf ∫L(...)dt”; analytic solution in Eq. 47</td><td>Removal → reduces to OT-CFM; loses all structure preservation (Fig. 1, Table 1 shows TP-DATE’s 75% lower Spatial MSE vs OT-CFM)</td></tr>
+<tr><td><strong>Modality-Separated Lagrangian</strong></td><td>对表达空间与空间坐标施加不同交互强度（λgene=0, λspatial&gt;0），实现多模态异构约束</td><td>表达变化与空间移动遵循不同物理规律；需解耦优化，避免空间结构被表达噪声淹没</td><td>Input: (x,s) and (y,h); Output: scalar L combining kinetic terms and spatial interaction Φ(∥s−h∥)</td><td>[Paper] [Paper: PDF p. 21, Eq. 75–76, B.3] “only added interaction term on spatial coordinates”</td><td>Removal → forces uniform λ, degrading spatial accuracy (Table 4 shows performance drop when ηspatial/λspatial mis-tuned)</td></tr>
+<tr><td><strong>QOT Coupling Solver (Frank-Wolfe)</strong></td><td>求解静态QOT耦合γ∈Π(μ₀,μ₁)以最小化∫A(z,z′)γ(z)γ(z′)dzdz′</td><td>γ定义了哪些细胞对参与结构保持的联合演化；是行进对采样的先验分布</td><td>Input: point clouds {Xi}, {Yj}; Output: coupling matrix Γij ≈ γ(Xi,Yj)</td><td>[Paper] [Paper: PDF p. 25–26, B.8, Eq. 84–88] “Frank-Wolfe algorithm... solve quadratic programming w.r.t Γ”</td><td>Removal → no structural guidance for paths; baseline becomes OT-CFM (Table 6 shows QOT+straight path underperforms TP-DATE)</td></tr>
+<tr><td><strong>Travelling-Pair Flow Matching</strong></td><td>将联合动力学πt(x,y)边缘化为单粒子速度vt(x)，并用神经网络vθ拟合；实现simulation-free学习</td><td>直接学习高维联合速度u¹ₜ,u²ₜ计算不可行；需降维至可训练的vt(x)，同时保留所有交互信息</td><td>Input: t, x; Output: vθ(x,t) ∈ ℝᴰ; Loss: LC(θ) (Eq. 22)</td><td>[Paper] [Paper: PDF p. 7, Eq. 22, A.9] “LC(θ) = 𝔼[∥vθ(x,t) − u¹ₜ(x,y∣z,z′)∥²]”; Thm 5.5 proves ∇LC = ∇LM</td><td>Removal → requires full simulation (e.g., NeuralODE), causing memory explosion (Fig. 6: CytoBridge OOM at 90k cells)</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>论文未提供单一主导公式，而是构建了一个<strong>以路径动作A(z,z′)为中心的公式族</strong>。关键符号与关系如下：</p>
+<ul>
+<li><strong>A(z,z′)</strong>：行进对路径动作（Eq. 7），核心标量，定义动态QOT能量；z=(x₀,x₁), z′=(y₀,y₁)为端点对。</li>
+<li><strong>L(t,x,y,ẋ,ẏ)</strong>：Lagrangian（Eq. 12），含动能项½∥ẋ∥²+½∥ẏ∥²与交互项λΦ(x−y,ẋ−ẏ)；Φ控制结构保持强度。</li>
+<li><strong>QOTS(μ₀,μ₁)</strong>：静态QOT（Eq. 9），inf over γ of ∫A(z,z′)γ(z)γ(z′)dzdz′；是BB-form的上界（Eq. 29）。</li>
+<li><strong>vt(x)</strong>：边际速度（Eq. 16），vt(x) = ∫u¹ₜ(x,y)πt(y∣x)dy；是TP-DATE实际学习的目标（Eq. 22, 71）。</li>
+<li><strong>SC-eMSE</strong>：空间耦合表达MSE（Eq. 80–81），先用空间坐标求OT耦合γ，再用此γ计算表达误差，专为评估空间定位精度设计。</li>
+<li><strong>ηspatial, λspatial</strong>：实验超参数（Eq. 75），分别控制空间动能权重与交互强度；Table 4验证其鲁棒性。</li>
+<li><strong>No closed-form objective for vθ</strong>：vθ通过条件损失LC(θ)（Eq. 22）隐式定义，非显式公式。</li>
+</ul>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>Synthetic Rotation (Fig. 1, Table 1)</strong></td><td>TP-DATE preserves rigid spatial structure better than baselines under pure rotation</td><td>All methods trained on t=0,1; evaluated at t=0.5 on ground-truth 45° rotation; metrics: Spatial MSE, Pair distortion</td><td>TP-DATE: Spatial MSE=0.0257±0.0048 (best); Pair distortion=0.1717±0.0148 (best)</td><td>TP-DATE’s travelling-pair path explicitly maintains pairwise distances, unlike OT-CFM’s straight lines</td><td>TP-DATE is universally superior across all noise levels (only one distractor setting tested)</td><td>[Paper] [Paper: PDF p. 8, Fig. 1, Table 1]</td></tr>
+<tr><td><strong>Mouse Brain &amp; ARTISTA (Table 2)</strong></td><td>TP-DATE improves spatiotemporal dynamics reconstruction on real data</td><td>Hold-one-out: train on E14.5/E16.5 (Mouse) or Day2/Day10 (ARTISTA), evaluate on E15.5/Day5; metrics: Spatial W2, Expression W2, SC-eMSE</td><td>TP-DATE achieves lowest SC-eMSE (1.477 vs 1.526 for OT-CFM) and Balanced fused W2 (9.593 vs 9.914) on Mouse; best Expression W2 (5.393) on ARTISTA</td><td>TP-DATE excels at reconstructing <em>spatially coupled</em> expression patterns, not just marginal distributions</td><td>TP-DATE is optimal for all spatial transcriptomics tasks (underperforms stVCR on ARTISTA Spatial W2)</td><td>[Paper] [Paper: PDF p. 8–9, Table 2]</td></tr>
+<tr><td><strong>Tumor 3D Reconstruction (Table 3)</strong></td><td>TP-DATE enables continuous 3D tissue structure reconstruction from serial sections</td><td>Train on subQ-3/subQ-5, evaluate on subQ-4; metrics same as Table 2</td><td>TP-DATE achieves best Balanced fused W2 (7.375) and SC-eMSE (1.046)</td><td>TP-DATE generalizes beyond temporal dynamics to depth-axis interpolation, enabling volumetric reconstruction</td><td>TP-DATE is the state-of-the-art for all 3D reconstruction (no comparison to dedicated 3D methods)</td><td>[Paper] [Paper: PDF p. 9, Table 3]</td></tr>
+<tr><td><strong>Conditional Path Ablation (Table 6)</strong></td><td>The travelling-pair conditional path, not just QOT coupling, drives performance gain</td><td>Same QOT coupling γ as TP-DATE, but replace travelling-pair path with straight interpolation xt=(1−t)x₀+tx₁</td><td>QOT+straight path has higher Expression W2 (+0.048) and SC-eMSE (+0.049) on Mouse Brain</td><td>Performance gain is attributable to the <em>dynamic interaction</em> encoded in the path, not merely the static coupling</td><td>The coupling alone is sufficient for structure preservation (it is not—ablation hurts performance)</td><td>[Paper] [Paper: PDF p. 27–28, Table 6]</td></tr>
+<tr><td><strong>Scalability (Fig. 5–7)</strong></td><td>TP-DATE scales linearly with dataset size, outperforming simulation-based methods</td><td>Trained on Tumor subsets (10k–90k cells); measured GPU memory &amp; training time</td><td>TP-DATE memory/time scale linearly (log-log slope ≈1); CytoBridge OOM at 90k; stVCR slower than TP-DATE</td><td>Simulation-free flow matching is computationally efficient for large-scale spatial transcriptomics</td><td>TP-DATE is always faster than all baselines (stVCR not timed on largest sizes)</td><td>[Paper] [Paper: PDF p. 29–31, Fig. 5–7]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>论文结论<strong>必须限定在以下范围内理解</strong>：</p>
+<ul>
+<li><strong>TP-DATE不是“动态GW-OT”的唯一可能实现</strong>，而是首个具备严格理论（静态-动态等价）、可计算性（Frank-Wolfe+Flow Matching）和实证优势（结构保持）的框架；它证明了动态GW-OT <em>可以</em>被有效构建，但不声称这是<em>唯一</em>正确方式。</li>
+<li><strong>“更好保留空间结构”指在hold-one-out插值任务中，对中间时间点的空间坐标与空间表达模式（SC-eMSE）的重建误差更低</strong>，并非声称其学习的向量场在生物学上更真实；图1的旋转轨迹是人为构造的ground truth，现实组织变形更复杂。</li>
+<li><strong>“改进连续3D重建”特指从稀疏深度切片（subQ-3/5）插值中间切片（subQ-4）</strong>，其成功依赖于“相邻深度结构平滑变化”的强假设（[Paper] [Paper: PDF p. 9]），不适用于剧烈形变或缺失深度的场景。</li>
+<li><strong>性能优势是相对的</strong>：在ARTISTA数据上，TP-DATE的Spatial W2 (0.0920) 略逊于stVCR (0.0858)，但胜在Expression W2与SC-eMSE；这反映其设计目标是<strong>联合建模</strong>，而非单项最优。</li>
+<li><strong>所有结论均基于所用指标</strong>：如Pair distortion仅在合成数据上有意义（真值为0），在真实数据中非零可能反映真实生物变形，故未报告（[Paper] [Paper: PDF p. 24]）。</li>
+</ul>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Computational cost of exact QOT coupling</strong></td><td>Frank-Wolfe on full coupling matrix is O(M²N²), prohibitive for large datasets</td><td>Use Monte Carlo gradient estimation (O(RMN)) and bidirectional KNN sparsification (O(RK(M+N)))</td><td>[Paper] [Paper: PDF p. 25–26, B.8.2–B.8.3]</td></tr>
+<tr><td><strong>Dimensionality constraint</strong></td><td>Analytic solution for travelling pair requires d ≥ 2; fails in 1D due to inability to continuously reverse point order</td><td>Acknowledge 1D case is pathological; suggest high-dim embedding as workaround</td><td>[Paper] [Paper: PDF p. 33–34, D.1.4, D.2.1] “In 1D spaces... impossible to realize by a continuous rigid transformation”</td></tr>
+<tr><td><strong>Lack of unbalanced dynamics modeling</strong></td><td>Cannot model cell proliferation/apoptosis (unlike stVCR’s WFR framework)</td><td>Extend dynamic QOT to unbalanced setting (e.g., via WFR-type growth term gₜ(x))</td><td>[Paper] [Paper: PDF p. 36, D.8] “This limitation points to an important direction for future work: extending the dynamic QOT framework to the unbalanced setting”</td></tr>
+<tr><td><strong>Marginal velocity decomposition ambiguity</strong></td><td>Velocity decomposition u¹ₜ(x,y) = bₜ(x) + fₜ(x,y) is not unique without gauge conditions</td><td>Require domain-specific gauges (e.g., prior knowledge of bₜ) or impose conditional mean-independence (Eq. 124)</td><td>[Paper] [Paper: PDF p. 37–38, E] “The problem here is that the conditional velocity decomposition may not lead to a marginal velocity decomposition”</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td><strong>The &quot;static-dynamic equivalence&quot; (Thm 4.1) holds only for convex L, but key experiments use non-convex Φ</strong></td><td>The Lagrangian in Eq. 13 (L = ∥ċₜ∥² + ¼∥q̇ₜ∥² + λΦ(∥qₜ∥)) is convex in q̇ₜ only if Φ is convex in q̇ₜ, yet Φ = \</td><td>d/dt∥qₜ∥\</td><td>² (used in experiments) is <em>not</em> convex in q̇ₜ (it&#x27;s quadratic in the derivative of norm, not in q̇ₜ itself). This violates Thm 4.1’s convexity assumption.</td><td>If equivalence fails, QOTS may not be a valid upper bound for QOTBB, undermining the theoretical justification for using static optimization to solve dynamic problems.</td><td>Re-run experiments with provably convex Φ (e.g., Φ = ∥q̇ₜ∥²) and compare performance; or empirically verify if QOTD ≈ QOTS on small synthetic data where both can be computed.</td><td>[Paper] [Paper: PDF p. 5, Eq. 13] “Φ = \</td><td>d/dt∥qₜ∥\</td><td>²”; [Paper] [Paper: PDF p. 15, A.3] “Φ = \</td><td>d/dt∥qₜ∥\</td><td>² is convex w.r.t q̇ₜ” — this claim is mathematically questionable; ∥q̇ₜ∥² is convex, but \</td><td>d/dt∥qₜ∥\</td><td>² = (q̇ₜ·qₜ/∥qₜ∥)² is not convex in q̇ₜ.</td></tr>
+<tr><td><strong>The &quot;travelling pair&quot; abstraction conflates biological interaction with geometric constraint</strong></td><td>TP-DATE models (x,y) as a pair whose relative motion is penalized, but in biology, a cell’s movement is influenced by <em>many</em> neighbors, not just one paired cell. The pair is a mathematical device, not a biological entity.</td><td>Over-interpreting u¹ₜ(x,y) as a biologically meaningful pairwise interaction could mislead downstream analysis (e.g., inferring cell-cell signaling). The model captures <em>emergent</em> structure preservation, not mechanistic interaction.</td><td>Compare TP-DATE’s learned vt(x) against a true multi-body interaction model (e.g., CytoBridge) on a synthetic system with known N-body forces; check if vt(x) correlates with local density or neighbor statistics.</td><td>[Paper] [Paper: PDF p. 36–37, D.9] contrasts TP-DATE’s action-based interaction with CytoBridge’s constraint-based interaction; [Paper] [Paper: PDF p. 6] “particle marginalization... cannot be recovered from single-particle dynamics”.</td></tr>
+<tr><td><strong>SC-eMSE metric may reward spatially smooth but biologically incorrect expression patterns</strong></td><td>SC-eMSE computes expression error under a spatial coupling γ, which prioritizes matching nearby locations. This could favor blurry, interpolated expression over sharp, localized patterns that are biologically accurate but misaligned.</td><td>If the goal is to recover precise gene expression domains (e.g., morphogen gradients), SC-eMSE might select suboptimal models that trade biological fidelity for spatial alignment.</td><td>Design a counterfactual metric: e.g., compute expression W2 <em>only</em> on cells within known anatomical boundaries (from histology), and see if TP-DATE’s advantage persists.</td><td>[Paper] [Paper: PDF p. 24, B.6.3] defines SC-eMSE as “measures whether the predicted snapshot shares similar spatial expression patterns”; it does not validate biological correctness of those patterns.</td></tr>
+<tr><td><strong>The Frank-Wolfe solver for QOT coupling uses symmetric Aij,kl = Akl,ij, but this assumes identical treatment of source/target</strong></td><td>In spatiotemporal data, μ₀ (early) and μ₁ (late) are asymmetric (e.g., cells proliferate), yet the coupling solver treats them symmetrically (γ⊗γ). This may force unrealistic backward transport.</td><td>Asymmetric dynamics (e.g., lineage commitment) cannot be captured by a symmetric coupling, potentially biasing the travelling-pair paths.</td><td>Implement an asymmetric QOT variant (e.g., using γ∈Π(μ₀,μ₁) without tensor product) and benchmark on lineage-traced data where directionality is known.</td><td>[Paper] [Paper: PDF p. 25, B.8.1] “with symmetric conditions such as L is symmetric... Aij,kl = Akl,ij”; [Paper] [Paper: PDF p. 17, A.5] “q = γ⊗γ... π₀(x,y) = μ₀(x)μ₀(y)”, confirming symmetry.</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>动态结构建模的升维范式</strong>：解决结构保持问题，不能停留在单点空间X，而需显式提升至两粒子空间X²，定义联合轨迹(xt,yt)及其动作A(z,z′)，这是将“结构”从静态属性转化为动态约束的关键跃迁。</li>
+<li><strong>Simulation-free的严格边界</strong>：Flow Matching的免仿真优势，源于其将复杂PDE约束（∂tρ + ∇·(ρu)=0）转化为可采样的条件回归（Eq. 22）。但此转化要求条件路径πt(x,y∣z,z′)可解析或高效采样；一旦交互项Φ需数据驱动学习（如CytoBridge），该范式即失效。</li>
+<li><strong>多模态Lagrangian的设计哲学</strong>：Eq. 75–76展示了一种优雅的解耦——对表达空间禁用交互（λgene=0），仅对空间坐标启用（λspatial&gt;0）。这提示在multi-omics中，可为不同模态（ATAC, RNA, protein）定制独立的Lagrangian分量。</li>
+<li><strong>评估指标的领域特异性</strong>：SC-eMSE（Eq. 80–81）是为spatial transcriptomics量身定制的创新指标，其“先空间对齐、再表达评估”的两阶段逻辑，比单纯W2更能反映生物学相关性，值得迁移至其他空间多组学任务。</li>
+<li><strong>理论与工程的张力</strong>：Theorem 4.1的等价性证明依赖凸性，但实验选择的Φ = \|d/dt∥qₜ∥\|²在数学上可能不满足；这揭示了前沿研究中，理论严谨性常为计算可行性让路，需在论文中明确标注此类妥协。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：TP-DATE的“行进对”与single-cell foundation models的潜在联系在于：后者学习细胞状态的通用表征，而TP-DATE的联合轨迹(xt,yt)可视为在foundation space中定义的结构约束。若将foundation encoder E(·)嵌入Lagrangian（如L = ... + λΦ(∥E(xt)−E(yt)∥)），则TP-DATE可利用foundation model的语义相似性替代原始空间距离，提升跨模态对齐鲁棒性。</li>
+<li><strong>候选连接/方法论连接</strong>：其modality-separated Lagrangian（Eq. 75）天然适配multi-omics：可将x,y扩展为多组学元组（xRNA, xATAC, s），并为每对模态分配独立η,λ，形成可学习的跨模态结构保持目标。</li>
+<li><strong>候选连接/方法论连接</strong>：Velocity decomposition（Sec. 5.2, Eq. 18）为cell state representation提供新视角——vt(x) = bt(x) + ∫ft(x,y)πt(y∣x)dy 将细胞状态x的演化分解为“自主驱动”bt(x)与“群体交互”项，后者可关联到graph neural networks中的邻居聚合（GNN aggregation），暗示用GNN参数化ft(x,y)的可行性。</li>
+<li><strong>弱连接/方法论连接</strong>：与perturbation prediction的联系较弱。TP-DATE建模的是自然演化轨迹，而perturbation prediction需反事实干预（如基因敲除），其动力学扰动机制（如Eq. 117的gt(x)项）未被TP-DATE涵盖；但其velocity decomposition框架可启发：将perturbation效应建模为bt(x)的偏移量。</li>
+<li><strong>弱连接/方法论连接</strong>：与cross-modal alignment的连接限于技术类比。TP-DATE的(x,y)对齐类似于跨模态对齐，但其目标是同一组织在不同时间/深度的状态，而非不同模态（如RNA vs ATAC）；若强行应用，需将模态差异编码进Φ，但论文未探索。</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Foundation-Guided Travelling Pair</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: TP-DATE uses raw spatial coordinates, but single-cell foundation models (e.g., scFoundation, scGPT) learn richer, denoised cell state representations where structural relationships are more linear and robust. <strong>core hypothesis</strong>: Replacing raw (x,y) with foundation embeddings (E(x),E(y)) in the Lagrangian L will improve structure preservation under technical noise and batch effects. <strong>delta from paper</strong>: Modifies input space of L from ℝᴰ to foundation latent space ℝᴸ; keeps all other TP-DATE machinery (QOT coupling, travelling-pair path, flow matching) identical. <strong>initial method</strong>: Pre-train scFoundation on large-scale spatial transcriptomics; extract E(x),E(y) for all cells; plug into Eq. 75 with new ηₗₐₜₑₙₜ, λₗₐₜₑₙₜ. <strong>validation</strong>: Compare Spatial W2 and SC-eMSE on ARTISTA with/without foundation guidance; ablate foundation quality (e.g., use random projection). <strong>failure modes</strong>: Foundation model may collapse spatial structure; embedding dimension mismatch with Φ’s convexity requirements. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Perturbation-Aware TP-DATE</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: TP-DATE models natural dynamics, but users often need to predict outcomes of interventions (e.g., drug treatment). Current frameworks like stVCR model proliferation (gₜ), but not targeted perturbations. <strong>core hypothesis</strong>: Augmenting the Lagrangian with a perturbation-conditioned interaction term Φₚ(x,y,p) will enable counterfactual trajectory prediction. <strong>delta from paper</strong>: Extends L in Eq. 75 to L = ... + λₛₚₐₜᵢₐₗ\|d/dt∥s−h∥\|² + λₚₑᵣₜΦₚ(s,h,p), where p is perturbation vector (e.g., drug dose). <strong>initial method</strong>: On perturbed synthetic data (e.g., simulated drug-induced migration), train TP-DATE with p as additional input to the velocity network vθ(x,t,p). <strong>validation</strong>: Hold-out perturbation conditions; measure prediction error of post-perturbation trajectories vs control. <strong>failure modes</strong>: Requires perturbation-labeled data; Φₚ may overfit to specific p values. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Graph-Regularized QOT Coupling</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: The Frank-Wolfe solver (B.8.1) uses dense coupling, but spatial transcriptomics has inherent graph structure (e.g., k-NN graph). Enforcing sparsity via KNN (B.8.3) is heuristic; explicit graph regularization could improve biological plausibility. <strong>core hypothesis</strong>: Adding a graph Laplacian penalty Ω(Γ) = tr(ΓᵀLΓ) to the QOT objective (Eq. 83) will yield couplings that respect tissue topology. <strong>delta from paper</strong>: Modifies static QOT objective to QOTS = inf_γ ∫Aγγ + β·tr(ΓᵀLΓ); keeps travelling-pair path and flow matching unchanged. <strong>initial method</strong>: Construct spatial k-NN graph L from μ₀,μ₁; integrate Ω(Γ) into Frank-Wolfe step (Eq. 88) as additional gradient term. <strong>validation</strong>: Compare topological similarity (e.g., persistence diagrams of coupled cells) between predicted and ground-truth tissue graphs. <strong>failure modes</strong>: β tuning is nontrivial; may over-constrain coupling, hurting global alignment. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>
