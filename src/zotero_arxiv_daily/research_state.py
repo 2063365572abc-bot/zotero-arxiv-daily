@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 import json
+import re
 import sqlite3
 from typing import Any
 
@@ -13,6 +14,18 @@ import numpy as np
 from openai import OpenAI
 
 from .protocol import CorpusPaper, Paper
+
+ARXIV_VERSION_RE = re.compile(r"v\d+$", re.IGNORECASE)
+COMPLETE_ZOTERO_PROMOTION_STATUSES = {"uploaded", "linked"}
+
+
+def canonical_arxiv_id(arxiv_id: str | None) -> str:
+    value = str(arxiv_id or "").strip()
+    if not value:
+        return ""
+    value = value.rstrip("/").rsplit("/", 1)[-1]
+    value = re.sub(r"\.pdf$", "", value, flags=re.IGNORECASE)
+    return ARXIV_VERSION_RE.sub("", value).lower()
 
 
 @dataclass
@@ -142,8 +155,12 @@ class ResearchRadarState:
     @staticmethod
     def arxiv_id(paper: Paper) -> str:
         arxiv_id = getattr(paper, "arxiv_id", None)
-        if arxiv_id:
-            return str(arxiv_id)
+        canonical = canonical_arxiv_id(str(arxiv_id or ""))
+        if canonical:
+            return canonical
+        canonical = canonical_arxiv_id(getattr(paper, "url", None))
+        if canonical:
+            return canonical
         return sha256((paper.url or paper.title).encode("utf-8")).hexdigest()
 
     def upsert_zotero_items(self, corpus: list[CorpusPaper], model: str) -> None:
@@ -276,20 +293,31 @@ class ResearchRadarState:
 
     def previously_selected_or_uploaded_arxiv_ids(self, before_date: str | None = None) -> set[str]:
         """Return arXiv IDs successfully promoted beyond the candidate pool."""
+        promoted: set[str] = set()
+        selection_query = "SELECT arxiv_id FROM daily_selections"
+        params: tuple[str, ...] = ()
+        if before_date is not None:
+            selection_query += " WHERE run_date < ?"
+            params = (before_date,)
+        selection_rows = self.conn.execute(selection_query, params).fetchall()
+        for row in selection_rows:
+            arxiv_id = canonical_arxiv_id(row["arxiv_id"])
+            if arxiv_id:
+                promoted.add(arxiv_id)
+
         upload_query = "SELECT arxiv_id, upload_json FROM zotero_uploads"
         params: tuple[str, ...] = ()
         if before_date is not None:
             upload_query += " WHERE run_date < ?"
             params = (before_date,)
         rows = self.conn.execute(upload_query, params).fetchall()
-        promoted: set[str] = set()
         for row in rows:
             try:
                 upload = json.loads(row["upload_json"] or "{}")
             except json.JSONDecodeError:
                 continue
-            if upload.get("status") == "uploaded" and row["arxiv_id"]:
-                promoted.add(str(row["arxiv_id"]))
+            if upload.get("status") in COMPLETE_ZOTERO_PROMOTION_STATUSES and row["arxiv_id"]:
+                promoted.add(canonical_arxiv_id(row["arxiv_id"]))
         return promoted
 
     def incomplete_zotero_upload_arxiv_ids(self, before_date: str | None = None) -> set[str]:
@@ -302,7 +330,7 @@ class ResearchRadarState:
         rows = self.conn.execute(query, params).fetchall()
         latest: dict[str, tuple[str, str]] = {}
         for row in rows:
-            arxiv_id = str(row["arxiv_id"] or "")
+            arxiv_id = canonical_arxiv_id(row["arxiv_id"])
             if not arxiv_id:
                 continue
             current = latest.get(arxiv_id)
@@ -315,7 +343,7 @@ class ResearchRadarState:
                 status = json.loads(upload_json).get("status")
             except json.JSONDecodeError:
                 status = None
-            if status != "uploaded":
+            if status not in COMPLETE_ZOTERO_PROMOTION_STATUSES:
                 incomplete.add(arxiv_id)
         return incomplete
 
@@ -329,7 +357,7 @@ class ResearchRadarState:
         rows = self.conn.execute(query, params).fetchall()
         latest: dict[str, tuple[str, dict[str, Any]]] = {}
         for row in rows:
-            arxiv_id = str(row["arxiv_id"] or "")
+            arxiv_id = canonical_arxiv_id(row["arxiv_id"])
             if not arxiv_id:
                 continue
             try:
@@ -343,7 +371,7 @@ class ResearchRadarState:
         return {
             _title_fingerprint(str(upload.get("title") or ""))
             for _, upload in latest.values()
-            if upload.get("status") != "uploaded" and upload.get("title")
+            if upload.get("status") not in COMPLETE_ZOTERO_PROMOTION_STATUSES and upload.get("title")
         }
 
     def zotero_title_fingerprints(self) -> set[str]:
