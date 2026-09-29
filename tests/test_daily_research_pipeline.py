@@ -163,6 +163,81 @@ def test_zotero_quota_error_creates_link_note(monkeypatch, tmp_path):
     note_payload = [item for item in stub.created_payloads if item.get("itemType") == "note"][0]
     assert note_payload["parentItem"] == "ITEM1234"
     assert "https://example.test/card.pdf" in note_payload["note"]
+
+
+def test_zotero_links_only_mode_skips_file_uploads(monkeypatch, tmp_path):
+    from zotero_arxiv_daily import daily_research_pipeline as pipeline
+
+    class StubZotero:
+        def __init__(self, *_args):
+            self.created_payloads = []
+
+        def everything(self, value):
+            return value
+
+        def items(self, **_kwargs):
+            return []
+
+        def item_template(self, item_type, **_kwargs):
+            if item_type == "preprint":
+                return {"itemType": "preprint"}
+            if item_type == "note":
+                return {"itemType": "note"}
+            return {"itemType": item_type}
+
+        def create_items(self, payloads):
+            self.created_payloads.extend(payloads)
+            if payloads[0].get("itemType") == "note":
+                return {"success": {"0": "NOTE5678"}}
+            return {"success": {"0": "ITEM5678"}}
+
+    def fail_if_uploaded(*_args, **_kwargs):
+        raise AssertionError("links_only mode must not upload Zotero attachments")
+
+    stub = StubZotero()
+    monkeypatch.setattr(pipeline.zotero, "Zotero", lambda *_args: stub)
+    monkeypatch.setattr(pipeline, "_zotero_collection_key", lambda *_args: None)
+    monkeypatch.setattr(pipeline, "_upload_zotero_attachment", fail_if_uploaded)
+
+    (tmp_path / "original.pdf").write_bytes(b"%PDF-1.4\n")
+    (tmp_path / "文档分析.pdf").write_bytes(b"%PDF-1.4\n")
+    record = SelectionRecord(
+        source="arxiv",
+        title="Links Only Paper",
+        authors=["A Researcher"],
+        abstract="summary",
+        url="https://arxiv.org/abs/2601.00009",
+        pdf_url="https://arxiv.org/pdf/2601.00009",
+        score=9.0,
+        role="best_match",
+        scoring={},
+        selection_reason="reason",
+        arxiv_id="2601.00009",
+    )
+    config = SimpleNamespace(
+        zotero=SimpleNamespace(user_id="1", api_key="key"),
+        daily_pipeline=SimpleNamespace(zotero_attachment_mode="links_only"),
+    )
+
+    result = upload_selected_paper_to_zotero(
+        config,
+        record,
+        tmp_path,
+        "2026-09-17",
+        links={
+            "original_pdf": "https://example.test/original.pdf",
+            "card_pdf": "https://example.test/card.pdf",
+            "quick_look": "https://example.test/quick.md",
+        },
+    )
+
+    assert result["status"] == "linked"
+    assert result["zotero_attachment_mode"] == "links_only"
+    assert result["item_key"] == "ITEM5678"
+    assert result["link_note_key"] == "NOTE5678"
+    assert result["original_pdf_attachment_key"] is None
+    note_payload = [item for item in stub.created_payloads if item.get("itemType") == "note"][0]
+    assert "Zotero 附件上传已设为 links_only" in note_payload["note"]
 from tests.canned_responses import make_sample_paper
 
 

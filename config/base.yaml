@@ -56,6 +56,7 @@ daily_pipeline:
   retrieval_only: false # Stop after candidate retrieval without model calls.
   full_card_input_chars: 55000 # Maximum extracted PDF characters sent to one-shot full-card generation.
   full_card_output_tokens: 12000 # Maximum output tokens for one-shot full-card generation.
+  zotero_attachment_mode: upload # Zotero artifact handling: upload imports PDFs, links_only stores public links in a child note, disabled only creates the item.
 
 daily_radar:
   quote_enabled: true # Whether to fetch a daily quote before falling back to local warm lines. Example: true

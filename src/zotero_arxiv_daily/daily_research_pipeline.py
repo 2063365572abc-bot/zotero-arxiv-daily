@@ -3288,6 +3288,17 @@ def _create_zotero_link_note(
     return None
 
 
+def _config_value(config: Any, section: str, key: str, default: Any) -> Any:
+    data = getattr(config, section, None)
+    if data is None and hasattr(config, "get"):
+        data = config.get(section, {})
+    if hasattr(data, "get"):
+        value = data.get(key, default)
+    else:
+        value = getattr(data, key, default)
+    return default if value in (None, "", "null") else value
+
+
 def upload_selected_paper_to_zotero(
     config: DictConfig,
     record: SelectionRecord,
@@ -3297,6 +3308,12 @@ def upload_selected_paper_to_zotero(
 ) -> dict[str, Any]:
     folder = Path(folder)
     links = links or {}
+    attachment_mode = str(_config_value(config, "daily_pipeline", "zotero_attachment_mode", "upload")).strip().lower()
+    if attachment_mode in {"links", "link", "note", "link_note"}:
+        attachment_mode = "links_only"
+    if attachment_mode not in {"upload", "links_only", "disabled"}:
+        logger.warning(f"Unknown Zotero attachment mode {attachment_mode!r}; falling back to upload.")
+        attachment_mode = "upload"
     result: dict[str, Any] = {
         "arxiv_id": record.arxiv_id,
         "title": record.title,
@@ -3306,6 +3323,7 @@ def upload_selected_paper_to_zotero(
         "card_pdf_attachment_key": None,
         "link_note_key": None,
         "external_links": links,
+        "zotero_attachment_mode": attachment_mode,
         "zotero_storage_quota_fallback": False,
         "collection_path": " / ".join(DAILY_ZOTERO_COLLECTION_PATH),
         "failure_reason": None,
@@ -3360,6 +3378,22 @@ def upload_selected_paper_to_zotero(
                 zot.addto_collection(collection_key, item)
             except Exception as exc:
                 logger.warning(f"Failed to assign Zotero collection for {record.title}: {exc}")
+
+        if attachment_mode == "disabled":
+            result["status"] = "linked"
+            result["failure_reason"] = "zotero_attachment_mode_disabled"
+            return result
+
+        if attachment_mode == "links_only":
+            reason = "Zotero 附件上传已设为 links_only，文件通过公开下载链接保留在条目 note 中。"
+            result["link_note_key"] = _create_zotero_link_note(zot, item_key, record, links, run_date, reason)
+            if result.get("link_note_key"):
+                result["status"] = "linked"
+                result["failure_reason"] = None
+            else:
+                result["status"] = "partial"
+                result["failure_reason"] = "link_note_creation_failed"
+            return result
 
         attachments = [
             (folder / "original.pdf", "original_pdf_attachment_key"),
@@ -3424,6 +3458,7 @@ def write_daily_report_markdown(output_dir: str | Path, audit: dict[str, Any], s
         f"- Card success: {audit.get('card_success_count', 0)}",
         f"- Zotero file uploads: {audit.get('zotero_upload_success_count', 0)}",
         f"- Zotero link fallbacks: {audit.get('zotero_upload_linked_count', 0)}",
+        f"- Zotero attachment mode: {audit.get('zotero_attachment_mode', 'unknown')}",
         "",
         "## Freshness",
         "",
@@ -3927,6 +3962,7 @@ def run_full_research_radar_pipeline(
                 "zotero_upload_linked_count": zotero_upload_linked_count,
                 "zotero_upload_partial_count": zotero_upload_partial_count,
                 "zotero_upload_failure_count": zotero_upload_failure_count,
+                "zotero_attachment_mode": _config_value(config, "daily_pipeline", "zotero_attachment_mode", "upload"),
             }
         )
         state.conn.execute(
