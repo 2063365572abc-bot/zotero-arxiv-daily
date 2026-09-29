@@ -857,6 +857,56 @@ def test_process_selected_paper_records_download_failure(tmp_path, monkeypatch):
     assert not (folder / "paper-card.md").exists()
 
 
+def test_process_selected_paper_writes_fallback_card_after_full_card_timeout(tmp_path, monkeypatch):
+    from zotero_arxiv_daily import daily_research_pipeline as pipeline
+
+    def fake_download(_pdf_url, output_pdf, timeout=60):
+        make_pdf(output_pdf)
+        return {
+            "pdf_url": "https://arxiv.org/pdf/2601.00006",
+            "download_status": "downloaded",
+            "failure_reason": None,
+            "sha256": "test",
+            "bytes": output_pdf.stat().st_size,
+        }
+
+    def raise_timeout(*_args, **_kwargs):
+        raise TimeoutError("read operation timed out")
+
+    monkeypatch.setattr(pipeline, "download_pdf", fake_download)
+    monkeypatch.setattr(pipeline, "generate_one_shot_full_card_markdown", raise_timeout)
+    record = SelectionRecord(
+        source="arxiv",
+        title="Timeout Paper",
+        authors=["A"],
+        abstract="A timeout paper about single-cell foundation models.",
+        url="https://arxiv.org/abs/2601.00006",
+        pdf_url="https://arxiv.org/pdf/2601.00006",
+        published_date="2026-09-15",
+        score=1.0,
+        role="best_match",
+        scoring={},
+        selection_reason="Testing timeout fallback.",
+        arxiv_id="2601.00006",
+    )
+
+    folder = process_selected_paper(
+        record,
+        tmp_path,
+        1,
+        openai_client=SimpleNamespace(),
+        llm_params={"generation_kwargs": {"model": "test"}},
+        card_mode="one_shot_full",
+    )
+
+    analysis = json.loads((folder / "paper_analysis.json").read_text(encoding="utf-8"))
+    audit = json.loads((folder / "audit-report.json").read_text(encoding="utf-8"))
+    assert analysis["status"] == "one_shot_full_card_failed_fallback"
+    assert (folder / "paper-card.md").exists()
+    assert (folder / "文档分析.pdf").exists()
+    assert audit["status"] in {"pass", "warning"}
+
+
 def test_write_daily_index(tmp_path):
     paper_dir = tmp_path / "paper-1" / "Paper"
     paper_dir.mkdir(parents=True)

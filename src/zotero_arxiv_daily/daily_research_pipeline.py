@@ -1364,6 +1364,54 @@ def generate_paper_quick_look_markdown(
     }
 
 
+def write_fallback_paper_quick_look_markdown(
+    paper: SelectionRecord,
+    output_path: str | Path,
+    *,
+    reason: str,
+) -> dict[str, Any]:
+    published_date = str(paper.published_date or "Card未提供")
+    pdf_link = paper.pdf_url or paper.url
+    field_values = {
+        "研究背景": "Paper Card 生成或速看生成失败，本条仅保留标题、摘要和选择理由，供当天日报不中断。",
+        "核心假设或问题": paper.abstract or "摘要未提供，无法可靠判断核心问题。",
+        "方法逻辑": "降级速看没有展开方法细节；需要重新运行完整 Paper Card 后补充。",
+        "主要结果": "降级速看没有从全文提取结果；请以原文和后续完整卡片为准。",
+        "真正贡献": paper.selection_reason or "本篇曾被筛选器判定为值得关注，但完整贡献需要重跑卡片确认。",
+        "与你研究方向的关系": "该论文进入当日精选，说明标题、摘要或检索信号与当前研究画像相关；具体关系待完整卡片确认。",
+        "局限性": f"这是自动降级产物，原因：{reason}。",
+        "是否值得精读": "可以先保留；建议在完整 Paper Card 成功后再决定是否深读。",
+        "发表状态": f"{published_date} · {_source_label(paper.source)}",
+    }
+    lines = [
+        f"## {paper.title}",
+        "",
+        f"**标题与发布时间**\n{paper.title}（{published_date}）",
+        "",
+        f"**作者和机构**\n{', '.join(paper.authors) if paper.authors else '作者信息未提供'}",
+        "",
+    ]
+    for field in QUICK_LOOK_FIELDS:
+        lines.extend([f"**{field}**", field_values[field], ""])
+    lines.append(f"**原文 PDF**：{pdf_link}")
+    markdown = "\n".join(lines).strip() + "\n"
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(markdown, encoding="utf-8")
+    audit = audit_paper_quick_look(markdown, paper)
+    audit["warnings"].append("fallback_quick_look_generated")
+    if audit["status"] == "pass":
+        audit["status"] = "pass_with_warnings"
+    result = {
+        "status": "fallback_paper_quick_look",
+        "reason": reason,
+        "quick_look_chars": len(markdown),
+        "audit": audit,
+    }
+    write_json(output_path.with_suffix(".json"), result)
+    return result
+
+
 def generate_daily_quote(
     output_path: str | Path,
     openai_client: OpenAI,
@@ -1786,6 +1834,129 @@ def generate_three_card_digest_markdown(
         "repair_attempted": repair_attempted,
         "audit": audit,
     }
+
+
+def generate_fallback_three_card_digest_markdown(
+    papers: list[SelectionRecord],
+    quick_look_paths: list[str | Path],
+    output_path: str | Path,
+    *,
+    report_date: str | None,
+    raw_fetched_count: int | None,
+    quote: str | None,
+    card_pdf_links: list[str] | None,
+    reason: str,
+) -> dict[str, Any]:
+    output_path = Path(output_path)
+    selected_count = len(papers)
+    raw_count = raw_fetched_count if raw_fetched_count is not None else selected_count
+    lines = [
+        "# 每日速看",
+        "",
+        f"**{report_date or output_path.parent.name}**",
+        "",
+        "早上好，一多。",
+    ]
+    if quote:
+        lines.extend(["", f"> {quote}"])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## 今日主线",
+            "",
+            (
+                f"今日首次从 arXiv 抓取 {raw_count} 篇候选论文，最终精选 {selected_count} 篇。"
+                "本期启用了降级发布，因为完整卡片或摘要生成环节出现异常；下面保留可核验链接和最小速读信息，方便后续重跑修复。"
+            ),
+            "",
+            "---",
+            "",
+        ]
+    )
+    for index, paper in enumerate(papers, start=1):
+        published_date = _published_date_label(paper.published_date) or str(paper.published_date or "Card未提供")
+        source_label = _source_label(paper.source)
+        card_link = ""
+        if card_pdf_links and index <= len(card_pdf_links):
+            card_link = card_pdf_links[index - 1]
+        quick_text = ""
+        if index <= len(quick_look_paths):
+            try:
+                quick_text = Path(quick_look_paths[index - 1]).read_text(encoding="utf-8")
+            except OSError:
+                quick_text = ""
+        lines.extend(
+            [
+                f"# {index:02d}｜{paper.title}",
+                "",
+                "**发布时间 · 来源**",
+                f"{published_date} · {source_label}",
+                "",
+                "> **速读判断**：这篇论文进入当日精选，但当天流程触发降级发布；建议优先用原文和后续完整 Paper Card 复核。",
+                "",
+                "**作者和机构**",
+                ", ".join(paper.authors) if paper.authors else "作者信息未提供",
+                "",
+            ]
+        )
+        fallback_values = {
+            "发表状态": f"{published_date} · {source_label}",
+            "研究背景": "降级日报保留最小背景信息；完整背景需要重跑 Paper Card。",
+            "核心假设或问题": paper.abstract or "摘要未提供。",
+            "方法逻辑": "方法细节未在降级日报中展开。",
+            "主要结果": "主要结果需要完整卡片成功后补充。",
+            "真正贡献": paper.selection_reason or "筛选器将其列为当日高相关论文。",
+            "与你研究方向的关系": "与当前研究画像存在筛选相关性，具体连接需要完整卡片确认。",
+            "局限性": f"降级发布原因：{reason}。",
+            "是否值得精读": "建议先保留并等待完整卡片重跑。",
+        }
+        for field in QUICK_LOOK_FIELDS:
+            value = _extract_quick_field(quick_text, field) if quick_text else ""
+            lines.extend([f"**{field}**", value or fallback_values[field], ""])
+        original_link = paper.pdf_url or paper.url
+        lines.extend([f"[原文 PDF]({original_link}) · [下载 Paper Card]({card_link})", "", "---", ""])
+    order = " → ".join(f"{index:02d}" for index in range(1, selected_count + 1))
+    lines.extend(
+        [
+            "## 今日精读顺序",
+            "",
+            (
+                f"{order}。本次先按当日精选顺序阅读；由于流程降级，优先复核第一篇与研究画像最贴近的论文，"
+                "再检查其余论文的完整 Paper Card 是否已在后续重跑中补齐。"
+            ),
+        ]
+    )
+    markdown = "\n".join(lines).strip() + "\n"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(markdown, encoding="utf-8")
+    audit = audit_three_card_digest(
+        markdown,
+        papers,
+        report_date=report_date,
+        raw_fetched_count=raw_fetched_count,
+        card_pdf_links=card_pdf_links,
+    )
+    audit["warnings"].append("fallback_three_card_digest_generated")
+    if audit["status"] == "pass":
+        audit["status"] = "pass_with_warnings"
+    result = {
+        "status": "fallback_three_card_digest",
+        "reason": reason,
+        "digest_chars": len(markdown),
+        "report_date": report_date,
+        "audit": audit,
+    }
+    write_json(output_path.with_suffix(".json"), result)
+    return result
+
+
+def _extract_quick_field(markdown: str, field: str) -> str:
+    match = re.search(rf"\*\*{re.escape(field)}\*\*\s*\n(.*?)(?=\n\s*\*\*|\Z)", markdown, flags=re.DOTALL)
+    if not match:
+        return ""
+    return " ".join(match.group(1).strip().split())[:450]
 
 
 def initial_paper_analysis(paper: SelectionRecord, bundle: dict[str, Any]) -> dict[str, Any]:
@@ -2917,17 +3088,18 @@ def process_selected_paper(
             write_json(folder / "paper_analysis.json", analysis)
         except Exception as exc:
             logger.error(f"Full Paper Card generation failed for {record.title}: {exc}")
-            write_json(folder / "paper_analysis.json", {
-                "status": "one_shot_full_card_failed",
-                "failure_reason": f"{type(exc).__name__}: {exc}",
-            })
-            write_json(folder / "audit-report.json", {
-                "status": "failed",
-                "errors": [f"one_shot_full_card_failed:{type(exc).__name__}"],
-                "warnings": [],
-                "failure_reason": str(exc),
-            })
-            return folder
+            analysis = initial_paper_analysis(record, bundle)
+            analysis.update(
+                {
+                    "status": "one_shot_full_card_failed_fallback",
+                    "failure_reason": f"{type(exc).__name__}: {exc}",
+                    "quality_notes": [
+                        "Full Paper Card generation failed; deterministic fallback card was written so the daily pipeline can publish.",
+                    ],
+                }
+            )
+            write_json(folder / "paper_analysis.json", analysis)
+            generate_paper_card_markdown(record, analysis, folder / "paper-card.md")
     elif card_mode == "one_shot_full":
         report = {
             "status": "failed",
@@ -3414,7 +3586,7 @@ def run_full_research_radar_pipeline(
                 VALUES(?,?,?)
                 ON CONFLICT(run_date, arxiv_id) DO UPDATE SET ranking_json=excluded.ranking_json
                 """,
-                (run_date, record.arxiv_id or record.title, json.dumps(asdict(record), ensure_ascii=False)),
+                (run_date, canonical_arxiv_id(record.arxiv_id) or record.title, json.dumps(asdict(record), ensure_ascii=False)),
             )
         state.conn.commit()
 
@@ -3470,7 +3642,7 @@ def run_full_research_radar_pipeline(
                 VALUES(?,?,?)
                 ON CONFLICT(run_date, arxiv_id) DO UPDATE SET selection_json=excluded.selection_json
                 """,
-                (run_date, record.arxiv_id or record.title, json.dumps(asdict(record), ensure_ascii=False)),
+                (run_date, canonical_arxiv_id(record.arxiv_id) or record.title, json.dumps(asdict(record), ensure_ascii=False)),
             )
         state.conn.commit()
 
@@ -3559,20 +3731,23 @@ def run_full_research_radar_pipeline(
                 quick_look_paths.append(quick_look_path)
             except Exception as exc:
                 logger.error(f"Paper quick look failed for {record.title}: {exc}")
+                reason = f"{type(exc).__name__}: {exc}"
+                fallback_meta = write_fallback_paper_quick_look_markdown(
+                    record,
+                    quick_look_path,
+                    reason=reason,
+                )
                 quick_look_reports.append({
                     "arxiv_id": record.arxiv_id,
                     "title": record.title,
                     "path": str(quick_look_path),
-                    "audit": {
-                        "status": "fail",
-                        "errors": [f"quick_look_failed:{type(exc).__name__}"],
-                        "warnings": [],
-                    },
+                    "audit": fallback_meta["audit"],
                 })
+                quick_look_paths.append(quick_look_path)
 
         write_json(output_dir / "quick-look-quality.json", quick_look_reports)
         quick_look_gate_passed = actual_selected_count > 0 and len(quick_look_reports) == actual_selected_count and all(
-            item["audit"].get("status") == "pass" for item in quick_look_reports
+            item["audit"].get("status") in {"pass", "pass_with_warnings"} for item in quick_look_reports
         )
         if not quick_look_gate_passed:
             daily_audit.update({
@@ -3631,19 +3806,34 @@ def run_full_research_radar_pipeline(
                 Path(folder / "文档分析.pdf").relative_to(output_dir).as_posix()
                 for folder in paper_folders
             ]
-        digest_meta = generate_three_card_digest_markdown(
-            selected,
-            quick_look_paths,
-            output_dir / "wechat-digest.md",
-            executor.openai_client,
-            llm_params,
-            max_input_chars=three_card_digest_input_chars,
-            max_output_tokens=three_card_digest_output_tokens,
-            report_date=run_date,
-            raw_fetched_count=len(raw_candidates),
-            quote=quote_meta.get("quote", ""),
-            card_pdf_links=card_pdf_links,
-        )
+        try:
+            digest_meta = generate_three_card_digest_markdown(
+                selected,
+                quick_look_paths,
+                output_dir / "wechat-digest.md",
+                executor.openai_client,
+                llm_params,
+                max_input_chars=three_card_digest_input_chars,
+                max_output_tokens=three_card_digest_output_tokens,
+                report_date=run_date,
+                raw_fetched_count=len(raw_candidates),
+                quote=quote_meta.get("quote", ""),
+                card_pdf_links=card_pdf_links,
+            )
+        except Exception as exc:
+            reason = f"{type(exc).__name__}: {exc}"
+            logger.error(f"Three-card digest generation failed; writing fallback digest: {reason}")
+            daily_audit["fallbacks_used"].append(f"fallback_three_card_digest:{reason}")
+            digest_meta = generate_fallback_three_card_digest_markdown(
+                selected,
+                quick_look_paths,
+                output_dir / "wechat-digest.md",
+                report_date=run_date,
+                raw_fetched_count=len(raw_candidates),
+                quote=quote_meta.get("quote", ""),
+                card_pdf_links=card_pdf_links,
+                reason=reason,
+            )
         digest_meta["quick_look_model_calls"] = quick_look_model_calls
         digest_meta["daily_quote_model_calls"] = 1 if quote_enabled else 0
         write_json(output_dir / "trend-analysis.json", digest_meta)
@@ -3671,7 +3861,7 @@ def run_full_research_radar_pipeline(
                 VALUES(?,?,?)
                 ON CONFLICT(run_date, arxiv_id) DO UPDATE SET upload_json=excluded.upload_json
                 """,
-                (run_date, record.arxiv_id or record.title, json.dumps(upload, ensure_ascii=False)),
+                (run_date, canonical_arxiv_id(record.arxiv_id) or record.title, json.dumps(upload, ensure_ascii=False)),
             )
             state.conn.commit()
         write_json(output_dir / "zotero_uploads.json", zotero_uploads)
@@ -3723,7 +3913,14 @@ def run_full_research_radar_pipeline(
                 "wechat_digest": digest_meta,
                 "freshness_distribution": freshness_distribution(candidates),
                 "top20_from_candidates": all(paper in candidates for paper in top20),
-                "top3_from_top20": all(record.arxiv_id in {getattr(paper, "arxiv_id", None) for paper in top20} for record in selected),
+                "top3_from_top20": all(
+                    (canonical_arxiv_id(record.arxiv_id) or record.title)
+                    in {
+                        canonical_arxiv_id(getattr(paper, "arxiv_id", None)) or paper.title
+                        for paper in top20
+                    }
+                    for record in selected
+                ),
                 "pdf_success_count": pdf_success_count,
                 "card_success_count": card_success_count,
                 "zotero_upload_success_count": zotero_upload_success_count,
