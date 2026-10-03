@@ -1,0 +1,162 @@
+{
+  "status": "complete",
+  "run_date": "2026-10-04",
+  "candidate_target": 50,
+  "top20_target": 20,
+  "selected_target": 3,
+  "embedding_model": "text-embedding-v4",
+  "zotero_upload_attempted_for": "selected_high_relevance_only",
+  "candidate_or_top20_zotero_uploads": 0,
+  "fallbacks_used": [],
+  "incomplete_zotero_corpus_excluded_count": 21,
+  "retrieval_sources": {
+    "api": 45
+  },
+  "retrieval_fallback_sources": {},
+  "raw_arxiv_count": 49,
+  "candidate_50_count": 45,
+  "excluded_previously_promoted_count": 4,
+  "top20_count": 20,
+  "selected_count": 3,
+  "embedding_audit": {
+    "embedding_model": "text-embedding-v4",
+    "zotero_embedding_count": 32,
+    "candidate_embedding_count": 668,
+    "zotero_cache_hit_count": 20,
+    "zotero_api_create_count": 0,
+    "candidate_cache_hit_count": 45,
+    "candidate_api_create_count": 0,
+    "embedding_missing_count": 0
+  },
+  "llm_model_calls": 4,
+  "deep_card_model_calls": 3,
+  "quick_look_model_calls": 3,
+  "daily_quote_model_calls": 1,
+  "three_card_digest_model_calls": 1,
+  "card_quality": [
+    {
+      "arxiv_id": "2609.23325v1",
+      "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+      "folder": "outputs/daily/2026-10-04/paper-1/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 1']"
+        ],
+        "card_path": "outputs/daily/2026-10-04/paper-1/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-10-04/paper-1/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/source_bundle.json",
+        "source_page_count": 9,
+        "source_character_count": 48772
+      }
+    },
+    {
+      "arxiv_id": "2609.38908v1",
+      "title": "CellMSA: Context Modeling for Single-Cell Representation Learning",
+      "folder": "outputs/daily/2026-10-04/paper-2/CellMSA Context Modeling for Single-Cell Representation Learning",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 1', 'Figure 2', 'Figure 3', 'Figure 4', 'Figure 5']"
+        ],
+        "card_path": "outputs/daily/2026-10-04/paper-2/CellMSA Context Modeling for Single-Cell Representation Learning/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-10-04/paper-2/CellMSA Context Modeling for Single-Cell Representation Learning/source_bundle.json",
+        "source_page_count": 31,
+        "source_character_count": 109342
+      }
+    },
+    {
+      "arxiv_id": "2609.33928v1",
+      "title": "Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction",
+      "folder": "outputs/daily/2026-10-04/paper-3/Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 1']"
+        ],
+        "card_path": "outputs/daily/2026-10-04/paper-3/Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-10-04/paper-3/Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction/source_bundle.json",
+        "source_page_count": 12,
+        "source_character_count": 46858
+      }
+    }
+  ],
+  "quick_look_quality": [
+    {
+      "arxiv_id": "2609.23325v1",
+      "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+      "path": "outputs/daily/2026-10-04/paper-1/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1683,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.38908v1",
+      "title": "CellMSA: Context Modeling for Single-Cell Representation Learning",
+      "path": "outputs/daily/2026-10-04/paper-2/CellMSA Context Modeling for Single-Cell Representation Learning/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1265,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.33928v1",
+      "title": "Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction",
+      "path": "outputs/daily/2026-10-04/paper-3/Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1264,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "daily_quote": {
+    "status": "generated",
+    "quote": "晨光初照，问题已在，答案尚远。",
+    "model": "qwen-plus-latest",
+    "prompt_chars": 73
+  },
+  "wechat_digest": {
+    "status": "three_card_digest",
+    "prompt_chars": 7358,
+    "digest_chars": 4220,
+    "model": "qwen-plus-latest",
+    "report_date": "2026-10-04",
+    "repair_attempted": false,
+    "audit": {
+      "schema_version": "1.0",
+      "status": "pass",
+      "character_count": 4220,
+      "errors": [],
+      "warnings": []
+    },
+    "quick_look_model_calls": 3,
+    "daily_quote_model_calls": 1
+  },
+  "freshness_distribution": {
+    "latest_48h": 0,
+    "recent_7d": 36,
+    "recent_30d": 9,
+    "backfill": 0,
+    "unknown": 0
+  },
+  "top20_from_candidates": true,
+  "top3_from_top20": true,
+  "pdf_success_count": 3,
+  "card_success_count": 3,
+  "zotero_upload_success_count": 0,
+  "zotero_upload_linked_count": 3,
+  "zotero_upload_partial_count": 0,
+  "zotero_upload_failure_count": 0
+}
