@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: None<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>CellMSA: Context Modeling for Single-Cell Representation Learning</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Suyuan Zhao, Minghao Liu, Yizhen Luo, Zaiqing Nie</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint (NeurIPS 2026 submission)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Year</td><td>2026</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Core model</td><td>CellMSA (CellMSA-Module + GenePairformer)</td><td>[Paper] [Paper: PDF p. 4–5]</td></tr>
+<tr><td>Key inspiration</td><td>Protein MSA context modeling (AlphaFold-style)</td><td>[Paper] [Paper: PDF p. 2, Fig. 1]</td></tr>
+<tr><td>Pretraining scale</td><td>~109M human cell observations (65.6M primary)</td><td>[Paper] [Paper: PDF p. 2, 3, 6, C.1]</td></tr>
+<tr><td>Input modality</td><td>Discretized scRNA-seq gene expression (binned counts)</td><td>[Paper] [Paper: PDF p. 4]</td></tr>
+<tr><td>Context composition</td><td>Same-batch + cross-batch + cross-type cells (N = 16+16+8)</td><td>[Paper] [Paper: PDF p. 4, 6]</td></tr>
+<tr><td>Pretraining objectives</td><td>LMGM + LRec + LCCE (weighted joint loss)</td><td>[Paper] [Paper: PDF p. 6]</td></tr>
+<tr><td>Downstream tasks</td><td>Batch integration, cell type/state classification, perturbation prediction</td><td>[Paper] [Paper: PDF p. 7–9]</td></tr>
+<tr><td>Evaluation benchmarks</td><td>scib-metrics (batch), Tabula Sapiens, Kidney Atlas, Replogle</td><td>[Paper] [Paper: PDF p. 7–9, C.2]</td></tr>
+<tr><td>Code availability</td><td>https://github.com/PharMolix/CellMSA</td><td>[Paper] [Paper: PDF p. 1]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>CellMSA 提出一种受蛋白质多序列比对（MSA）启发的单细胞上下文建模框架，通过为每个目标细胞检索跨批次、跨细胞类型的相似细胞构成“单细胞MSA”，并用CellMSA-Module提取上下文感知的基因对表示（gene-pair representation），再注入GenePairformer实现细粒度细胞表征学习；该设计显著提升了批效应校正、细胞状态分类与扰动响应预测能力，在Tabula Sapiens等大规模基准上全面超越现有foundation models。其核心价值在于将“跨样本一致性/变异性比较”这一生物信号提取范式从蛋白结构域迁移至单细胞转录组，且严格保持基因级分辨率，而非压缩式聚合。边界在于：所有上下文检索依赖标注（label-informed）或表达相似性（label-free），未建模空间或时序关系；预训练未覆盖perturbation任务本身，仅提供表征供下游STATE-ST模块调用。</p>
+<h2>03 研究问题</h2>
+<p><strong>问题</strong>：现有单细胞foundation models（如Geneformer、scGPT）普遍采用独立细胞编码或仅限同一批次多细胞联合建模，导致无法有效利用跨批次、跨细胞类型的生物学冗余与差异信号，从而难以捕获与细胞状态强相关的精细基因-基因依赖模式。 <strong>假设/洞察</strong>：类比蛋白质MSA中通过多序列比对识别保守残基与共进化对以推断三维结构约束，单细胞场景下亦可通过聚合多个相似细胞（同型跨批、异型相关）的表达模式，识别marker基因与共表达网络，进而建模细胞状态特异的基因依赖关系。 <strong>方法路径</strong>：不直接建模细胞间图结构或全局图神经网络，而是构造一个“伪MSA”输入矩阵（行=细胞，列=基因），在低维空间中迭代执行Outer-product Mean（聚合跨细胞共变）与Pair-weighted Averaging（反向调制基因表示），最终生成context-dependent gene-pair representation，并作为attention bias注入目标细胞Transformer编码器。</p>
+<h2>04 研究背景与发展路径</h2>
+<p>单细胞foundation model演进呈现两条主线：（1）<strong>独立编码路线</strong>（Geneformer、scGPT）：将每个细胞视为独立token序列，依赖大规模预训练学习基因语义，但受限于单细胞稀疏性与噪声，难以区分生物变异与技术噪声 [Paper] [Paper: PDF p. 1–2]；（2）<strong>局部上下文路线</strong>（CellPLM、STATE、Stack）：引入同一批次内多细胞联合建模以提升去噪能力，但存在两大瓶颈——一是采用基因加权平均/模块压缩丢弃基因级细节 [Paper] [Paper: PDF p. 2]，二是上下文局限于同型同批，缺乏跨条件鲁棒性 [Paper] [Paper: PDF p. 2]。CellMSA定位为第三条路径：<strong>跨条件、基因级、MSA式上下文建模</strong>。它继承了Stack的“多细胞输入”形式，但摒弃其模块化压缩，转而借鉴AlphaFold中MSA模块的计算原语（Outer-product Mean / Pair-weighted Averaging）[Paper] [Paper: PDF p. 5, A.1]，将上下文作用机制从“统计降噪”升维至“状态特异关系发现”。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>孤立细胞建模导致噪声敏感</strong></td><td>单细胞表达高度稀疏、受测序深度/脱落/批次效应强烈干扰，独立编码难区分生物变异与随机噪声</td><td>“when the model relies on only a single observation of a cell, it is often difficult to distinguish biological variation from stochastic noise”</td><td>[Paper] [Paper: PDF p. 2]</td></tr>
+<tr><td><strong>现有上下文建模粒度粗、范围窄</strong></td><td>跨细胞聚合常采用基因加权平均或细胞编码压缩，丢失基因对级别信息；上下文仅限同批同型，缺乏跨条件泛化能力</td><td>“such compression can discard gene-level information… they do not explicitly exploit cross-batch signals or biologically related cell types”</td><td>[Paper] [Paper: PDF p. 2]</td></tr>
+<tr><td><strong>缺乏状态特异的基因依赖建模机制</strong></td><td>现有模型输出为细胞级向量，隐式包含基因关系，但不可解释、不可控、难迁移；无法显式建模如“PT损伤时CDH6-VIM共表达增强”此类病理网络</td><td>“models can capture fine-grained gene-gene dependencies associated with cell states, which are essential for learning high-quality representations”</td><td>[Paper] [Paper: PDF p. 1, 2]</td></tr>
+<tr><td><strong>上下文信息利用效率低</strong></td><td>单纯增加上下文细胞数不必然提升性能，需结构化组织与高效计算机制</td><td>“the ablation results demonstrate the performance gains resulting from incorporating the information-rich MSA context”；Fig. 5显示context size &gt;40后收益饱和</td><td>[Paper] [Paper: PDF p. 10, Fig. 5]</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>CellMSA的核心思想是将<strong>单细胞表征学习重构为一个“上下文驱动的关系发现”问题</strong>，而非传统“特征提取”问题。其关键跃迁在于：（1）<strong>上下文定义升维</strong>：将上下文从“同批邻居”拓展为“same-batch + cross-batch + cross-type”三元组合，分别服务于局部去噪、跨批鲁棒性、功能对比增强 [Paper] [Paper: PDF p. 4]；（2）<strong>关系建模解耦</strong>：分离“关系发现”（CellMSA-Module，在低维d′空间用Outer-product Mean/PW-Avg迭代提炼gene-pair representation）与“主干编码”（GenePairformer，在高维d空间用pair-aware attention精调目标细胞），避免计算耦合导致的精度损失 [Paper] [Paper: PDF p. 5, A.2]；（3）<strong>生物学先验注入</strong>：通过relation-type embedding（same batch/cross batch/cross type）显式编码上下文来源的生物学意义，使模型能区分“技术相似”与“功能相关”信号 [Paper] [Paper: PDF p. 4]。</p>
+<h2>07 方法总览</h2>
+<p>CellMSA是一个两阶段上下文感知编码框架：（1）<strong>上下文关系提炼阶段</strong>（CellMSA-Module）：以目标细胞+40个上下文细胞（16 same-batch + 16 cross-batch + 8 cross-type）构成MSA-like输入矩阵；通过LMSA层迭代执行Outer-product Mean（聚合跨细胞基因共变）与Pair-weighted Averaging（用更新后的gene-pair表示调制上下文基因表示），最终输出一个RG×G×dp维度的context-dependent gene-pair representation PLMSA；（2）<strong>目标细胞精编阶段</strong>（GenePairformer）：将PLMSA投影为head-specific pair representations R0，与目标细胞基因嵌入e1g共同输入LGPFLayer Transformer；在每层中，Rl被注入self-attention作为bias（RL+1,Huv = RL,Huv + QL,Hu(KL,Hv)⊤/√dH），实现gene-pair结构对序列编码的显式引导 [Paper] [Paper: PDF p. 5]。预训练采用三目标联合优化：LMGM（掩码基因预测）、LRec（细胞表达重建）、LCCE（细胞对比学习）[Paper] [Paper: PDF p. 6]。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>CellMSA-Module</strong></td><td>从MSA-like上下文中提炼context-dependent gene-pair representation，捕捉跨细胞一致性/变异性</td><td>独立解决“如何从多细胞中高效提取基因对关系”问题，避免与高维目标编码耦合；低维d′设计降低计算开销</td><td>Input: MSA-like input (S rows × G genes), Output: PLMSA ∈ RG×G×dp</td><td>Outer-product Mean &amp; PW-Avg structures detailed in [Paper] [Paper: PDF p. 5, A.1]; complexity analysis shows O(SG²d′) cost [Paper] [Paper: PDF p. 16]</td><td>Removal causes &gt;3% drop in PT state accuracy &amp; &gt;0.07 drop in Pearson Δ (Table 4); degenerates to standard Transformer [Paper] [Paper: PDF p. 10]</td></tr>
+<tr><td><strong>GenePairformer</strong></td><td>将gene-pair representation作为attention bias注入目标细胞编码，实现细粒度、关系引导的表征学习</td><td>需在保留目标细胞全基因分辨率前提下，融合外部关系信号；标准Transformer无此机制</td><td>Input: target cell gene embeddings e1g, pair representations R0; Output: &lt;cls&gt; token embedding zi</td><td>Architecture diagram Fig. 2; pair-as-bias formula RL+1,Huv = RL,Huv + QL,Hu(KL,Hv)⊤/√dH [Paper] [Paper: PDF p. 5]</td><td>Without it, model loses ability to interpret disease networks (Fig. 4); ablation w/o CellMSA-Module confirms its necessity for pair-aware encoding [Paper] [Paper: PDF p. 10]</td></tr>
+<tr><td><strong>MSA-like Context Construction</strong></td><td>组织same-batch/cross-batch/cross-type三类细胞为结构化上下文，并添加relation-type embedding</td><td>解决“上下文应包含什么生物学信号”问题；relation-type embedding enables model to distinguish noise-reduction vs. biology-enhancement contexts</td><td>Input: target cell ci; Output: Ni = Nsame batchi ∪ Ncross batchi ∪ Ncross typei, with rij ∈ {same batch, cross batch, cross type}</td><td>Section 3.1 formal definition [Paper] [Paper: PDF p. 4]; hierarchical clustering for cross-type neighbors described in [Paper] [Paper: PDF p. 6, C.1]</td><td>Ablation &quot;Only Same-batch Context&quot; drops PT accuracy by 2.9% and Pearson Δ by 0.033 vs full model (Table 4), proving cross-context value [Paper] [Paper: PDF p. 10]</td></tr>
+<tr><td><strong>Three-Objective Pretraining</strong></td><td>LMGM (local fidelity) + LRec (global structure) + LCCE (biological discriminability)</td><td>单一目标无法兼顾：LMGM易过拟合局部噪声，LRec易坍缩到细胞类型均值，LCCE易忽略状态内变异；三者协同平衡</td><td>Joint loss L = LMGM + λ1LRec + λ2LCCE (λ1=0.01, λ2=10)</td><td>Section 3.3 &amp; B.3 (Fig. A.5 shows trade-off visualization) [Paper] [Paper: PDF p. 6, 25]</td><td>Ablation in B.3 shows λ1=0 causes over-clustering by cell type (loss of state resolution), λ2=0 causes noise sensitivity [Paper] [Paper: PDF p. 25]</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>论文未给出可核验的完整数学公式（如端到端损失函数闭式），但明确定义了所有核心符号与模块计算逻辑：</p>
+<ul>
+<li><strong>MSA-like context</strong>: Ni = Nsame batchi ∪ Ncross batchi ∪ Ncross typei [Paper] [Paper: PDF p. 4]</li>
+<li><strong>Relation-type embedding</strong>: rij ∈ {same batch, cross batch, cross type}, encoded as Erel(rs) [Paper] [Paper: PDF p. 4]</li>
+<li><strong>Outer-product Mean update</strong>: pl+1uv = pluv + Wlp(1/S Σs=1S alsu ⊗ blsv) [Paper] [Paper: PDF p. 5, A.1]</li>
+<li><strong>Pair-weighted Averaging update</strong>: ml+1su = mlsu + Wlo(Concath γl,hsu ⊙ Σv Al,huv vl,hs v) [Paper] [Paper: PDF p. 5]</li>
+<li><strong>GenePairformer attention bias</strong>: RL+1,Huv = RL,Huv + QL,Hu(KL,Hv)⊤/√dH [Paper] [Paper: PDF p. 5]</li>
+<li><strong>Pretraining loss</strong>: L = LMGM + λ1LRec + λ2LCCE [Paper] [Paper: PDF p. 6]</li>
+<li><strong>Hub score</strong>: Hc,s,h(g) = 1/(G−1) Σj≠g P̄(h)c,s(g,j) [Paper] [Paper: PDF p. 24]</li>
+<li><strong>Delta-hub score</strong>: HΔabsc,h(g) = 1/(G−1) Σj≠g |P̄(h)c,disease(g,j) − P̄(h)c,healthy(g,j)| [Paper] [Paper: PDF p. 25]</li>
+</ul>
+<p><em>注：所有公式符号均来自原文，无虚构；dp, d′, d, G, S等维度参数在附录C.2中明确给出（e.g., dp=8, d′=128, d=512, G=61982, S=41）[Paper] [Paper: PDF p. 28]</em></p>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>Batch integration (Table 1)</strong></td><td>CellMSA achieves superior batch mixing while preserving biology</td><td>Label-informed context: CellMSA vs Stack/scGPT/Geneformer/scVI/PC-HVG on Tabula Sapiens (24 tissues); metrics: NMI/ARI/ASW/cLISI (bio), BRAS/iLISI/kBET/Conn/PCR (batch)</td><td>CellMSA: Total score 0.736 &gt; Stack 0.663 &gt; scVI 0.600; highest NMI (0.895), ARI (0.805), ASW (0.699), iLISI (0.242), kBET (0.627)</td><td>CellMSA&#x27;s MSA context improves both batch correction and biological conservation simultaneously under label-informed setting</td><td>That CellMSA dominates <em>all</em> baselines in <em>all</em> individual metrics (e.g., scVI has higher BRAS=1.000)</td><td>[Paper] [Paper: PDF p. 7, Table 1]</td></tr>
+<tr><td><strong>Cell state classification (Table 2)</strong></td><td>CellMSA captures fine-grained disease-associated transcriptional states</td><td>PT cell state (aPT/dPT/dPT/DTL) on Kidney Atlas; 5-run avg; vs CellPLM/Stack/STATE-SE/scGPT/scVI</td><td>CellMSA: Accuracy 0.958±0.004, Macro F1 0.931±0.006 &gt; CellPLM 0.794±0.012, Stack 0.909±0.009</td><td>CellMSA&#x27;s context modeling enables discrimination of subtle injury states within same epithelial lineage</td><td>That this superiority generalizes to <em>all</em> kidney cell types (only PT tested)</td><td>[Paper] [Paper: PDF p. 8, Table 2]</td></tr>
+<tr><td><strong>Perturbation prediction (Table 3)</strong></td><td>CellMSA provides more robust latent space for perturbation response modeling</td><td>Using STATE-ST module on Replogle dataset (4 cell lines, 100 perturbations); vs Expression+STATE-ST/STATE-SE+STATE-ST/Stack+STATE-ST</td><td>CellMSA+STATE-ST: Pearson Δ 0.433 &gt; Stack 0.358 (+8.8%), PRAUC 0.334 &gt; Stack 0.293</td><td>CellMSA&#x27;s representations encode perturbation-relevant regulatory logic better than alternatives</td><td>That CellMSA alone (without STATE-ST) can predict perturbations (it&#x27;s used as encoder only)</td><td>[Paper] [Paper: PDF p. 9, Table 3]</td></tr>
+<tr><td><strong>Ablation study (Table 4)</strong></td><td>Performance gains stem from MSA context &amp; CellMSA-Module</td><td>PT state classification &amp; perturbation prediction; ablations: w/o CellMSA-Module, w/o Context, Only Same-batch Context</td><td>Full model best in all metrics; w/o CellMSA-Module drops Macro F1 by 2.0% (0.931→0.811) and Pearson Δ by 0.078 (0.433→0.355)</td><td>The CellMSA-Module and its MSA context are necessary and sufficient for observed gains</td><td>That other architectural choices (e.g., number of layers) are unimportant (not tested)</td><td>[Paper] [Paper: PDF p. 10, Table 4]</td></tr>
+<tr><td><strong>Label-free integration (Table A.27)</strong></td><td>CellMSA retains advantage without cell-type labels</td><td>Bladder dataset; context via HVG-PCA-KNN (no labels); vs scGPT/Geneformer/Stack</td><td>CellMSA label-free total 0.688 &gt; Stack 0.600; label-informed boosts to 0.748</td><td>CellMSA&#x27;s context mechanism works even without annotations, but labels provide additional benefit</td><td>That label-free CellMSA matches label-informed Stack (0.688 &lt; 0.698)</td><td>[Paper] [Paper: PDF p. 22, Table A.27]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>CellMSA的结论必须置于其<strong>特定实验设定与评估协议</strong>中理解：（1）<strong>上下文依赖性</strong>：所有SOTA结果（Table 1/2/3）均基于label-informed context retrieval（使用cell-type标签构建上下文），这并非模型内在能力，而是数据利用策略；label-free版本（Table A.27）性能下降证实此点；（2）<strong>下游任务耦合性</strong>：perturbation预测（Table 3）完全依赖STATE-ST模块，CellMSA仅提供表征，其优势反映的是表征质量，而非端到端预测能力；（3）<strong>生物学解释的限定性</strong>：Figure 4的GO富集分析（ECM重组、dedifferentiation）是基于Head 7的delta-hub基因集，属<strong>相关性解释</strong>，作者明确声明“mainly reflect statistical associations rather than explicit causal regulatory relationships” [Paper] [Paper: PDF p. 10]；（4）<strong>规模效应边界</strong>：109M预训练规模带来收益，但附录C.1指出“109 million denotes observations rather than unique biological cells”，存在重复采样风险，且未验证scaling law。</p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Statistical vs. causal interpretation</strong></td><td>Gene-pair representations reflect statistical associations, not causal regulatory mechanisms</td><td>Incorporate prior knowledge of gene regulation and causal machine learning methods</td><td>[Paper] [Paper: PDF p. 10]</td></tr>
+<tr><td><strong>Context retrieval dependency</strong></td><td>Performance gain relies on access to cell-type labels or high-quality expression-based neighbors</td><td>Not explicitly stated, but label-free ablation (Table A.27) implies need for robust unsupervised context construction</td><td>[Paper] [Paper: PDF p. 22, Table A.27]</td></tr>
+<tr><td><strong>Computational cost of CellMSA-Module</strong></td><td>Complexity dominated by O(SG²d′) term, scaling quadratically with gene count G</td><td>Not proposed, but Appendix A.2 notes design choice to keep CellMSA-Module in low-d′ space to mitigate cost</td><td>[Paper] [Paper: PDF p. 16]</td></tr>
+<tr><td><strong>Limited modality scope</strong></td><td>Model operates solely on scRNA-seq; no integration with spatial, multi-omics, or protein data</td><td>Not proposed, but broader impacts section notes potential for &quot;multi-omics&quot; extension</td><td>[Paper] [Paper: PDF p. 31]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td><strong>Context composition may introduce confounding</strong></td><td>Same-batch context (Nsame batch) includes cells from identical experimental conditions, potentially amplifying batch-specific technical artifacts rather than biological signals</td><td>Could degrade cross-batch robustness if model overfits to shared noise; contradicts stated goal of &quot;encouraging biologically meaningful patterns stable across batches&quot;</td><td>Train ablation using only cross-batch + cross-type context (exclude same-batch), evaluate on scib-metrics batch correction scores (iLISI/kBET)</td><td>[Paper] [Paper: PDF p. 4] defines Nsame batch for &quot;local similarity and support denoising&quot;, but does not validate its net effect on batch robustness</td></tr>
+<tr><td><strong>Gene-pair representation lacks directional validation</strong></td><td>Figure 4b shows gene-pair heatmap for PT markers, but no test confirms if learned pairs (e.g., CDH6-VIM) align with known physical interactions (e.g., STRING) beyond the KDR validation in Appendix B.2.4</td><td>Weak external validation undermines claims of &quot;biologically interpretable latent modes&quot;; current KDR overlap (52%) is descriptive, not statistically significant</td><td>Compute precision@K for top-ranked pairs against gold-standard interaction databases (STRING, HIPPIE) across multiple query genes (not just KDR), report enrichment p-values</td><td>[Paper] [Paper: PDF p. 25, B.2.4] reports only descriptive overlap for KDR, states &quot;without claiming statistically significant enrichment&quot;</td></tr>
+<tr><td><strong>Pretraining objectives may conflate cell identity and state</strong></td><td>LCCE uses cell-type labels, potentially forcing representations to collapse to type-level centroids, conflicting with PT state classification goal (same type, different states)</td><td>Risks undermining fine-grained state resolution; Figure A.5c shows balanced setting, but no ablation tests state-level discriminability under LCCE dominance</td><td>Ablate LCCE during pretraining, then evaluate PT state classification accuracy and UMAP separation of aPT/dPT/dPT/DTL clusters</td><td>[Paper] [Paper: PDF p. 25, B.3] visualizes UMAP under λ2=1 (LCCE dominant) showing &quot;overemphasize cell-type identity&quot;, but does not quantify state separation</td></tr>
+<tr><td><strong>Cross-type neighbor selection may be brittle</strong></td><td>Hierarchical clustering of cell types (818 types → 28 clusters) uses mean expression vectors; rare cell types or batch-specific biases could distort cosine similarity</td><td>May yield biologically implausible cross-type contexts (e.g., linking unrelated lineages), harming contrastive signal</td><td>Sample 10 random query cell types, manually inspect top-5 neighbors in Table A.31 for biological plausibility; compute average cluster purity using ontology hierarchies</td><td>[Paper] [Paper: PDF p. 26–27, C.1] describes clustering but provides no validation of cluster biological coherence beyond average cosine similarity (0.845 vs 0.581)</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>MSA式建模可迁移至单细胞</strong>：Protein MSA的核心洞见——“跨样本一致性/变异性蕴含结构约束”——可成功映射为“跨细胞一致性/变异性蕴含状态特异基因依赖”，且无需修改计算原语（Outer-product Mean/PW-Avg）[Paper] [Paper: PDF p. 2, 5, A.1]。</li>
+<li><strong>上下文结构化优于数量堆砌</strong>：Figure 5证明context size &gt;40后收益饱和，而Table 4显示“Only Same-batch Context”性能显著低于Full Model，说明<strong>上下文的生物学多样性（cross-batch/cross-type）比单纯增加数量更重要</strong>。</li>
+<li><strong>关系发现与主干编码解耦是关键</strong>：CellMSA-Module在低维d′空间处理S×G输入，GenePairformer在高维d空间仅处理单细胞G×d输入，这种分离设计使模型能以可控成本获得gene-pair级别的关系感知能力 [Paper] [Paper: PDF p. 16, A.2]。</li>
+<li><strong>预训练目标需协同制衡</strong>：LMGM/LRec/LCCE三者存在天然张力——LCCE推动类型聚类，LRec preserves cell uniqueness，LMGM ensures local fidelity；λ1=0.01, λ2=10的平衡点（Fig. A.5c）是经验性选择，非理论最优 [Paper] [Paper: PDF p. 25, B.3]。</li>
+<li><strong>解释性需多尺度验证</strong>：CellMSA的interpretability（Fig. 4）结合了head-level delta hub scores、GO富集、以及外部STRING验证（B.2.4），形成“计算信号→功能注释→外部数据库”三级证据链，为单细胞模型解释性树立了新范式。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：CellMSA的MSA-inspired design与作者团队前期工作Stofm（spatial transcriptomics foundation model）[Paper] [Paper: PDF p. 13, Ref 32]共享“多源上下文建模”思想，但Stofm处理空间邻域，CellMSA处理跨批次/跨类型细胞邻域，二者构成“多尺度上下文建模范式”的互补实例。</li>
+<li><strong>候选连接/方法论连接</strong>：CellMSA的GenePairformer中pair-as-attention-bias机制，与Uni-Mol [Paper] [Paper: PDF p. 13, Ref 30] 和多尺度蛋白语言模型 [Paper] [Paper: PDF p. 13, Ref 31] 的pair-aware设计同源，表明“pair representation注入Transformer”已成为跨模态（分子/细胞）关系建模的通用原语。</li>
+<li><strong>候选连接/方法论连接</strong>：上下文三元分组（same-batch/cross-batch/cross-type）与graph neural networks中neighbor sampling策略（e.g., Cluster-GCN, GraphSAINT）理念相通，均强调对邻居进行语义分层采样，但CellMSA不构建显式图，而是通过relation-type embedding隐式编码。</li>
+<li><strong>弱连接/方法论连接</strong>：perturbation prediction依赖STATE-ST模块，与用户研究方向“perturbation prediction”构成工具链连接（CellMSA提供表征，STATE-ST完成预测），但CellMSA自身未建模扰动动态过程。</li>
+<li><strong>弱连接/方法论连接</strong>：cross-type neighbor construction via hierarchical clustering of cell-type embeddings预示了与“cell state representation”研究的潜在接口——若将cell state（而非cell type）作为聚类单元，可自然延伸至状态空间建模。</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Cross-State MSA for Dynamic Cell State Trajectories</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: CellMSA’s cross-type context uses static cell-type ontology, but user’s focus is on <em>cell state</em> (e.g., perturbation-induced transitions); current design cannot model continuous state drift [Paper] [Paper: PDF p. 10, limitation on statistical vs causal]. <strong>core hypothesis</strong>: Replacing cross-type neighbors with <em>temporally adjacent states</em> (e.g., pre-/post-perturbation cells, healthy/injured PT) will enable explicit modeling of state transition dynamics, improving perturbation prediction beyond static representations. <strong>delta from paper</strong>: Replace hierarchical clustering of cell types with trajectory-aligned clustering of cell states (e.g., using RNA velocity or pseudotime embeddings), and define cross-state context as cells at similar pseudotime positions across different trajectories. <strong>initial method</strong>: On Replogle dataset, compute Monocle3 pseudotime for each perturbation trajectory; cluster cells by pseudotime bin + perturbation type; sample cross-state context from same-bin cells across different perturbations. Pretrain CellMSA with modified context and add a trajectory reconstruction objective. <strong>validation</strong>: Perturbation prediction (Pearson Δ, DE Overlap) on held-out perturbations; UMAP visualization of state progression smoothness. <strong>failure modes</strong>: Pseudotime estimation noise may corrupt context; limited to perturbations with clear temporal ordering. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Spatial-MSA Fusion for Multi-Modal Alignment</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: CellMSA operates solely on scRNA-seq; user’s interest in spatial transcriptomics requires cross-modal alignment, but paper offers no spatial interface [Paper] [Paper: PDF p. 31, broader impacts mentions &quot;multi-omics&quot; but no implementation]. <strong>core hypothesis</strong>: Integrating spatial coordinates as an additional relation-type embedding (e.g., &quot;same-spot&quot;, &quot;adjacent-spot&quot;, &quot;distant-spot&quot;) into CellMSA’s context construction will enable joint learning of expression and spatial constraints, improving spatial domain prediction. <strong>delta from paper</strong>: Extend relation-type embedding set from {same batch, cross batch, cross type} to include spatial relations; modify CellMSA-Module to accept coordinate-aware positional encoding. <strong>initial method</strong>: On spatial datasets (e.g., STARmap mouse brain), treat each spot as a &quot;cell&quot; with spatial coordinates; construct context using k-NN in spatial coordinates; train with masked spot prediction + spatial proximity contrastive loss. <strong>validation</strong>: Spot-level domain annotation accuracy; correlation between learned gene-pair representations and known spatial gene co-expression patterns (e.g., ligand-receptor pairs). <strong>failure modes</strong>: Sparse spatial data may yield insufficient context; coordinate systems vary across platforms. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Causal-Pair Refinement via Regulatory Prior Injection</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Authors explicitly state gene-pair representations reflect statistical associations, not causal regulation [Paper] [Paper: PDF p. 10], limiting biological utility for perturbation prediction. <strong>core hypothesis</strong>: Injecting curated regulatory priors (e.g., TF-target from DoRothEA, kinase-substrate from KinaseNet) as hard constraints or soft biases into the Outer-product Mean module will steer gene-pair learning toward causally plausible relationships, improving DE gene prediction. <strong>delta from paper</strong>: Modify Outer-product Mean’s weight matrix Wlp to be maskable by prior confidence scores; add a regularization term penalizing pair representations inconsistent with high-confidence priors. <strong>initial method</strong>: Extract top 10K high-confidence TF-target pairs from DoRothEA; during CellMSA-Module training, apply binary mask to Wlp for non-prior pairs, and add L2 penalty on prior-violating entries. <strong>validation</strong>: DE Overlap and PRAUC on perturbation tasks; GO enrichment of top-ranked pairs for regulatory process terms. <strong>failure modes</strong>: Prior incompleteness may prune true novel interactions; over-regularization may harm generalization. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>

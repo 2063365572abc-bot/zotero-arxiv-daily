@@ -1,0 +1,162 @@
+{
+  "status": "complete",
+  "run_date": "2026-10-09",
+  "candidate_target": 50,
+  "top20_target": 20,
+  "selected_target": 3,
+  "embedding_model": "text-embedding-v4",
+  "zotero_upload_attempted_for": "selected_high_relevance_only",
+  "candidate_or_top20_zotero_uploads": 0,
+  "fallbacks_used": [],
+  "incomplete_zotero_corpus_excluded_count": 21,
+  "retrieval_sources": {
+    "api": 46
+  },
+  "retrieval_fallback_sources": {},
+  "raw_arxiv_count": 50,
+  "candidate_50_count": 46,
+  "excluded_previously_promoted_count": 4,
+  "top20_count": 20,
+  "selected_count": 3,
+  "embedding_audit": {
+    "embedding_model": "text-embedding-v4",
+    "zotero_embedding_count": 32,
+    "candidate_embedding_count": 801,
+    "zotero_cache_hit_count": 20,
+    "zotero_api_create_count": 0,
+    "candidate_cache_hit_count": 13,
+    "candidate_api_create_count": 33,
+    "embedding_missing_count": 0
+  },
+  "llm_model_calls": 4,
+  "deep_card_model_calls": 3,
+  "quick_look_model_calls": 3,
+  "daily_quote_model_calls": 1,
+  "three_card_digest_model_calls": 1,
+  "card_quality": [
+    {
+      "arxiv_id": "2609.38908v1",
+      "title": "CellMSA: Context Modeling for Single-Cell Representation Learning",
+      "folder": "outputs/daily/2026-10-09/paper-1/CellMSA Context Modeling for Single-Cell Representation Learning",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 3']"
+        ],
+        "card_path": "outputs/daily/2026-10-09/paper-1/CellMSA Context Modeling for Single-Cell Representation Learning/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-10-09/paper-1/CellMSA Context Modeling for Single-Cell Representation Learning/source_bundle.json",
+        "source_page_count": 31,
+        "source_character_count": 109342
+      }
+    },
+    {
+      "arxiv_id": "2609.23325v1",
+      "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+      "folder": "outputs/daily/2026-10-09/paper-2/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "figures_not_covered:['Figure 1']"
+        ],
+        "card_path": "outputs/daily/2026-10-09/paper-2/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-10-09/paper-2/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/source_bundle.json",
+        "source_page_count": 9,
+        "source_character_count": 48772
+      }
+    },
+    {
+      "arxiv_id": "2609.36429v1",
+      "title": "Towards Scalable Context-Aware Single-Cell Spatial Transcriptomics Prediction from Histology Images",
+      "folder": "outputs/daily/2026-10-09/paper-3/Towards Scalable Context-Aware Single-Cell Spatial Transcriptomics Prediction from Histology Images",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "tables_not_covered:['Table 3', 'Table 4']"
+        ],
+        "card_path": "outputs/daily/2026-10-09/paper-3/Towards Scalable Context-Aware Single-Cell Spatial Transcriptomics Prediction from Histology Images/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-10-09/paper-3/Towards Scalable Context-Aware Single-Cell Spatial Transcriptomics Prediction from Histology Images/source_bundle.json",
+        "source_page_count": 23,
+        "source_character_count": 76585
+      }
+    }
+  ],
+  "quick_look_quality": [
+    {
+      "arxiv_id": "2609.38908v1",
+      "title": "CellMSA: Context Modeling for Single-Cell Representation Learning",
+      "path": "outputs/daily/2026-10-09/paper-1/CellMSA Context Modeling for Single-Cell Representation Learning/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1379,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.23325v1",
+      "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+      "path": "outputs/daily/2026-10-09/paper-2/Rethinking Class Imbalance for Single-Cell Foundation Models A Systematic Benchmark Across Architectures and Long-Tail L/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1434,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.36429v1",
+      "title": "Towards Scalable Context-Aware Single-Cell Spatial Transcriptomics Prediction from Histology Images",
+      "path": "outputs/daily/2026-10-09/paper-3/Towards Scalable Context-Aware Single-Cell Spatial Transcriptomics Prediction from Histology Images/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1340,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "daily_quote": {
+    "status": "generated",
+    "quote": "晨光初照，问题已在，答案尚远。",
+    "model": "qwen-plus-latest",
+    "prompt_chars": 73
+  },
+  "wechat_digest": {
+    "status": "three_card_digest",
+    "prompt_chars": 7302,
+    "digest_chars": 4172,
+    "model": "qwen-plus-latest",
+    "report_date": "2026-10-09",
+    "repair_attempted": false,
+    "audit": {
+      "schema_version": "1.0",
+      "status": "pass",
+      "character_count": 4172,
+      "errors": [],
+      "warnings": []
+    },
+    "quick_look_model_calls": 3,
+    "daily_quote_model_calls": 1
+  },
+  "freshness_distribution": {
+    "latest_48h": 33,
+    "recent_7d": 1,
+    "recent_30d": 12,
+    "backfill": 0,
+    "unknown": 0
+  },
+  "top20_from_candidates": true,
+  "top3_from_top20": true,
+  "pdf_success_count": 3,
+  "card_success_count": 3,
+  "zotero_upload_success_count": 0,
+  "zotero_upload_linked_count": 3,
+  "zotero_upload_partial_count": 0,
+  "zotero_upload_failure_count": 0
+}
