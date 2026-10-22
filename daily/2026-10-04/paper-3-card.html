@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: discovery<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>Preserving DEG Rankings for Gene Discovery in Histology-Based Spatial Gene Expression Prediction</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Kaito Shiku, Kazuya Nishimura, Yasuhiro Kojima, Ryoma Bise</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint (cs.CV)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Publication date</td><td>2026-09-27</td><td>[URL metadata]</td></tr>
+<tr><td>Core task</td><td>Image-based Differential Expression Ranking (IDER)</td><td>[Paper] [Paper: PDF p. 2]</td></tr>
+<tr><td>Key metric</td><td>nDCGDEG@200, SCCDEG, pathway Jaccard overlap</td><td>[Paper] [Paper: PDF p. 6–8]</td></tr>
+<tr><td>Primary datasets</td><td>HEST-1K (Bowel/Ovary/Lymph Node), Her2st</td><td>[Paper] [Paper: PDF p. 6–7]</td></tr>
+<tr><td>Model backbone</td><td>CONCH foundation model + frozen encoder + trainable 3-layer MLP</td><td>[Paper] [Paper: PDF p. 6]</td></tr>
+<tr><td>Training signal</td><td>Morphology-derived proxy contrasts via K-means on CONCH features</td><td>[Paper] [Paper: PDF p. 5, p. 6]</td></tr>
+<tr><td>Loss function</td><td>L = L&lt;sub&gt;DEG&lt;/sub&gt; + λL&lt;sub&gt;const&lt;/sub&gt;, where L&lt;sub&gt;DEG&lt;/sub&gt; is gene-axis Pearson correlation of differentiable U-statistics</td><td>[Paper] [Paper: PDF p. 5, Eq. 3]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>该论文指出：当前基于组织病理图像预测空间基因表达（ST prediction）的方法，普遍以“单基因空间表达模式重建”为优化目标（如 per-gene PCC），但这一目标与下游核心任务——差异表达基因（DEG）发现——存在根本错位：DEG发现依赖的是<strong>跨基因的对比统计排序</strong>（contrast-specific ranked gene list），而非单基因空间一致性。为此，作者提出 IDER（Image-based Differential Expression Ranking）新任务及可微分训练目标，用形态学聚类生成的代理对比组（morphology-derived proxy contrasts）驱动模型学习保留 DEG 排序能力，实验证明其在 DEG 排名一致性（nDCGDEG@200）、通路富集重叠（Jaccard）上显著优于所有常规重建目标，且可即插即用于 ST-Net、TRIPLEX 等现有架构。该工作不追求更高 per-gene PCC，而是明确将模型目标对齐生物发现流程，为 cross-modal alignment 提供了可解释、下游感知的对齐范式。</p>
+<h2>03 研究问题</h2>
+<p>传统 ST 预测方法为何在“发现哪些基因最能区分组织区域/表型”这一关键下游任务上表现不佳？ → 作者洞察到：问题根源不在模型容量或数据质量，而在于<strong>优化目标与下游分析逻辑脱节</strong>——现有方法最小化每个基因在空间维度上的预测误差（spot-wise），却未建模基因在生物学对比维度上的相对重要性（gene-wise ranking）。 → 进一步追问：能否定义一个可计算、可微分、无需真实生物学标注的训练目标，使模型在仅见组织图像时，也能隐式习得“哪些基因的表达变化最敏感地响应形态学差异”？ → 最终聚焦：如何形式化“预测表达谱是否复现真实 DEG 排序”这一语义，并将其转化为端到端可优化的损失？</p>
+<h2>04 研究背景与发展路径</h2>
+<p>背景层：ST 技术成本高、通量低，而病理图像（H&amp;E）广泛可得；因此 histology-to-ST 预测被视为扩展分子分析的关键路径 [Paper] [Paper: PDF p. 1]。 技术演进层：从早期 CNN（ST-Net [8]）→ Transformer/GCN 捕获长程依赖 [6,27,38] → 检索/生成范式（diffusion/flow matching [39,10]）→ 排序增强（STRank [25] 关注 spot-level 相对排序）；但所有工作均未突破“per-gene reconstruction”范式。 认知跃迁层：作者跳出“重建精度”框架，转向“下游分析保真度”视角——受 differential expression analysis 标准流程启发（U-statistic → gene ranking → pathway enrichment），提出 IDER 是连接图像与生物学发现的<strong>语义接口</strong>，而非技术中间件。该路径本质是从 signal fidelity（信号保真）转向 biological utility fidelity（生物学效用保真）。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td>Objective misalignment</td><td>High per-gene PCC does not guarantee high DEG-ranking agreement (e.g., Ours ranks lower on Table 5 but higher on Table 1/3)</td><td>Conventional objectives optimize spatial-profile agreement <em>within each gene</em>, while DEG discovery requires agreement <em>across genes</em> in their contrast-specific ranking order [Paper] [Paper: PDF p. 1–2]</td><td>Table 5 shows Ours has lower per-gene PCC than MSE/PCC baselines, yet Table 1/3 show it dominates on nDCGDEG@200 and SCCDEG; [Paper] [Paper: PDF p. 9] explicitly states “Methods with higher per-gene spatial PCC do not necessarily achieve better DEG-ranking agreement”</td></tr>
+<tr><td>Annotation dependency bottleneck</td><td>Real tissue-region annotations are costly, sparse, and unavailable for most cohorts</td><td>Biological group labels (e.g., “invasive cancer”) are required for conventional DEG analysis but impractical for large-scale training [Paper] [Paper: PDF p. 7]</td><td>Her2st experiment uses annotations <em>only for evaluation</em>, not training; training relies solely on unsupervised K-means clustering of CONCH features [Paper] [Paper: PDF p. 7]</td></tr>
+<tr><td>Ranking non-differentiability</td><td>Direct optimization of argsort-based ranking (π&lt;sub&gt;c&lt;/sub&gt;) is non-differentiable, blocking end-to-end learning</td><td>The core IDER output π&lt;sub&gt;c&lt;/sub&gt; = argsort↓(U&lt;sub&gt;c,g&lt;/sub&gt;) involves discrete sorting and hard comparisons [Paper] [Paper: PDF p. 4–5]</td><td>Section 5 explicitly states “directly optimizing this ranking is not differentiable” and introduces sigmoid-smoothed U-statistic (Eq. 1) as surrogate [Paper] [Paper: PDF p. 5]</td></tr>
+<tr><td>Inter-gene relationship neglect</td><td>Baselines treat genes independently; no mechanism to preserve relative ordering between genes</td><td>Conventional losses (MSE, PCC, Poisson) compute scalar errors per gene and average — no cross-gene constraint on ranking structure [Paper] [Paper: PDF p. 4, p. 8]</td><td>Ablation in Table 4 shows “Ours w/o DEG ranking” (which applies MSE to U-statistic vector but ignores inter-gene ranking) fails to improve nDCGDEG@200 consistently, proving ranking relationships matter [Paper] [Paper: PDF p. 8]</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>核心不是“预测更准”，而是“排序更对”——将 ST 预测的目标函数从<strong>空间保真</strong>（reconstructing where each gene is expressed）升维至<strong>生物学保真</strong>（preserving which genes are most discriminative for a given morphological contrast）。 这一升维通过三重解耦实现： ① <strong>任务解耦</strong>：分离“评估什么”（IDER：对比统计排序一致性）与“如何训练”（不同iable U-statistic alignment）； ② <strong>标注解耦</strong>：用无监督形态学聚类（CONCH + K-means）生成 proxy contrasts，规避对病理专家标注的依赖； ③ <strong>优化解耦</strong>：主损失 L&lt;sub&gt;DEG&lt;/sub&gt; 专注基因轴相关性（Corr&lt;sub&gt;g&lt;/sub&gt;），辅损失 L&lt;sub&gt;const&lt;/sub&gt; 稳定空间表达基础，二者权重 λ=1.0 平衡（Eq. 3）。 本质是构建了一个“形态学差异 → 基因表达差异强度 → 基因排序”的可微分因果链，使模型内化生物学发现逻辑。</p>
+<h2>07 方法总览</h2>
+<p>整体为 encoder-predictor 架构：输入 H&amp;E patch → CONCH 提取 frozen 特征 → 3-layer MLP 回归 G 维表达向量 ŷ&lt;sub&gt;i&lt;/sub&gt;。训练目标非拟合 y&lt;sub&gt;i&lt;/sub&gt;，而是拟合其诱导的<strong>对比统计结构</strong>。流程分三步： ① <strong>Proxy contrast construction</strong>：对训练集 CONCH 特征做 K-means（k=10），每簇视为 morphology-defined group；采用 one-vs-rest scheme，每次随机选一簇为 A&lt;sub&gt;c&lt;/sub&gt;（positive），其余为 B&lt;sub&gt;c&lt;/sub&gt;（negative）[Paper] [Paper: PDF p. 6]； ② <strong>Differentiable U-statistic computation</strong>：对每个 contrast c 和 gene g，用温度 τ-sigmoid 替换硬比较，计算 ˆU&lt;sub&gt;c,g&lt;/sub&gt; = Σ&lt;sub&gt;i∈A&lt;sub&gt;c&lt;/sub&gt;&lt;/sub&gt; Σ&lt;sub&gt;j∈B&lt;sub&gt;c&lt;/sub&gt;&lt;/sub&gt; σ((ŷ&lt;sub&gt;i,g&lt;/sub&gt;−ŷ&lt;sub&gt;j,g&lt;/sub&gt;)/τ) [Paper] [Paper: PDF p. 5, Eq. 1]； ③ <strong>Ranking-aware optimization</strong>：对每个 c，计算 ˆU&lt;sub&gt;c&lt;/sub&gt; 与真实 U&lt;sub&gt;c&lt;/sub&gt; 的 gene-axis Pearson correlation，取负为 L&lt;sub&gt;DEG&lt;/sub&gt;；叠加 per-gene PCC 正则项 L&lt;sub&gt;const&lt;/sub&gt;，总损失 L = L&lt;sub&gt;DEG&lt;/sub&gt; + λL&lt;sub&gt;const&lt;/sub&gt; [Paper] [Paper: PDF p. 5, Eq. 3]。 整个设计确保：模型无需知道“invasive cancer”标签，却能学会哪些基因的表达变化最稳定地区分癌组织与间质——这正是病理医生依赖的直觉。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td>Morphology-derived proxy contrast generator</td><td>Converts unlabeled histology features into biologically plausible group definitions for DEG computation</td><td>To enable training without costly expert annotations; leverages morphology as proxy for biology [Paper] [Paper: PDF p. 5, p. 6]</td><td>Input: CONCH embeddings of training patches; Output: K cluster assignments → {A&lt;sub&gt;c&lt;/sub&gt;, B&lt;sub&gt;c&lt;/sub&gt;} for each c</td><td>Described in Sec 5 &amp; 7.1; used in all experiments including Her2st (where annotations are withheld from training) [Paper] [Paper: PDF p. 5, p. 7]</td><td>Removal forces reliance on real annotations (infeasible for scale); ablation not done, but paper states this is core to annotation-free generalization [Paper] [Paper: PDF p. 6]</td></tr>
+<tr><td>Differentiable U-statistic calculator</td><td>Approximates non-differentiable Mann–Whitney U test with smooth sigmoid to enable gradient flow</td><td>To make gene-ranking objective trainable; hard indicator 1[·] blocks backpropagation [Paper] [Paper: PDF p. 4–5]</td><td>Input: predicted expression matrix Ŷ (N×G), groups A&lt;sub&gt;c&lt;/sub&gt;/B&lt;sub&gt;c&lt;/sub&gt;; Output: ˆU&lt;sub&gt;c&lt;/sub&gt; ∈ ℝ&lt;sup&gt;G&lt;/sup&gt;</td><td>Eq. 1 defined on p.5; τ controls smoothness; tie term omitted as network outputs continuous [Paper] [Paper: PDF p. 5]</td><td>Removal reverts to non-differentiable ranking → no end-to-end training possible; confirmed by explicit statement [Paper] [Paper: PDF p. 5]</td></tr>
+<tr><td>Gene-axis correlation loss L&lt;sub&gt;DEG&lt;/sub&gt;</td><td>Aligns relative magnitudes of differential-expression scores across genes, preserving ranking order</td><td>To directly optimize for DEG list agreement (π&lt;sub&gt;c&lt;/sub&gt; ≈ ˆπ&lt;sub&gt;c&lt;/sub&gt;); conventional spot-axis PCC cannot capture cross-gene ordering [Paper] [Paper: PDF p. 4–5]</td><td>Input: ˆU&lt;sub&gt;c&lt;/sub&gt;, U&lt;sub&gt;c&lt;/sub&gt; (both G-dim vectors); Output: scalar L&lt;sub&gt;DEG&lt;/sub&gt; = 1 − Corr&lt;sub&gt;g&lt;/sub&gt;(ˆU&lt;sub&gt;c&lt;/sub&gt;, U&lt;sub&gt;c&lt;/sub&gt;) [Paper] [Paper: PDF p. 5, Eq. 2]</td><td>Table 4 shows “Ours w/o DEG ranking” (using MSE on U instead of Corr&lt;sub&gt;g&lt;/sub&gt;) fails to boost nDCGDEG@200, proving correlation over genes is essential [Paper] [Paper: PDF p. 8]</td><td>Removal reduces to “Ours w/o DEG ranking” → performance collapse in nDCGDEG@200 (Table 4: 0.494→0.491 on Bowel)</td></tr>
+<tr><td>Auxiliary PCC regularizer L&lt;sub&gt;const&lt;/sub&gt;</td><td>Constrains per-gene spatial profile fidelity as a stabilizing prior</td><td>To prevent degenerate solutions where ˆU&lt;sub&gt;c,g&lt;/sub&gt; aligns but individual ŷ&lt;sub&gt;i,g&lt;/sub&gt; are meaningless; ensures basic spatial consistency [Paper] [Paper: PDF p. 5]</td><td>Input: Ŷ, Y (both N×G); Output: scalar L&lt;sub&gt;const&lt;/sub&gt; = 1 − mean&lt;sub&gt;g&lt;/sub&gt;[Corr&lt;sub&gt;i&lt;/sub&gt;(ŷ&lt;sub&gt;•,g&lt;/sub&gt;, y&lt;sub&gt;•,g&lt;/sub&gt;)] [Paper] [Paper: PDF p. 5]</td><td>Table 5 shows Ours maintains intermediate per-gene PCC (e.g., 0.322 on Bowel vs 0.345 for MSE), confirming L&lt;sub&gt;const&lt;/sub&gt; preserves baseline spatial fidelity [Paper] [Paper: PDF p. 9]</td><td>Removal (λ=0) likely degrades spatial profile quality; not ablated, but paper states it’s for “stabilizing training” [Paper] [Paper: PDF p. 5]</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<p>论文未给出完整可核验的闭式公式（如网络结构），但明确定义了以下关键符号与可验证操作：</p>
+<ul>
+<li><strong>U&lt;sub&gt;c,g&lt;/sub&gt;</strong>: 真实 one-sided Mann–Whitney U statistic for gene g under contrast c (one-vs-rest), computed as sum over i∈A&lt;sub&gt;c&lt;/sub&gt;, j∈B&lt;sub&gt;c&lt;/sub&gt; of indicator 1[y&lt;sub&gt;i,g&lt;/sub&gt; &gt; y&lt;sub&gt;j,g&lt;/sub&gt;] + 0.5·1[y&lt;sub&gt;i,g&lt;/sub&gt; = y&lt;sub&gt;j,g&lt;/sub&gt;] [Paper] [Paper: PDF p. 4]</li>
+<li><strong>ˆU&lt;sub&gt;c,g&lt;/sub&gt;</strong>: Differentiable approximation: Σ&lt;sub&gt;i∈A&lt;sub&gt;c&lt;/sub&gt;&lt;/sub&gt; Σ&lt;sub&gt;j∈B&lt;sub&gt;c&lt;/sub&gt;&lt;/sub&gt; σ((ŷ&lt;sub&gt;i,g&lt;/sub&gt; − ŷ&lt;sub&gt;j,g&lt;/sub&gt;)/τ), where σ is sigmoid, τ is temperature [Paper] [Paper: PDF p. 5, Eq. 1]</li>
+<li><strong>π&lt;sub&gt;c&lt;/sub&gt;</strong>: Reference ranked gene list = argsort↓&lt;sub&gt;g&lt;/sub&gt;(U&lt;sub&gt;c,g&lt;/sub&gt;) [Paper] [Paper: PDF p. 4]</li>
+<li><strong>ˆπ&lt;sub&gt;c&lt;/sub&gt;</strong>: Predicted ranked gene list = argsort↓&lt;sub&gt;g&lt;/sub&gt;(ˆU&lt;sub&gt;c,g&lt;/sub&gt;) [Paper] [Paper: PDF p. 4]</li>
+<li><strong>L&lt;sub&gt;DEG&lt;/sub&gt;</strong>: DEG-ranking loss = 1 − (1/|C|) Σ&lt;sub&gt;c∈C&lt;/sub&gt; Corr&lt;sub&gt;g&lt;/sub&gt;(ˆU&lt;sub&gt;c&lt;/sub&gt;, U&lt;sub&gt;c&lt;/sub&gt;) [Paper] [Paper: PDF p. 5, Eq. 2]</li>
+<li><strong>L = L&lt;sub&gt;DEG&lt;/sub&gt; + λL&lt;sub&gt;const&lt;/sub&gt;</strong>: Overall loss, with λ=1.0 [Paper] [Paper: PDF p. 5, Eq. 3]</li>
+<li><strong>SCCDEG&lt;sub&gt;c&lt;/sub&gt;</strong>: Spearman rank correlation between U&lt;sub&gt;c&lt;/sub&gt; and ˆU&lt;sub&gt;c&lt;/sub&gt; across genes [Paper] [Paper: PDF p. 6, Eq. 4]</li>
+<li><strong>nDCGDEG&lt;sub&gt;c&lt;/sub&gt;@k</strong>: Normalized Discounted Cumulative Gain for top-k DEGs, using binary relevance rel&lt;sub&gt;c&lt;/sub&gt;(g) = 1[g ∈ top-k of π&lt;sub&gt;c&lt;/sub&gt;] [Paper] [Paper: PDF p. 6, Eq. 5]</li>
+</ul>
+<p>No other equations are formally defined beyond these.</p>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td>Cluster-based DEG (Table 1)</td><td>Our IDER objective improves DEG ranking over conventional objectives when groups are morphology-derived</td><td>All methods trained on HEST-1K (Ovary/Lymph Node/Bowel); groups from K-means (k=10) on CONCH features; evaluated on nDCGDEG@50/100/200 &amp; SCCDEG</td><td>Ours achieves highest scores across all datasets/metrics (e.g., nDCGDEG@200: 0.595 vs 0.546 for NB on Bowel)</td><td>Morphology-derived proxy contrasts + IDER loss enable superior DEG ranking even without biological labels</td><td>Not that IDER works for <em>all</em> morphological granularities — tested only at k=10 during training</td><td>[Paper] [Paper: PDF p. 7, Table 1]</td></tr>
+<tr><td>Generalization to grouping granularity (Figure 2)</td><td>Model trained at fixed granularity (k=10) generalizes to unseen coarser groupings</td><td>Evaluated on Lymph Node with k=10,8,6,4,2 clusters; same trained model, no finetuning</td><td>Ours consistently best across all k (nDCGDEG@200: 0.643 at k=10 → 0.601 at k=2)</td><td>IDER-trained models encode morphology-DEG associations robustly across scales, enabling flexible downstream analysis</td><td>Not that generalization holds for k&gt;10 or pathological extremes (e.g., k=100)</td><td>[Paper] [Paper: PDF p. 7, Figure 2]</td></tr>
+<tr><td>Real annotation-based DEG (Table 3)</td><td>IDER-trained model transfers to expert-annotated tissue regions without seeing annotations</td><td>Trained on Her2st using morphology clusters; evaluated on pathologist-annotated regions (adipose, connective, etc.)</td><td>Ours outperforms all baselines on all subtypes (e.g., invasive cancer: nDCGDEG=0.301 vs 0.176 for MSE)</td><td>Morphology-derived proxy groups capture biologically meaningful tissue variation, enabling zero-shot transfer to pathology annotations</td><td>Not that model understands pathology semantics — it learns statistical associations, not causal mechanisms</td><td>[Paper] [Paper: PDF p. 8, Table 3]</td></tr>
+<tr><td>Pathway enrichment overlap (Table 2)</td><td>Improved DEG ranking translates to better preservation of functional interpretation</td><td>Top-200 DEGs from predicted/measured profiles fed to Reactome/KEGG; Jaccard index computed on top-200 enriched pathways</td><td>Ours achieves highest Jaccard across all datasets (e.g., 0.571 on Lymph Node vs 0.443 for NB)</td><td>IDER preserves downstream biological utility — predicted DEG lists yield more concordant pathway hypotheses</td><td>Not that individual pathway predictions are accurate; Jaccard measures set overlap, not directionality or significance</td><td>[Paper] [Paper: PDF p. 8, Table 2]</td></tr>
+<tr><td>Ablation (Table 4)</td><td>Inter-gene ranking optimization (Corr&lt;sub&gt;g&lt;/sub&gt;) is critical, not just DEG signal presence</td><td>“Ours w/o DEG rank.” replaces L&lt;sub&gt;DEG&lt;/sub&gt; with MSE on U-vector; same architecture/data</td><td>Removing ranking component drops nDCGDEG@200 sharply (e.g., 0.595→0.491 on Bowel)</td><td>Gene-axis correlation is necessary to capture ranking structure; MSE on U alone is insufficient</td><td>Not that Corr&lt;sub&gt;g&lt;/sub&gt; is the only viable ranking surrogate — alternatives (e.g., NDCG loss) untested</td><td>[Paper] [Paper: PDF p. 8, Table 4]</td></tr>
+<tr><td>Plug-in to ST-Net/TRIPLEX (Table 6)</td><td>IDER objective is architecture-agnostic and modular</td><td>ST-Net and TRIPLEX trained with original loss vs + Ours loss on Her2st</td><td>Both gain substantially (e.g., ST-Net nDCGDEG@200: 0.073→0.247)</td><td>IDER can be adopted as a drop-in replacement for any ST predictor, enhancing its biological utility</td><td>Not that plug-in works for <em>all</em> architectures — only tested on ST-Net and TRIPLEX</td><td>[Paper] [Paper: PDF p. 9, Table 6]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<ul>
+<li><strong>IDER 是任务定义，不是模型</strong>：论文贡献首先是形式化 IDER 任务（Fig.1b），其次才是提供可微分实现；任何能优化 DEG 排序的方法都属 IDER 范畴。</li>
+<li><strong>“Better DEG ranking” ≠ “Better gene expression”</strong>：Table 5 explicitly shows Ours trades off per-gene PCC for ranking quality — this is intentional design, not deficiency.</li>
+<li><strong>Proxy contrasts are sufficient, not perfect</strong>：K-means on CONCH features approximates biology but doesn’t replicate ground-truth pathology; success in Her2st (Table 3) shows sufficiency for transfer, not equivalence.</li>
+<li><strong>Pathway overlap is emergent, not engineered</strong>：No pathway priors are injected (unlike PEaRL [20]); improved Jaccard (Table 2) is a <em>consequence</em> of better DEG ranking, validating biological relevance.</li>
+<li><strong>Generalization is empirical, not theoretical</strong>：Figure 2 shows robustness across k=2–10, but makes no claim about extrapolation beyond this range or to unseen tissue types.</li>
+<li><strong>Plug-in success requires compatible output</strong>：The method assumes predictor outputs ŷ&lt;sub&gt;i&lt;/sub&gt; ∈ ℝ&lt;sup&gt;G&lt;/sup&gt;; it wouldn’t apply to generative models outputting distributions without modification.</li>
+</ul>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td>Dependence on foundation model quality</td><td>Performance tied to CONCH feature quality; if CONCH fails on novel tissue, proxy groups degrade</td><td>Explore alternative foundation models or self-supervised histology encoders</td><td>[Paper] [Paper: PDF p. 6] states CONCH is used, but no robustness analysis against encoder failure</td></tr>
+<tr><td>Limited evaluation on rare cell types</td><td>In Her2st, classes with &lt;10 spots/patient excluded due to unreliable statistics</td><td>Develop DEG ranking metrics robust to ultra-sparse groups (e.g., single-cell aware)</td><td>[Paper] [Paper: PDF p. 7] notes exclusion of small classes; no proposal for sparse-group adaptation</td></tr>
+<tr><td>No explicit handling of batch effects</td><td>Training uses single-dataset splits; no multi-center or stain-variance robustness test</td><td>Integrate stain-normalization or domain-adversarial components into IDER framework</td><td>Not mentioned in limitations section; absence implies unstudied</td></tr>
+<tr><td>Static contrast construction</td><td>Proxy groups fixed at training time; cannot adapt to user-defined contrasts at inference</td><td>Enable on-the-fly contrast definition (e.g., user scribbles) with lightweight fine-tuning</td><td>[Paper] [Paper: PDF p. 5] describes offline clustering; no inference-time contrast flexibility discussed</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td>IDER’s success may stem from implicit spatial regularization in U-statistic computation, not pure ranking alignment</td><td>The double sum Σ&lt;sub&gt;i∈A&lt;/sub&gt;Σ&lt;sub&gt;j∈B&lt;/sub&gt; inherently aggregates spatial neighborhood information; high nDCGDEG@200 could reflect better spatial coherence rather than true DEG prioritization</td><td>Confounds interpretation: Is improvement due to better biological signal or better spatial smoothing? This affects trust in DEG lists for validation</td><td>Train a control model that computes U-statistic on <em>spatially shuffled</em> ŷ&lt;sub&gt;i,g&lt;/sub&gt; (breaking spatial structure but preserving marginal distributions) and compare nDCGDEG</td><td>U-statistic definition depends on pairwise spot comparisons [Paper] [Paper: PDF p. 4], so spatial arrangement is baked in; no ablation tests spatial vs ranking contribution</td></tr>
+<tr><td>nDCGDEG@200 may overemphasize top-200 while ignoring long-tail biological signals</td><td>Many disease-relevant genes reside outside top-200; SCCDEG (Spearman) captures global order but is less used in practice</td><td>Clinical utility depends on actionable top hits; if IDER distorts mid-rank genes, pathway analysis (Table 2) could be misleading despite high Jaccard</td><td>Report nDCG@50, @100, @200 separately (done in Table 1) AND analyze precision@k for k=10,20,50 on known marker genes from literature</td><td>Table 1 reports @50/@100/@200, showing consistent gains, but no marker-specific validation is performed [Paper] [Paper: PDF p. 7]</td></tr>
+<tr><td>Pathway Jaccard overlap (Table 2) conflates sensitivity and specificity</td><td>High Jaccard could arise from both methods missing the same pathways, not recovering correct ones</td><td>For biomedical AI, false positives in DEG lists are costly; Jaccard alone doesn’t reveal whether recovered pathways are biologically plausible</td><td>Compute pathway-level precision/recall against gold-standard disease pathways (e.g., Hallmark sets) instead of just set overlap</td><td>Paper uses Reactome/KEGG but no external validation against curated disease pathways [Paper] [Paper: PDF p. 8]</td></tr>
+<tr><td>Plug-in gains (Table 6) might be attributable to increased training stability from L&lt;sub&gt;const&lt;/sub&gt;, not IDER’s ranking objective</td><td>L&lt;sub&gt;const&lt;/sub&gt; is retained in plug-in; its PCC term could simply improve convergence, making STRank/ST-Net train better</td><td>Undermines the core claim that IDER objective is the driver; confounds architectural vs objective contribution</td><td>Run plug-in ablation: ST-Net + L&lt;sub&gt;const&lt;/sub&gt; only (no L&lt;sub&gt;DEG&lt;/sub&gt;) vs ST-Net + full L — compare nDCGDEG@200</td><td>Paper adds full L = L&lt;sub&gt;DEG&lt;/sub&gt; + λL&lt;sub&gt;const&lt;/sub&gt; in plug-in [Paper] [Paper: PDF p. 9], but no ablation isolates L&lt;sub&gt;const&lt;/sub&gt;’s role</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>下游对齐设计原则</strong>：当模型输出需服务于特定下游分析（如 DEG ranking → pathway enrichment），应直接优化该分析的中间产物（U-statistic vector），而非原始输出（expression matrix）；这是比“post-hoc correction”更根本的对齐。</li>
+<li><strong>代理对比组（proxy contrast）是一种通用范式</strong>：在缺乏黄金标注时，用无监督特征聚类生成对比组，可作为生物学差异的廉价代理；该思路可迁移到 single-cell foundation models 中的 condition-aware representation learning。</li>
+<li><strong>排名可微分化的工程选择</strong>：温度控制的 sigmoid 平滑（Eq. 1）比 soft-sort 或 neural sort 更轻量，且 τ 可调——大 τ 适合稳定训练，小 τ 逼近离散排序；这对 perturbation prediction 中的 top-K gene selection有直接启示。</li>
+<li><strong>评价指标必须与目标同构</strong>：用 nDCGDEG@200 评价 DEG discovery 是因为临床关注 top hits；若目标是 biomarker panel discovery, 应设计 panel-level metrics (e.g., Jaccard of top-10 gene sets)。</li>
+<li><strong>模块化即插即用的价值</strong>：L&lt;sub&gt;DEG&lt;/sub&gt; + L&lt;sub&gt;const&lt;/sub&gt; 损失可无缝替换任何回归头，证明“下游感知”不必重构整个模型——这对用户现有 spatial transcriptomics pipeline 的升级极为友好。</li>
+<li><strong>形态学-基因关联的鲁棒性</strong>：CONCH 聚类生成的 proxy groups 能泛化到 Her2st 真实标注（Table 3），说明现代病理 foundation models 已编码足够强的 morphology-biology mapping，可作为 biomedical AI 的可靠中间表示。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：</li>
+<li>与 <em>single-cell foundation models</em>：IDER 的 proxy contrast idea maps to scFoundation’s “condition-aware masking” —— 两者均用无监督 grouping 替代稀疏标注，但 IDER 将 grouping 用于 ranking alignment，scFoundation 用于 masked reconstruction。</li>
+<li>与 <em>spatial transcriptomics</em>：本文的 U-statistic over spots parallels spatial DEG tools like SPARK-X, but IDER lifts it to image-conditioned prediction; Table 5’s per-gene PCC trade-off echoes debates in ST denoising about spatial fidelity vs biological signal.</li>
+<li>与 <em>graph neural networks</em>：虽然本文未用 GNN，但 Fig.1b 的 “U-statistic → ranking” 流程可自然嵌入 spatial graph：A&lt;sub&gt;c&lt;/sub&gt;/B&lt;sub&gt;c&lt;/sub&gt; 定义图节点子集，U&lt;sub&gt;c,g&lt;/sub&gt; 成为图级 readout，为 GNN-based ST predictors 提供新监督信号。</li>
+<li>与 <em>multi-omics</em>：IDER 的核心是 cross-modal alignment (image ↔ expression) via downstream task —— 这与 multi-omics integration 中“alignment via shared biological function”（如 MOFA+）理念一致，但 IDER 用可微分 ranking 替代 latent space correlation。</li>
+<li>与 <em>perturbation prediction</em>：IDER 的 contrast-specific ranking is analogous to perturbation-response ranking (e.g., “which genes most change after drug X?”); the differentiable U-statistic could replace current rank-losses in perturbation models.</li>
+<li>与 <em>cell state representation</em>：π&lt;sub&gt;c&lt;/sub&gt; = argsort↓(U&lt;sub&gt;c,g&lt;/sub&gt;) defines a “morphology-responsive gene signature” —— this is a functional cell-state representation grounded in image-derived context, complementary to PCA/UMAP embeddings.</li>
+<li><strong>弱连接/方法论连接</strong>：</li>
+<li><em>biomedical AI</em>：IDER provides a concrete, evaluable definition of “biological utility”, moving beyond accuracy metrics toward clinical actionability — highly relevant for FDA-cleared AI tools.</li>
+<li><em>cross-modal alignment</em>：IDER is a task-driven alignment paradigm: instead of maximizing image-expression similarity in embedding space (e.g., CLIP-style), it aligns their <em>downstream analytical consequences</em> — a more rigorous form of alignment.</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Morphology-Guided Perturbation Prioritization</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: IDER uses static morphology-derived groups, but perturbation experiments (e.g., drug treatment) define dynamic, intervention-specific contrasts [Analysis] — current proxy groups cannot capture treatment-induced morphological shifts. <strong>core hypothesis</strong>: Fine-tuning IDER’s contrast generator on pre/post-perturbation image pairs enables discovery of genes whose expression changes most sensitively to intervention, outperforming static morphology groups. <strong>delta from paper</strong>: Replace offline K-means with contrast-aware adapter on CONCH, trained on paired pre/post images to predict perturbation-responsive groups. <strong>initial method</strong>: Given pre-treatment image x&lt;sub&gt;pre&lt;/sub&gt; and post-treatment x&lt;sub&gt;post&lt;/sub&gt;, train adapter to output group assignment δ(x&lt;sub&gt;pre&lt;/sub&gt;,x&lt;sub&gt;post&lt;/sub&gt;) that maximizes U-statistic separation for known responsive genes (e.g., from LINCS). <strong>validation</strong>: On CMap or DrugCell datasets, compare nDCG@50 of predicted top-responsive genes against ground-truth perturbation signatures. <strong>failure modes</strong>: Adapter overfits to technical artifacts (stain drift); pre/post pairs too scarce for stable contrast learning. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Graph-Regularized IDER for Spatial Context</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: IDER computes U-statistic over spot pairs but ignores spatial adjacency — a gene highly expressed in adjacent tumor spots should contribute more to U&lt;sub&gt;c,g&lt;/sub&gt; than distant ones [Analysis]. <strong>core hypothesis</strong>: Incorporating spatial graph structure (e.g., Visium spot neighbors) into U-statistic weighting improves localization of morphology-associated DEGs. <strong>delta from paper</strong>: Modify Eq. 1 to ˆU&lt;sub&gt;c,g&lt;/sub&gt; = Σ&lt;sub&gt;i∈A&lt;sub&gt;c&lt;/sub&gt;&lt;/sub&gt; Σ&lt;sub&gt;j∈B&lt;sub&gt;c&lt;/sub&gt;&lt;/sub&gt; w&lt;sub&gt;ij&lt;/sub&gt; · σ((ŷ&lt;sub&gt;i,g&lt;/sub&gt;−ŷ&lt;sub&gt;j,g&lt;/sub&gt;)/τ), where w&lt;sub&gt;ij&lt;/sub&gt; is adjacency weight from spatial graph. <strong>initial method</strong>: Build k-nearest neighbor graph on spot coordinates; set w&lt;sub&gt;ij&lt;/sub&gt; = exp(−d&lt;sub&gt;ij&lt;/sub&gt;&lt;sup&gt;2&lt;/sup&gt;/σ&lt;sup&gt;2&lt;/sup&gt;) for neighbors, 0 otherwise; integrate into loss L&lt;sub&gt;DEG&lt;/sub&gt;. <strong>validation</strong>: Compare nDCGDEG@200 on Her2st with/without graph weighting; inspect top-ranked genes for spatial coherence (e.g., enriched in contiguous tumor regions). <strong>failure modes</strong>: Graph construction sensitive to spot density; weighting may suppress long-range biological signals (e.g., immune infiltration). <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Cross-Modal Alignment via Shared DEG Manifold</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: IDER aligns image-predicted and measured U-vectors, but multi-omics data (e.g., ATAC+RNA) have their own DEG rankings — no mechanism to align <em>across modalities</em> [Analysis]. <strong>core hypothesis</strong>: Jointly optimizing IDER losses for image→RNA and ATAC→RNA predictions forces their U-statistic vectors to lie on a shared “DEG manifold”, improving cross-modal interpretability. <strong>delta from paper</strong>: Extend L&lt;sub&gt;DEG&lt;/sub&gt; to L&lt;sub&gt;DEG&lt;/sub&gt;&lt;sup&gt;img&lt;/sup&gt; + L&lt;sub&gt;DEG&lt;/sub&gt;&lt;sup&gt;atac&lt;/sup&gt; + λ&lt;sub&gt;align&lt;/sub&gt;·||U&lt;sub&gt;c&lt;/sub&gt;&lt;sup&gt;img&lt;/sup&gt; − U&lt;sub&gt;c&lt;/sub&gt;&lt;sup&gt;atac&lt;/sup&gt;||&lt;sub&gt;2&lt;/sub&gt;&lt;sup&gt;2&lt;/sup&gt;, where U&lt;sup&gt;atac&lt;/sup&gt; is ATAC-derived contrast score. <strong>initial method</strong>: On matched multi-omics ST data (e.g., 10x Multiome), compute ATAC-based U-statistic using chromatin accessibility peaks as proxy for gene regulation; add alignment term. <strong>validation</strong>: Measure correlation of top-100 DEGs between modalities; assess if joint training improves pathway Jaccard over single-modality IDER. <strong>failure modes</strong>: ATAC-RNA coupling weak in some tissues; U-statistic may not be appropriate for sparse ATAC data. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>

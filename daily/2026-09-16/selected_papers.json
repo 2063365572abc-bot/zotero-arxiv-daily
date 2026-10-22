@@ -1,0 +1,66 @@
+[
+  {
+    "source": "arxiv",
+    "title": "Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+    "authors": [
+      "Xiao Xiao",
+      "Jiashu He",
+      "Shiyang Zhang",
+      "Meiyi Mao"
+    ],
+    "abstract": "In the tumor microenvironment, cell's state is influenced by cell-cell interactions (CCIs) with neighboring cells in its niches. Identifying dysregulated CCIs that are associated with pathogenic process pinpoints targets for drug discovery. Imaging-based spatial transcriptomics and single-cell RNA sequencing provide, respectively, single-cell spatial information and transcriptome-wide measurements needed to study CCIs, but neither modality provides both. Existing spatial transcriptomics foundation models also cannot effectively learn from spatially resolved single-cell data with full-transcriptome coverage, explicitly infer the CCI mechanisms driving cell state-niche associations, or interpretable enough to support direct biological interpretations. Here, we present GITIII-scale, a hierarchical, interpretable pan-cancer spatial transcriptomics foundation model for TME representation learning that investigates cell state-niche associations and their underlying ligand-receptor (LR) signaling pathways. GITIII-scale uses transformers to model interactions between pairs of cells at defined spatial distances, an interpretable single-layer graph transformer without a feed-forward network to decompose how each gene in a receiver cell is influenced by each neighboring sender cell, and a graph transformer to generate cellular-neighborhood embeddings. Trained on our assembled pan-cancer database of specimen-matched scRNA-seq and imaging-based spatial transcriptomics datasets, GITIII-scale generated TME embeddings that recovered niche-associated state changes more accurately than existing spatial transcriptomics foundation models in cancer types unseen during training. A case study of an unseen breast cancer dataset further demonstrated the model's interpretability by identifying potentially drug-targetable LR pathways associated with endothelial overgrowth and tumorigenesis.",
+    "url": "http://arxiv.org/abs/2608.26208v1",
+    "pdf_url": "https://arxiv.org/pdf/2608.26208v1",
+    "score": 91.0,
+    "role": "best_match",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 9.0,
+      "evidence_quality": 8.0,
+      "transferability": 9.0,
+      "resource_value": 7.0,
+      "trend_value": 10.0,
+      "total": 91.0,
+      "role": "best_match",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as best_match; LLM total=91.0/100. 直接解决空间转录组+单细胞联合建模、CCI机制可解释性，匹配全部核心关键词 Risk: 泛癌训练可能弱化特定组织domain segmentation性能",
+    "arxiv_id": "2608.26208v1",
+    "published_date": "2026-08-26T04:55:19+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Towards a knowledge-enhanced single-cell foundation model",
+    "authors": [
+      "Hanqing Zhang",
+      "Jie Bao",
+      "Mei Ma",
+      "Shuai Liu",
+      "Jiaying Ma",
+      "Jiaguan Liu",
+      "Jiaxiao Li",
+      "Zhenbo Li",
+      "Wenwen Gong",
+      "Zhijun Ca"
+    ],
+    "abstract": "Single-cell foundation models (scFMs) increasingly rely on large-scale transcriptomic pretraining, yet expanding pretraining data can yield diminishing gains while substantially increasing computational cost. Our data scaling analyses showed that incorporating biological knowledge, including cell-level text annotation and gene-level regulatory information, provided additional scaling dimension than simply increasing data size. Motivated by this observation, we present scKITE, a simple yet effective scFM that integrates cell-annotation and gene-regulatory supervision into a shared transcriptomic Transformer encoder through lightweight auxiliary decoders. These decoders are used only during pretraining and subsequently discarded, yielding a general-purpose encoder enriched with biological knowledge for downstream applications. With only 179,067 pretraining samples, i.e., less than 0.5\\% of those used by previous strong scFMs, scKITE outperformed these models across diverse downstream tasks, highlighting knowledge-enhanced pretraining as a promising paradigm for biologically grounded scFMs.",
+    "url": "http://arxiv.org/abs/2609.14970v1",
+    "pdf_url": "https://arxiv.org/pdf/2609.14970v1",
+    "score": 89.5,
+    "role": "method_inspiration",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 8.0,
+      "evidence_quality": 8.0,
+      "transferability": 9.0,
+      "resource_value": 8.0,
+      "trend_value": 10.0,
+      "total": 89.5,
+      "role": "method_inspiration",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as method_inspiration; LLM total=89.5/100. 知识增强scFM，明确支持cell state representation与perturbation prediction下游任务 Risk: 未提空间或multi-omics扩展，跨模态对齐证据不足",
+    "arxiv_id": "2609.14970v1",
+    "published_date": "2026-09-14T03:23:55+00:00"
+  }
+]

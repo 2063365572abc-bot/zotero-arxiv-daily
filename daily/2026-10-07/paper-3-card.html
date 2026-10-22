@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: discovery<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Zeyu Dong, Jiahui Zhong</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>URL</td><td>http://arxiv.org/abs/2609.23325v1</td><td>[Paper meta]</td></tr>
+<tr><td>PDF URL</td><td>https://arxiv.org/pdf/2609.23325v1</td><td>[Paper meta]</td></tr>
+<tr><td>Publication date</td><td>2026-09-20</td><td>[Paper meta]</td></tr>
+<tr><td>Code availability</td><td>https://github.com/jz890/sc-imbalance</td><td>[Paper] [Paper: PDF p. 7]</td></tr>
+<tr><td>Datasets</td><td>Multiple Sclerosis (MS), Zheng68K, human Pancreas</td><td>[Paper] [Paper: PDF p. 3]</td></tr>
+<tr><td>Backbones</td><td>scGPT, scBERT, Geneformer</td><td>[Paper] [Paper: PDF p. 3]</td></tr>
+<tr><td>Losses evaluated</td><td>Cross-entropy (CE), weighted CE, class-balanced loss, focal loss, LDAM, logit-adjusted softmax</td><td>[Paper] [Paper: PDF p. 3]</td></tr>
+<tr><td>Total runs</td><td>162 (3 backbones × 3 datasets × 6 losses × 3 seeds)</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Key metrics</td><td>Macro-F1, rare-class recall (Recall&lt;sub&gt;R&lt;/sub&gt;), rare-class precision, rare-class macro-AUPRC, ∆F1&lt;sub&gt;c&lt;/sub&gt;, NC1</td><td>[Paper] [Paper: PDF p. 3–6]</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>该论文系统评测了六种长尾损失函数在三种单细胞基础模型（scGPT/scBERT/Geneformer）和三个真实数据集（MS/ Zheng68K/Pancreas）上的表现，发现整体准确率严重掩盖罕见细胞类型（如疾病相关病理亚群）的系统性失败；这种失败可划分为两类：一类是“损失敏感型”（loss-sensitive），可通过重加权类平衡损失等方法显著提升性能；另一类是“严重纠缠型”（severely entangled），其根本瓶颈在于训练样本绝对数量过少（如仅3个细胞）与嵌入空间几何结构（如邻域吸收、高NC1）共同导致，现有损失函数均无法缓解。论文由此提出首个机制驱动的实践指南：用NC1与最近邻混淆模式预判失败类型，对可恢复类优先选用class-balanced loss或LDAM，对不可恢复类应转向数据增补或拒判策略，而非继续优化损失。</p>
+<h2>03 研究问题</h2>
+<p>论文直面单细胞基础模型在临床关键场景下的可信度断层：当模型报告97.5%的总体准确率时，是否仍会系统性漏检那些仅含个位数样本、却承载疾病早期信号的罕见细胞亚型？作者不满足于将问题归因为“数据不平衡”，而是追问更精细的机制问题：（1）不同长尾损失函数的收益是否依赖于特定骨干架构？（2）罕见类失败是统一现象，还是存在本质不同的子类型？（3）若存在可恢复子类型，决定其是否受益于重加权的关键变量是相对频率（如占比&lt;5%），还是绝对样本量？（4）若存在不可恢复子类型，其失败根源是表征坍缩（representation collapse），还是分类器训练缺陷？这些问题共同构成对“长尾损失是否万能解药”的实证拷问。</p>
+<h2>04 研究背景与发展路径</h2>
+<p>单细胞基础模型（scGPT/scBERT/Geneformer）已成为细胞类型注释默认主干，但其高聚合准确率被证实由常见细胞主导，而罕见细胞（如MS中的病理寡突胶质细胞C、吞噬细胞）常被忽略 [Paper] [Paper: PDF p. 1]。此前工作已识别该问题：Alsabbagh et al. (2023) 发现随机过采样最稳健，但聚焦采样策略而非损失函数；Naziri et al. (2025) 在AML中观察到健康vs.复发样本F1骤降，归因于预训练偏差；Al Amin et al. (2025) 揭示人口统计学失衡亦影响微调。长尾学习领域已有成熟损失族（重加权、focal loss、LDAM、logit adjustment）[Paper] [Paper: PDF p. 2]，但其在单细胞基础模型上的系统性跨架构评估尚属空白。本文承接此缺口，将“损失函数选择”作为独立控制轴，在固定采样分布与批处理条件下，隔离考察其效应，从而补全从采样→表示→分类的完整干预谱系。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>Aggregate metrics mask rare-class failure</strong></td><td>Accuracy &gt; Macro-F1 &gt; rare-class recall consistently across all 9 (backbone, dataset) settings [Paper] [Paper: PDF p. 3]</td><td>Dataset structure (training-set scarcity), not pretraining bias, drives the gap [Paper] [Paper: PDF p. 1]</td><td>Figure 2 (left): Pancreas has highest accuracy but largest accuracy-to-rare-recall drop; Table 1 shows consistent ordering across datasets [Paper] [Paper: PDF p. 4–5]</td></tr>
+<tr><td><strong>Loss-level interventions are insufficient for some rare classes</strong></td><td>Two MS classes (oligodendrocyte C, phagocyte) achieve near-zero F1 under <em>all</em> six losses and <em>all</em> three backbones [Paper] [Paper: PDF p. 5]</td><td>Training-set size too small (n=3 cells) to learn distinguishable representation; geometric absorption into unrelated classes’ neighborhoods [Paper] [Paper: PDF p. 5–6]</td><td>Figure 3 (left): two darkest rows across all columns; Figure 4: UMAP shows 116 test cells absorbed in CE/LDAM spaces; Section 5.1 confirms same failure in non-foundation baselines (5-NN, RF) [Paper] [Paper: PDF p. 5–7]</td></tr>
+<tr><td><strong>Reweighting benefit is misattributed to relative imbalance</strong></td><td>Weighted CE performs best on MS (most imbalanced <em>ratio</em>), yet worst on Zheng68K (less imbalanced ratio but larger absolute rare-class counts) [Paper] [Paper: PDF p. 4]</td><td>Benefit is predicted by <em>absolute</em> training-set size of the rare class, not its share of dataset or overall imbalance ratio [Paper] [Paper: PDF p. 4]</td><td>Figure 3 (right): strong negative Pearson correlation (r = −0.77, p &lt; 0.001) between log(training size) and ∆F1&lt;sub&gt;c&lt;/sub&gt;; MS rare classes have smallest absolute counts [Paper] [Paper: PDF p. 4]</td></tr>
+<tr><td><strong>Loss functions make hidden trade-offs obscured by Macro-F1</strong></td><td>Logit adjustment achieves highest rare-class recall on Zheng68K (+0.075 over CE) but lowest rare-class precision among all six losses [Paper] [Paper: PDF p. 4]</td><td>It shifts decision threshold rather than improving feature separability, increasing false positives [Paper] [Paper: PDF p. 4]</td><td>Figure 2 (right): logit-adjusted point lies far below y=x line; Table 1 shows its rare-class precision is lowest (0.632 vs. CE’s 0.650 on Zheng68K) [Paper] [Paper: PDF p. 4–5]</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>论文的核心思想不是“设计新损失”，而是<strong>建立一个诊断性框架，将罕见类失败解耦为可修复与不可修复两类，并为每类提供可操作的判别标准与干预路径</strong>。其洞察源于对失败机制的分层归因：第一层是数据层面——若某类训练样本绝对数量极低（如≤3），则任何损失函数都无法克服信息匮乏，表现为嵌入空间中该类样本被完全吸收进其他类的邻域（Figure 4），且NC1指标异常升高（oligodendrocyte C）或异常降低（phagocyte）[Paper] [Paper: PDF p. 6]；第二层是算法层面——对于其余“损失敏感型”类，其可修复性由绝对样本量线性预测，而非相对频率，这解释了为何MS（小绝对数）比Zheng68K（大绝对数）从重加权中获益更多；第三层是评估层面——Macro-F1等单一指标会掩盖precision-recall权衡，必须通过散点图（Figure 2 right）与AUPRC等阈值无关指标揭示真实trade-off。该思想将长尾问题从“如何调参”升维至“何时放弃调参”。</p>
+<h2>07 方法总览</h2>
+<p>论文采用<strong>控制变量+多尺度诊断</strong>方法论：（1）<strong>系统性基准构建</strong>：在3 backbone × 3 dataset × 6 loss × 3 seed = 162次运行中，严格固定数据划分、基因面板、优化器超参、批大小等所有非损失变量，仅改变损失函数，以隔离其效应 [Paper] [Paper: PDF p. 3]；（2）<strong>双轨评估体系</strong>：既报告宏观指标（Macro-F1, Recall&lt;sub&gt;R&lt;/sub&gt;），也深入微观层面——按类分析∆F1&lt;sub&gt;c&lt;/sub&gt;（Eq. 3）、绘制F1热图（Figure 3 left）、计算NC1（Eq. 4）与最近邻熵 [Paper] [Paper: PDF p. 4–6]；（3）<strong>机制验证实验</strong>：引入非基础模型基线（5-NN, RF）验证失败非预训练特有；用线性探针（linear probe）在冻结嵌入上测试判别信号是否残留，定位瓶颈在分类器训练而非表示坍缩 [Paper] [Paper: PDF p. 6]；（4）<strong>几何可视化</strong>：UMAP投影（Figure 4）直观呈现“吸收”现象，将抽象失败转化为可观察的空间关系。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>Rare-class definition &amp; metric suite</strong></td><td>Define rare classes (training freq &lt; 5%), compute Recall&lt;sub&gt;R&lt;/sub&gt;, precision&lt;sub&gt;R&lt;/sub&gt;, macro-AUPRC, ∆F1&lt;sub&gt;c&lt;/sub&gt;</td><td>To move beyond aggregate accuracy and quantify failure on clinically relevant subpopulations</td><td>Input: per-class true labels/predictions; Output: scalar metrics per rare class/dataset</td><td>Section 3 defines R ⊆ {1,…,C}; Eq. 2 defines Recall&lt;sub&gt;R&lt;/sub&gt;; Table 1 reports all metrics [Paper] [Paper: PDF p. 3–5]</td><td>Without this, Figure 2 (right) and Figure 3 (right) would be impossible; conclusions about &quot;loss-sensitive&quot; regime vanish.</td></tr>
+<tr><td><strong>Per-class ∆F1&lt;sub&gt;c&lt;/sub&gt; analysis (Eq. 3)</strong></td><td>Quantify gain of best loss over CE for each rare class c</td><td>To test whether reweighting benefit is uniform or concentrated, and identify predictors (e.g., absolute count)</td><td>Input: F1&lt;sub&gt;c&lt;/sub&gt; under each loss ℓ; Output: ∆F1&lt;sub&gt;c&lt;/sub&gt; = max&lt;sub&gt;ℓ∈L&lt;/sub&gt; F&lt;sup&gt;(ℓ)&lt;/sup&gt;&lt;sub&gt;1,c&lt;/sub&gt; − F&lt;sup&gt;(CE)&lt;/sup&gt;&lt;sub&gt;1,c&lt;/sub&gt;</td><td>Eq. 3 explicitly defined; Figure 3 (right) plots ∆F1&lt;sub&gt;c&lt;/sub&gt; vs. log(training size) [Paper] [Paper: PDF p. 4]</td><td>Without Eq. 3, the central finding that absolute count predicts benefit (r=−0.77) could not be established.</td></tr>
+<tr><td><strong>Neural Collapse Geometry (NC1, Eq. 4)</strong></td><td>Quantify embedding tightness/separability via trace ratio tr(Σ&lt;sub&gt;W&lt;/sub&gt;)/tr(Σ&lt;sub&gt;B&lt;/sub&gt;)</td><td>To distinguish geometric causes of failure: high NC1 → poor within-class cohesion; low NC1 + absorption → small cluster embedded in another class</td><td>Input: frozen test-set embeddings per class; Output: scalar NC1 per class</td><td>Eq. 4 defined; Section 5.2 reports NC1 values for oligodendrocyte C (1.19–1.79) and phagocyte (0.17–0.32) [Paper] [Paper: PDF p. 6]</td><td>Without NC1, the geometric signature difference between the two severely entangled classes (Figure 4) remains qualitative, not quantifiable.</td></tr>
+<tr><td><strong>Linear probe on frozen embeddings</strong></td><td>Test if discriminative signal exists <em>in the representation</em> independent of classifier training</td><td>To determine if failure is due to lack of signal (data scarcity) or inability of loss functions to exploit it</td><td>Input: frozen CE-fine-tuned embeddings; Output: F1/recall/precision of logistic regression probe</td><td>Section 5.3 describes probe; results show probe F1 &gt; best trained F1 for entangled classes (e.g., scGPT/oligodendrocyte C: 0.465 vs. 0.329) [Paper] [Paper: PDF p. 6]</td><td>Without probe, conclusion that &quot;bottleneck is partly in loss design, not solely data scarcity&quot; [Paper] [Paper: PDF p. 6] lacks direct evidence.</td></tr>
+<tr><td><strong>UMAP visualization with selective highlighting (Figure 4)</strong></td><td>Visualize spatial relationship of severely entangled classes&#x27; test cells in embedding space</td><td>To provide intuitive, geometric evidence of &quot;neighborhood absorption&quot; that precedes any loss choice</td><td>Input: scGPT test embeddings; Output: 2D plot with 116 rare cells highlighted</td><td>Figure 4 caption and description; shows same 116 cells misclassified in CE and LDAM spaces [Paper] [Paper: PDF p. 7]</td><td>Without Figure 4, the claim of &quot;absorption into unrelated classes&#x27; neighborhoods&quot; [Paper] [Paper: PDF p. 5] is abstract; visualization makes it concrete and verifiable.</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<ul>
+<li><strong>No verifiable closed-form equations are presented in the paper.</strong> All listed equations are definitions or computational recipes, not derived theoretical formulas.</li>
+<li><strong>Equation 1</strong>: <code>Macro-F1 = 1/C ∑_{c=1}^C F1,c</code> — Definition of unweighted mean F1 score across C classes [Paper] [Paper: PDF p. 3]. Symbol <code>F1,c</code> denotes F1 score for class <code>c</code>.</li>
+<li><strong>Equation 2</strong>: <code>Recall_R = 1/|R| ∑_{c∈R} Recall_c</code> — Definition of macro-averaged recall over rare-class set <code>R</code> [Paper] [Paper: PDF p. 3]. Symbol <code>R</code> denotes set of rare classes (training freq &lt; 5%).</li>
+<li><strong>Equation 3</strong>: <code>∆F1,c = max_{ℓ∈L} F^{(ℓ)}_{1,c} − F^{(CE)}_{1,c}</code> — Definition of per-class F1 gain from best loss over cross-entropy [Paper] [Paper: PDF p. 4]. Symbol <code>L</code> denotes set of six losses; <code>F^{(ℓ)}_{1,c}</code> is class <code>c</code>&#x27;s F1 under loss <code>ℓ</code>.</li>
+<li><strong>Equation 4</strong>: <code>NC1 = tr(Σ_W) / tr(Σ_B)</code> — Neural collapse trace ratio, where <code>Σ_W</code> is average within-class scatter, <code>Σ_B</code> is between-class scatter of centroids [Paper] [Paper: PDF p. 6]. Lower NC1 indicates tighter, better-separated clusters.</li>
+<li><strong>Key metrics</strong>: <code>Accuracy</code>, <code>Macro-F1</code>, <code>Recall_R</code>, <code>Precision_R</code>, <code>macro-AUPRC</code>, <code>∆F1,c</code>, <code>NC1</code>.</li>
+<li><strong>Key sets</strong>: <code>R</code> (rare classes), <code>L</code> (loss set), <code>C</code> (total classes).</li>
+<li><strong>Not assessable from supplied material</strong>: No derivation, proof, or theoretical justification of any equation is provided.</li>
+</ul>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>162-run benchmark (Table 1, Fig 2 left)</strong></td><td>Aggregate metrics mask rare-class failure across architectures</td><td>CE vs. 5 other losses; 3 backbones × 3 datasets × 3 seeds; fixed data splits, gene panels, optimizers</td><td>Accuracy &gt; Macro-F1 &gt; Recall_R consistently across all 9 (backbone, dataset) cells</td><td>Gap is inherent to dataset imbalance structure, not backbone-specific</td><td>That pretraining is irrelevant — authors note variance arises from config differences [Paper] [Paper: PDF p. 3]</td><td>[Paper] [Paper: PDF p. 3–5], Table 1, Figure 2 left</td></tr>
+<tr><td><strong>∆F1,c vs. log(training size) (Fig 3 right)</strong></td><td>Absolute training-set size, not relative frequency, predicts reweighting benefit</td><td>Correlation of ∆F1,c (Eq. 3) with log(count) for 19 recoverable rare classes</td><td>Strong negative Pearson r = −0.77 (p &lt; 0.001); robust to exclusion thresholds</td><td>Reweighting efficacy is determined by absolute sample count</td><td>That this holds for <em>all</em> rare classes — 4 severely entangled classes were excluded [Paper] [Paper: PDF p. 4]</td><td>[Paper] [Paper: PDF p. 4], Figure 3 right</td></tr>
+<tr><td><strong>UMAP + linear probe (Fig 4, Sec 5.3)</strong></td><td>Severely entangled classes retain discriminative signal in frozen embeddings</td><td>Linear probe (class-balanced logistic regression) on CE-fine-tuned frozen embeddings vs. best trained classifier F1</td><td>Probe F1 exceeds best trained F1 for oligodendrocyte C (0.465 vs 0.329) and phagocyte (0.462 vs 0.000)</td><td>Bottleneck is in classifier training/loss design, not representation collapse</td><td>That a more complex nonlinear probe would close the gap — not tested [Paper] [Paper: PDF p. 6]</td><td>[Paper] [Paper: PDF p. 6–7], Figure 4, Section 5.3</td></tr>
+<tr><td><strong>Non-foundation baselines (Sec 5.1)</strong></td><td>Failure is not specific to pretrained representations</td><td>5-NN and class-balanced RF on raw gene expression vs. foundation models</td><td>Both baselines yield F1=0 on oligodendrocyte C/phagocyte, matching foundation models</td><td>Failure stems from data scarcity &amp; geometry, not pretraining artifacts</td><td>That these baselines are universally weak — they achieve Macro-F1=0.28/0.65 on MS overall [Paper] [Paper: PDF p. 5]</td><td>[Paper] [Paper: PDF p. 5], Section 5.1</td></tr>
+<tr><td><strong>NC1 &amp; nearest-neighbor analysis (Sec 5.2)</strong></td><td>Two distinct geometric signatures distinguish severely entangled classes</td><td>NC1 computed on MS rare classes; nearest-neighbor entropy calculated for phagocyte/oligodendrocyte C</td><td>Phagocyte: low NC1 (0.17–0.32), high concentration (entropy 0.71); Oligo-C: high NC1 (1.19–1.79), high dispersion (entropy 0.90)</td><td>Failure modes are geometrically distinct, requiring different diagnostics</td><td>That NC1 alone suffices for diagnosis — authors use it <em>with</em> nearest-neighbor patterns [Paper] [Paper: PDF p. 6]</td><td>[Paper] [Paper: PDF p. 6], Section 5.2</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>论文结论<strong>不可简化为“class-balanced loss is best”或“loss functions don’t work”</strong>。正确理解需把握三层限定：（1）<strong>适用范围限定</strong>：class-balanced loss 和 LDAM 是“最一致的通用选择”（mean rank 2.4/2.6），但并非在所有数据集上都最优（e.g., weighted CE wins on MS Macro-F1, LDAM wins on Pancreas Macro-F1）[Paper] [Paper: PDF p. 3]；（2）<strong>问题域限定</strong>：结论仅针对“细胞类型级”类别不平衡，明确排除了人口统计学失衡、批次效应等混杂变量 [Paper] [Paper: PDF p. 6]；（3）<strong>机制限定</strong>：“损失无效”仅适用于“严重纠缠型”类（如MS中n=3的两类），其失效根源是数据稀缺与几何吸收，而非损失函数本身缺陷；对“损失敏感型”类（如microglial cell），class-balanced loss确实能将其F1从0（scBERT）提升至0.86–0.92 [Paper] [Paper: PDF p. 6]。因此，核心贡献是提供了一个<strong>条件化决策树</strong>：先用NC1/UMAP诊断失败类型，再决定是换损失（可恢复）还是补数据（不可恢复）。</p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Limited backbone coverage</strong></td><td>Only scGPT, scBERT, Geneformer evaluated; scFoundation and CellPLM remain untested [Paper] [Paper: PDF p. 6]</td><td>Test other existing single-cell foundation models (scFoundation, CellPLM) [Paper] [Paper: PDF p. 6]</td><td>[Paper] [Paper: PDF p. 6]</td></tr>
+<tr><td><strong>Classifier expressivity ceiling</strong></td><td>Linear probe reveals unused discriminative signal in frozen embeddings, suggesting current losses may not fully exploit it [Paper] [Paper: PDF p. 6]</td><td>Explore more expressive, nonlinear classifier heads beyond the six losses tested [Paper] [Paper: PDF p. 6]</td><td>[Paper] [Paper: PDF p. 6]</td></tr>
+<tr><td><strong>Isolated imbalance axis</strong></td><td>Study focuses solely on cell-type class imbalance; does not address compounding variables like demographic composition or batch effects [Paper] [Paper: PDF p. 6]</td><td>Investigate interactions with demographic composition (Al Amin et al. 2025) and batch effects (Maan et al. 2024) [Paper] [Paper: PDF p. 6]</td><td>[Paper] [Paper: PDF p. 6]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td>*<em>The &quot;severely entangled&quot; regime is defined by near-zero F1 across </em>all<em> losses, but F1=0 may reflect label noise or annotation ambiguity rather than pure data scarcity</em>*</td><td>The MS dataset retains &quot;two ambiguous MS labels as defined in the source atlas&quot; [Paper] [Paper: PDF p. 3]; oligodendrocyte C and phagocyte may be biologically ill-defined or mislabeled, making them inherently non-separable regardless of samples or loss.</td><td>If true, the &quot;data scarcity&quot; interpretation is incomplete; the bottleneck may be ontological (label quality) rather than statistical (sample count). This affects whether data collection or label curation is the priority.</td><td>Re-annotate the 3 training cells for oligodendrocyte C/phagocyte using orthogonal modalities (e.g., spatial transcriptomics or protein markers) and re-run experiments. Compare F1 before/after.</td><td>[Paper] [Paper: PDF p. 3] states ambiguous labels exist; [Paper] [Paper: PDF p. 6] notes phagocyte is identified by ingested myelin RNA, suggesting biological heterogeneity.</td></tr>
+<tr><td>*<em>NC1 is computed on </em>frozen test-set embeddings<em>, but the paper attributes geometric failure to training dynamics</em>*</td><td>NC1 measures static geometry post-training; however, neural collapse theory (Papyan et al. 2020) links NC1 to <em>training trajectory</em>. Computing it only on test embeddings misses whether collapse occurs during fine-tuning or is inherited from pretraining.</td><td>Misattribution could lead to wrong interventions (e.g., blaming fine-tuning loss when pretraining already induced collapse). For user&#x27;s sc foundation model work, this affects whether to modify pretraining or fine-tuning.</td><td>Compute NC1 at multiple fine-tuning epochs (e.g., epoch 1, 5, 10, 15) and compare to pretraining checkpoint. Plot NC1 trajectory for oligodendrocyte C vs. other classes.</td><td>[Paper] [Paper: PDF p. 6] cites Papyan et al. 2020 on neural collapse but applies NC1 only to frozen test embeddings, not dynamics.</td></tr>
+<tr><td><strong>The linear probe uses class-balanced logistic regression, but the &quot;best loss&quot; comparison includes non-calibrated losses (e.g., LDAM)</strong></td><td>Probe performance is measured by F1, while LDAM is designed to shape decision boundaries, not calibrate probabilities. A probe using LDAM&#x27;s margin-aware objective might show different signal recovery.</td><td>This creates an apples-to-oranges comparison: probe evaluates separability, but losses optimize different objectives. It may underestimate what LDAM <em>could</em> extract if properly tuned.</td><td>Train linear probes using each of the six loss functions (not just logistic regression) on the same frozen embeddings and compare their F1.</td><td>[Paper] [Paper: PDF p. 6] uses &quot;class-balanced logistic regression&quot; for probe, while losses like LDAM and logit adjustment have fundamentally different objectives.</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>诊断先行，干预后置</strong>：在单细胞长尾任务中，不应直接尝试所有损失函数，而应先用NC1（Eq. 4）和UMAP最近邻分析（Figure 4）对罕见类进行“几何体检”，区分可修复（loss-sensitive）与不可修复（severely entangled）两类。</li>
+<li><strong>绝对数量胜于相对比例</strong>：决定重加权效果的关键变量是罕见类的<strong>绝对训练样本数</strong>（如3 vs. 70），而非其在数据集中的占比（如1% vs. 5%）。这解释了为何MS（小绝对数）比Zheng68K（大绝对数）获益更大，颠覆了“不平衡比率决定一切”的直觉。</li>
+<li><strong>Macro-F1是危险的简化器</strong>：Figure 2 (right) 清晰显示，logit adjustment虽提升recall，却大幅牺牲precision，而Macro-F1无法揭示此trade-off。必须辅以precision-recall散点图与macro-AUPRC。</li>
+<li><strong>失败可溯源至几何</strong>：严重纠缠类的失败不是黑箱，而是可观测的空间现象——其测试样本在UMAP中被完全吸收进其他类的邻域（Figure 4），且NC1指标呈现特征性偏移（高或低），这为调试提供了具体靶点。</li>
+<li><strong>信号未消失，只是未被利用</strong>：线性探针证明，即使仅有3个训练样本，判别性信号仍线性可分地存在于冻结嵌入中（Section 5.3）。这表明当前损失函数的设计存在表达能力缺口，为用户设计新损失（如结合margin与calibration）提供了强动机。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：本文的“两阶段诊断框架”（先几何分析，再损失选择）与Kang et al. (2020) 提出的“解耦表示学习与分类器校准”思想高度一致，均主张将表征质量与决策边界优化分离；本文用NC1和UMAP实现了该思想在单细胞领域的可操作化落地。</li>
+<li><strong>候选连接/方法论连接</strong>：对“绝对样本量预测重加权收益”的发现，与计算机视觉中Buda et al. (2018) 和Saini &amp; Susan (2023) 的结论形成跨模态呼应，证实了“有效样本数”（effective-number-of-samples）框架在单细胞领域的普适性。</li>
+<li><strong>候选连接/方法论连接</strong>：使用UMAP可视化嵌入空间吸收现象（Figure 4），与用户研究方向中“spatial transcriptomics”的空间邻域概念存在方法论共鸣——两者均强调细胞/spot在低维流形中的相对位置与生物学意义的关联。</li>
+<li><strong>候选连接/方法论连接</strong>：线性探针揭示未被利用的信号（Section 5.3），为用户“perturbation prediction”方向提供启示：若基础模型嵌入中已蕴含扰动响应信号（如药物处理后的状态偏移），但当前分类头未能提取，则可借鉴此探针范式，设计专用扰动解码头。</li>
+<li><strong>弱连接/方法论连接</strong>：本文聚焦单模态（scRNA-seq）细胞类型分类，与用户“multi-omics”方向无直接交集；但其“几何诊断”思路可迁移至多组学对齐后的联合嵌入空间，用于识别跨模态对齐失败的罕见亚群。</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Geometric-aware Loss Gating</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Severely entangled classes exhibit distinct NC1 signatures (high vs. low) and nearest-neighbor entropy, yet all losses fail uniformly [Paper] [Paper: PDF p. 6]. <strong>core hypothesis</strong>: A loss function should <em>adapt its objective</em> based on the geometric profile of each class — e.g., apply large-margin constraints for high-NC1 classes (poor cohesion) and density-aware reweighting for low-NC1 classes (absorption). <strong>delta from paper</strong>: Paper treats loss choice as global; this proposes per-class, geometry-conditioned loss selection or interpolation. <strong>initial method</strong>: For each class c, compute NC1&lt;sub&gt;c&lt;/sub&gt; and neighbor entropy H&lt;sub&gt;c&lt;/sub&gt; on frozen embeddings; define gating weight g&lt;sub&gt;c&lt;/sub&gt; = σ(α·NC1&lt;sub&gt;c&lt;/sub&gt; + β·H&lt;sub&gt;c&lt;/sub&gt;); blend LDAM (for high NC1) and class-balanced (for low NC1) via g&lt;sub&gt;c&lt;/sub&gt;. <strong>validation</strong>: Train on MS; compare F1 for oligodendrocyte C (high NC1) and phagocyte (low NC1) vs. baseline LDAM/class-balanced. <strong>failure modes</strong>: Gating weights may be unstable with tiny n; requires reliable NC1 estimation from few samples. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Probe-guided Loss Synthesis</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Linear probe recovers non-trivial F1 on entangled classes, exceeding best trained classifiers, proving signal exists but is unused [Paper] [Paper: PDF p. 6]. <strong>core hypothesis</strong>: The gradient update direction of standard losses misaligns with the direction of maximal separability revealed by the probe; synthesizing a loss that directly minimizes the probe&#x27;s classification error on frozen embeddings will close the gap. <strong>delta from paper</strong>: Paper uses probe for diagnosis; this uses probe gradients to <em>design</em> a new loss term. <strong>initial method</strong>: Extract frozen embeddings Z; train linear probe w&lt;sup&gt;<em>&lt;/sup&gt; = argmin&lt;sub&gt;w&lt;/sub&gt; ℓ&lt;sub&gt;probe&lt;/sub&gt;(w&lt;sup&gt;T&lt;/sup&gt;Z, y); define new loss ℓ&lt;sub&gt;new&lt;/sub&gt; = ℓ&lt;sub&gt;CE&lt;/sub&gt; + λ·ℓ&lt;sub&gt;probe&lt;/sub&gt;(w&lt;sup&gt;</em>&lt;/sup&gt;&lt;sup&gt;T&lt;/sup&gt;Z, y), where ℓ&lt;sub&gt;probe&lt;/sub&gt; is hinge or logistic loss. <strong>validation</strong>: On MS oligodendrocyte C, measure if ℓ&lt;sub&gt;new&lt;/sub&gt; lifts F1 above probe&#x27;s 0.465. <strong>failure modes</strong>: w&lt;sup&gt;*&lt;/sup&gt; is fixed; may not generalize to unseen samples; adds computational overhead. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Spatial-Anchor Contrastive Alignment</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Phagocyte&#x27;s confusion with oligodendrocyte A reflects real transcriptional overlap from ingested myelin RNA [Paper] [Paper: PDF p. 6], suggesting biological proximity should inform loss design. <strong>core hypothesis</strong>: Incorporating spatial transcriptomics priors (e.g., from Visium) as contrastive anchors can disentangle transcriptionally overlapping but spatially segregated rare classes, mitigating absorption. <strong>delta from paper</strong>: Paper uses only scRNA-seq; this fuses spatial context to reshape embedding geometry <em>during</em> fine-tuning. <strong>initial method</strong>: For MS, obtain spatial data; identify oligodendrocyte A and phagocyte spots; use their averaged spatial gene expression as positive anchors in a contrastive loss alongside scRNA-seq embeddings. <strong>validation</strong>: Train scGPT on MS with/without spatial anchors; compare NC1 and UMAP absorption (Figure 4) for phagocyte. <strong>failure modes</strong>: Requires matched spatial data for rare classes; anchor quality depends on spot purity. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>

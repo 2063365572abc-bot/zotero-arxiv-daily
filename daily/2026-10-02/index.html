@@ -1,0 +1,43 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>2026-10-02 每日科研雷达</title><style>+:root{color-scheme:light;--ink:#172e2b;--muted:#526a65;--accent:#126450;--line:#d8e3dc}
+*{box-sizing:border-box}body{margin:0;background:#f4f6f1;color:var(--ink);font:16px/1.75 system-ui,-apple-system,'Segoe UI','Microsoft YaHei',sans-serif}
+main{max-width:820px;margin:auto;padding:32px 18px 70px}a{color:var(--accent);overflow-wrap:anywhere}h1{font-size:30px;line-height:1.3;margin:12px 0}h2{font-size:21px;line-height:1.45}p{margin:12px 0}.eyebrow{font-size:12px;letter-spacing:.14em;font-weight:700;color:var(--accent)}
+.muted,small{color:var(--muted)}.paper{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin:22px 0}.tag{font-size:12px;background:#e9f1e9;border-radius:99px;padding:4px 10px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.button{display:inline-flex;align-items:center;min-height:46px;padding:9px 14px;border:1px solid var(--line);border-radius:9px;text-decoration:none;background:#fff}.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+summary{cursor:pointer;color:var(--accent);padding:8px 0}details{border-top:1px solid var(--line);margin-top:14px}details h1,details h2,details h3{font-size:16px}details ul{padding-left:22px}footer{margin-top:36px;font-size:13px;color:var(--muted)}.archive{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}header{border-bottom:1px solid var(--line);padding-bottom:24px}img{max-width:100%}table{display:block;overflow:auto;max-width:100%}th,td{padding:6px;border:1px solid var(--line)}
+@media(max-width:480px){main{padding-top:24px}.paper{padding:18px}h1{font-size:26px}.actions .button{flex:1 1 42%;justify-content:center;text-align:center}}
+</style></head><body><main><header><div class="eyebrow">一多科研 / 每日更新</div><h1>每日科研雷达</h1><p class="muted">2026-10-02 · 3 篇精选 · 生物学 × 深度学习</p><p>先读速看，再打开完整卡片。PDF 可直接下载，无需登录 GitHub。</p></header><article class="paper" id="paper-1"><span class="tag">01 · arXiv</span><h2>CellMSA: Context Modeling for Single-Cell Representation Learning</h2><small>发布于 2026-09-30</small><details><summary>展开研究速看</summary><h2>CellMSA: Context Modeling for Single-Cell Representation Learning</h2>
+<p><strong>标题与发布时间</strong> CellMSA: Context Modeling for Single-Cell Representation Learning（2026-09-30T03:55:27+00:00）</p>
+<p><strong>作者和机构</strong> Card未提供</p>
+<p><strong>发表状态</strong> arXiv 预印本（NeurIPS 2026 投稿）</p>
+<p><strong>研究背景</strong> 单细胞基础模型正从“规模驱动”转向“上下文增强”，但现有方法（如CellPLM、STATE、Stack）受限于同批次建模或压缩式上下文，无法在跨批次/跨类型数据中稳定提取基因级共表达模式。</p>
+<p><strong>核心假设或问题</strong> 能否设计一种上下文范式，在不牺牲基因分辨率前提下，利用跨批次/跨类型细胞的一致性与变异，学习状态特异的基因-基因依赖关系？</p>
+<p><strong>方法逻辑</strong> 输入：目标细胞 + 三类检索细胞（同批次去噪、跨批次同类型、跨类型对比）；核心方法：先用CellMSA-Module提炼低维基因对关系表示，再将该表示作为偏置注入GenePairformer的注意力机制；输出：鲁棒、细粒度的单细胞表征。</p>
+<p><strong>主要结果</strong> 在Tabula Sapiens等基准上，CellMSA总分0.736，NMI 0.895，ARI 0.805，显著优于scGPT、Geneformer、STATE-SE、Stack等基线；UMAP显示其能同时分离细胞类型、混合供体批次；GO分析证实基因对表示具生物学可解释性。</p>
+<p><strong>真正贡献</strong> 提出首个类比蛋白质MSA的单细胞上下文建模范式，通过跨细胞基因对聚合实现细粒度、批次鲁棒的表征学习，而非仅靠增大参数或数据量。</p>
+<p><strong>与你研究方向的关系</strong> 其“MSA-like上下文”可直接适配空间转录组邻域；GenePairformer的pair-bias机制可迁移至图神经网络；三目标预训练框架为多组学整合提供可扩展蓝图；跨批次上下文设计契合临床多中心小批量场景。</p>
+<p><strong>局限性</strong> 作者明确：学习的是统计关联而非因果调控；依赖细胞类型注释进行上下文检索；批判性分析指出，基于平均表达的聚类可能忽略稀有亚群。</p>
+<p><strong>是否值得精读</strong> 值得精读——它提供了首个将MSA思想系统迁移到单细胞建模的完整架构，并在多个权威指标和可视化中验证了其细粒度建模能力。</p>
+<p><strong>原文 PDF</strong>：https://arxiv.org/pdf/2609.38908v1</p></details><div class="actions"><a class="button primary" href="paper-1-card.html">在线读深度卡片</a><a class="button" href="https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-10-02/paper-1-card.pdf">下载卡片 PDF</a><a class="button" href="https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-10-02/paper-1-original.pdf">下载论文 PDF</a><a class="button" href="http://arxiv.org/abs/2609.38908v1">论文来源页</a></div></article><article class="paper" id="paper-2"><span class="tag">02 · arXiv</span><h2>GATE-ST: Gene-Aware Text-image Encoder for Spatial Transcriptomics</h2><small>发布于 2026-09-30</small><details><summary>展开研究速看</summary><h2>GATE-ST: Gene-Aware Text-image Encoder for Spatial Transcriptomics</h2>
+<p><strong>标题与发布时间</strong> GATE-ST: Gene-Aware Text-image Encoder for Spatial Transcriptomics（2026-09-30T00:19:55+00:00）</p>
+<p><strong>作者和机构</strong> Lucas Ni, Jian Luo, Wentao Huang, Chao Chen</p>
+<p><strong>发表状态</strong> arXiv 预印本（cs.AI）</p>
+<p><strong>研究背景</strong> 空间转录组（ST）成本高、通量低；H&amp;E染色廉价普及但缺乏分子信息。现有方法将基因视为固定输出维度，未建模其生物学语义——这是关键断层。</p>
+<p><strong>核心假设或问题</strong> 能否不增加湿实验成本，仅用H&amp;E图像和基因功能文本（如“IGKC, Predicted to enable antigen binding activity...”）提升空间基因表达预测精度？作者假设：基因文本中蕴含的生物学先验可与组织形态形成可学习的跨模态对齐。</p>
+<p><strong>方法逻辑</strong> 输入是H&amp;E图像块和基因功能文本摘要；核心方法是让每个基因文本作为query，引导模型在图像中定位相关形态线索（如“antigen binding”对应浆细胞区），并叠加全局图像残差防止细节丢失；输出是每个基因在该空间位置的表达预测值。</p>
+<p><strong>主要结果</strong> 在HER2+乳腺癌数据（36样本，8供体）上，GATE-ST用CONCH backbone达到MSE=0.7280、Pearson=0.6360，优于五种替代方案（如拼接、相似度匹配、纯cross-attention等）。</p>
+<p><strong>真正贡献</strong> 提出“基因文本作为语义探针”的新范式，实现文本主动引导图像注意力；设计轻量级cross-attention+残差结构，在冻结大模型基础上LoRA微调，兼顾性能与效率。</p>
+<p><strong>与你研究方向的关系</strong> 为跨模态对齐提供新模板：可用scRNA-seq基因程序作文本，对齐空间成像；CONCH文本编码器可直接用于单细胞基础模型；全局残差设计启发细胞状态表征中的形态保留策略。</p>
+<p><strong>局限性</strong> 作者明确：仅在小规模HER2+乳腺癌数据验证；未测试其他癌种、正常组织或单细胞分辨率；文本使用通用摘要，未评估注释质量影响。Card未提供对低表达/稀有基因的分析。</p>
+<p><strong>是否值得精读</strong> 值得精读：它首次系统验证“基因文本作query”的可行性，并给出可复现的轻量架构，在空间多模态方向具方法论参考价值。</p>
+<p><strong>原文 PDF</strong>：https://arxiv.org/pdf/2609.38690v1</p></details><div class="actions"><a class="button primary" href="paper-2-card.html">在线读深度卡片</a><a class="button" href="https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-10-02/paper-2-card.pdf">下载卡片 PDF</a><a class="button" href="https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-10-02/paper-2-original.pdf">下载论文 PDF</a><a class="button" href="http://arxiv.org/abs/2609.38690v1">论文来源页</a></div></article><article class="paper" id="paper-3"><span class="tag">03 · arXiv</span><h2>STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images</h2><small>发布于 2026-09-05</small><details><summary>展开研究速看</summary><h2>STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images</h2>
+<p><strong>标题与发布时间</strong> STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images（2026-09-05T07:43:36+00:00）</p>
+<p><strong>作者和机构</strong> Youngmin Chung, Ji Hun Ha, Andrew H. Song, et al.</p>
+<p><strong>发表状态</strong> arXiv 预印本</p>
+<p><strong>研究背景</strong> virtual ST 试图用廉价 H&amp;E 图像预测昂贵空间转录组数据，但现有评估混乱：有的混用不同图像编码器，有的只测简单回归器，无法区分是模型结构进步还是编码器更强。</p>
+<p><strong>核心假设或问题</strong> 能否建立公平基准，分离“图像表征能力”和“建模能力”？哪些基因/通路能稳定从形态恢复？预测结果是否真能支撑下游生物分析？其可靠性如何随数据质量（Xenium vs Visium）和跨组织迁移而变化？</p>
+<p><strong>方法逻辑</strong> 输入：H&amp;E 图像 patch；核心方法：强制所有兼容模型统一使用 UNIv2 等 PFM 编码器，再接入回归/检索/生成等21种架构；输出：基因表达预测，并在基因级、通路级、细胞丰度、空间结构四层评估，同时测试跨平台/跨组织/跨机构鲁棒性。</p>
+<p><strong>主要结果</strong> UNIv2 标准化后，CFANet 排名从第16升至第6；多数模型未超越线性探针（在 UNIv2 + HMHVG 下）；multi-scale 模型对基质/免疫/上皮相关基因预测更优；Xenium 数据平均计数（52.1）高于 Visium（9.2）；跨组织泛化最难。</p>
+<p><strong>真正贡献</strong> 首个大规模、标准化 virtual ST 基准，支持统一编码器下的架构比较、多粒度生物学效用验证、系统性域偏移鲁棒性测试。</p>
+<p><strong>与你研究方向的关系</strong> 其多粒度评估（gene→gene-set→cell→domain）可启发单细胞或多组学对齐的效用验证；cross-platform 泛化设计呼应多分辨率空间数据对齐需求；下游任务（Cell2location, SpaGCN）测试逻辑适用于跨模态评估。</p>
+<p><strong>局限性</strong> 仅覆盖6种癌症、2种平台（Visium/Xenium）；基因分析限于 HMHVG 和16个TME标记；TRIPLEX/DeepSpot 的优势可能源于更大训练数据量，而非架构本身。</p>
+<p><strong>是否值得精读</strong> 值得精读——它提供了首个控制变量的 virtual ST 评估框架，实证揭示了编码器选择对模型排名的主导影响，且所有结论均锚定在具体实验设置中，无过度外推。</p>
+<p><strong>原文 PDF</strong>：https://arxiv.org/pdf/2609.05956v1</p></details><div class="actions"><a class="button primary" href="paper-3-card.html">在线读深度卡片</a><a class="button" href="https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-10-02/paper-3-card.pdf">下载卡片 PDF</a><a class="button" href="https://raw.githubusercontent.com/2063365572abc-bot/zotero-arxiv-daily/reports/public/daily/2026-10-02/paper-3-original.pdf">下载论文 PDF</a><a class="button" href="http://arxiv.org/abs/2609.05956v1">论文来源页</a></div></article><footer><a href="../index.html">查看历史每日更新</a><p>仅收录每日更新；论文事实、分析判断与研究假设请以完整卡片中的标记区分。</p></footer></main></body></html>

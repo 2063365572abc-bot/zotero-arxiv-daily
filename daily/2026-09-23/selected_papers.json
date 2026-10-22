@@ -1,0 +1,94 @@
+[
+  {
+    "source": "arxiv",
+    "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+    "authors": [
+      "Youngmin Chung",
+      "Ji Hun Ha",
+      "Andrew H. Song",
+      "Cristina Almagro-Pérez",
+      "Chaeyoung Seo",
+      "Won Jun Suh",
+      "Jeong Won Beom",
+      "Kyoung Bin Oh",
+      "Eytan Ruppin",
+      "Faisal Mahmood",
+      "Joo Sang Lee"
+    ],
+    "abstract": "Spatial transcriptomics (ST) provides unprecedented insights into tumor heterogeneity by capturing spatially resolved gene expression, yet its high experimental cost hinders large-scale adoption. Consequently, computational approaches that predict spatial gene expression directly from hematoxylin and eosin slides, termed virtual ST, have rapidly emerged. Despite this progress, assessing advances in the field remains difficult due to insufficient benchmarking: prior studies rely on small, heterogeneous datasets, inconsistent training and inference pipelines, and limited evaluation of biological interpretability and model robustness. To address these gaps, we present STP-BENCH, a standardized benchmark for virtual ST models. STP-BENCH comprises six cancer types spanning two ST platforms (Visium and Xenium), with each training dataset containing more than 30,000 spots and at least 15 slides to ensure statistical reliability. We evaluate 21 predictive approaches, re-implemented with a unified pathology foundation model as the morphological encoder when architecturally applicable. Beyond conventional benchmarks that report average predictive accuracy on highly variable genes, we systematically examine which genes and gene sets are recoverable from histomorphology. We further evaluate the downstream biological utility of predicted profiles through cell-type deconvolution and spatial domain identification, and assess model reliability under domain shifts and data scaling. Notably, unified morphological encoding substantially re-orders model rankings established in prior studies, indicating that architectural innovations and image encoding have been conflated in previous evaluations. We publicly release STP-BENCH to support reproducibility and serve as a community benchmark at https://github.com/NEXGEM/STP-Bench.",
+    "url": "https://arxiv.org/abs/2609.05956",
+    "pdf_url": "https://arxiv.org/pdf/2609.05956",
+    "score": 98.0,
+    "role": "best_match",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 9.0,
+      "evidence_quality": 10.0,
+      "transferability": 10.0,
+      "resource_value": 10.0,
+      "trend_value": 10.0,
+      "total": 98.0,
+      "role": "best_match",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as best_match; LLM total=98.0/100. 直接构建ST基准，覆盖空间域识别、跨平台泛化、多癌种，含代码+数据+统一评估协议 Risk: 偏工程基准，非端到端新模型",
+    "arxiv_id": "2609.05956",
+    "published_date": "2026-09-05T00:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Dynamic Generalized Gromov-Wasserstein Optimal Transport",
+    "authors": [
+      "Junda Ying",
+      "Zhiwei Zeng",
+      "Peijie Zhou",
+      "Lei Zhang"
+    ],
+    "abstract": "Gromov--Wasserstein optimal transport (GW-OT) extends classical optimal transport by introducing structure-aware transport cost. This is particularly relevant for spatial transcriptomics, where dynamical reconstruction should preserve tissue structure in addition to matching expression patterns. While static formulations have been widely used for such structure-aware alignment, a general dynamic formulation for reconstructing continuous trajectories is still missing. We introduce Travelling Pair Dynamical Alignment and Trajectory Estimation (TP-DATE), a theoretical and computational framework to generalize GW-OT dynamically in a simulation-free manner. We formulate a broad class of static and dynamic Quadratic-form OT (QOT) through path actions and prove the static dynamic equivalence. We further develop travelling-pair flow matching, which allows interacting conditional paths and marginalizes their interactions into a single vector field. On synthetic and real spatial transcriptomics data, TP-DATE better preserves spatial structure and improves continuous 3D dynamics reconstruction.",
+    "url": "https://arxiv.org/abs/2609.20008",
+    "pdf_url": "https://arxiv.org/pdf/2609.20008",
+    "score": 94.5,
+    "role": "method_inspiration",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 10.0,
+      "evidence_quality": 8.0,
+      "transferability": 10.0,
+      "resource_value": 7.0,
+      "trend_value": 10.0,
+      "total": 94.5,
+      "role": "method_inspiration",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as method_inspiration; LLM total=94.5/100. 首次提出动态Gromov-Wasserstein框架用于空间转录组连续轨迹重建 Risk: 未提代码/模型开源，实证限于合成+真实数据但未列具体数据集",
+    "arxiv_id": "2609.20008",
+    "published_date": "2026-09-17T00:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Rethinking Class Imbalance for Single-Cell Foundation Models: A Systematic Benchmark Across Architectures and Long-Tail Loss Functions",
+    "authors": [
+      "Zeyu Dong",
+      "Jiahui Zhong"
+    ],
+    "abstract": "Single-cell foundation models (scGPT, scBERT, Geneformer) achieve cell-type classification accuracy up to 97.5% in our experiments, yet this aggregate accuracy can mask systematic failure on rare, often disease-relevant cell populations that long-tail loss functions are widely assumed to address. We present a systematic benchmark of six long-tail loss functions (cross-entropy, weighted CE, class-balanced loss, focal loss, LDAM, logit-adjusted softmax) across three architectures and three datasets (Multiple Sclerosis, Zheng68K, human Pancreas), totaling 162 controlled training runs (3 backbones x 3 datasets x 6 losses x 3 seeds). The gap between overall accuracy, Macro-F1, and rare-class recall under plain cross-entropy is consistent across all nine (architecture, dataset) settings, driven by dataset structure rather than pretraining. Rare-class failure itself splits into two regimes with distinct embedding-geometry signatures, visible before any loss is chosen: some classes are recoverable by the right loss, while others retain linear separability yet are absorbed into unrelated classes' neighborhoods under every evaluated loss and architecture. Among the recoverable classes, the efficacy of reweighting is predicted by a class's absolute training-set size, rather than its share of the dataset or the dataset's overall imbalance ratio. Class-balanced loss and LDAM are the most consistent choices across all nine settings, while logit adjustment trades rare-class precision for recall rather than improving both. Our results give both a reusable benchmark and mechanism-grounded practical guidelines for combining foundation models with imbalanced biological data.",
+    "url": "https://arxiv.org/abs/2609.23325",
+    "pdf_url": "https://arxiv.org/pdf/2609.23325v1",
+    "score": 93.5,
+    "role": "trend_signal",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 8.0,
+      "evidence_quality": 10.0,
+      "transferability": 9.0,
+      "resource_value": 8.0,
+      "trend_value": 10.0,
+      "total": 93.5,
+      "role": "trend_signal",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as trend_signal; LLM total=93.5/100. 聚焦scFM长尾问题，162次控制实验揭示嵌入几何机制，提供可复用benchmark与loss选择指南 Risk: 未开源代码，但实验设计极严谨",
+    "arxiv_id": "2609.23325v1",
+    "published_date": "2026-09-22T04:00:00+00:00"
+  }
+]

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: None<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<table><thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead><tbody><tr><td>Title</td><td>Correlation-Guided Flow Matching with Annealed Masking for Spatial Transcriptomics Generation</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Authors</td><td>Yupei Zhang, Hao Chen, Li Pan, Chao Li, Xiaohan Xing</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Venue</td><td>arXiv preprint</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Year</td><td>2026</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Core task</td><td>Histology-to-ST prediction (spatial transcriptomics generation from H&amp;E images)</td><td>[Paper] [Paper: PDF p. 1, 2]</td></tr>
+<tr><td>Method name</td><td>CorrFlow</td><td>[Paper] [Paper: PDF p. 1]</td></tr>
+<tr><td>Key technique</td><td>Conditional flow matching + annealed masking + gene graph regularization</td><td>[Paper] [Paper: PDF p. 1, 4]</td></tr>
+<tr><td>Primary evaluation metric</td><td>PCC (Pearson correlation coefficient) and HPCC (Hallmark-Gene PCC) on HMHVG-50 genes</td><td>[Paper] [Paper: PDF p. 7, Table 1]</td></tr>
+<tr><td>Benchmark datasets</td><td>HEST-1K (10 cancer/tissue types), STImage-1K4M (Brain, Breast)</td><td>[Paper] [Paper: PDF p. 7, Table 9]</td></tr>
+<tr><td>Baseline model</td><td>STFlow [11] (flow-matching baseline)</td><td>[Paper] [Paper: PDF p. 7]</td></tr>
+<tr><td>Code/data availability</td><td>Not stated in text; “not verified”</td><td>Not mentioned in supplied material</td></tr></tbody></table>
+<h2>02 一句话总结</h2>
+<p>CorrFlow 提出一种面向空间转录组（ST）生成的条件流匹配框架，通过<strong>渐进式掩码策略</strong>（annealed masking）和<strong>基因图正则化</strong>（gene graph regularization）显式建模基因间依赖关系，解决现有生成模型将基因视为独立预测目标、无法保留生物学共表达模式的根本缺陷；该方法在10个HEST-1K数据集上显著提升PCC与HPCC，尤其增强通路级预测一致性，但其STRING+WGCNA融合策略的泛化性未在外部队列验证，且未开源实现。</p>
+<h2>03 研究问题</h2>
+<p>论文直面一个被既有工作系统性忽略的核心矛盾：<strong>生成式ST预测模型虽能建模表达分布的随机性，却在训练目标层面默认基因独立</strong>。作者指出，这种“per-gene decomposition”并非建模能力不足所致，而是标准流匹配（Eq. 2–3）与扩散目标（Remark 1）在数学上天然分解为G个独立损失项，导致优化过程对跨基因协同建模既无激励也无约束 [Paper] [Paper: PDF p. 4]。因此，研究问题不是“能否建模基因相关性”，而是“如何重构训练信号与正则化机制，使模型<strong>必须</strong>学习并利用基因互作结构才能最小化损失”。</p>
+<h2>04 研究背景与发展路径</h2>
+<p>该工作处于“histology-to-ST generative modeling”演进的关键转折点：早期为确定性回归（ST-Net [8]），后转向捕捉不确定性的生成范式（Stem [40]、STFlow [11]），但均延续“per-gene marginal estimation”范式；本文则首次将<strong>基因互作建模</strong>从特征编码/后处理环节（如WGCNA用于预处理 [24] 或图神经网络用于回归 [38]）前移至<strong>生成动力学核心</strong>——即在流匹配的插值轨迹（xt）构建与速度场（vθ）优化中，强制引入基因维度间的耦合。这一路径跳出了“用图结构增强输入特征”的旧范式，转向“用图结构约束输出空间+用掩码重构学习任务”，构成方法论跃迁 [Paper] [Paper: PDF p. 2–3]。</p>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td>Per-gene decomposition of training objective</td><td>Uneven gene-level performance; highly correlated genes (e.g., x₃₁) predicted poorly despite accurate predictions for others (x₁₁, x₂₁); failure to preserve co-expression patterns</td><td>Standard CFM loss decomposes across genes (Proposition 1, Eq. 3), making cross-gene coordination unidentifiable — any gain from modeling correlation is equally achievable without it</td><td>[Paper] [Paper: PDF p. 2, 4]; Fig. 1 caption; Proposition 1 proof [Paper] [Paper: PDF p. 4]</td></tr>
+<tr><td>Shortcut reconstruction near t=1</td><td>Network copies near-target values from xt instead of learning meaningful transport dynamics</td><td>As t→1, xt→x₁, providing trivial reconstruction signal</td><td>[Paper] [Paper: PDF p. 5]; Eq. 8 motivation</td></tr>
+<tr><td>Lack of biological constraint on output space</td><td>Predictions may violate known co-expression structures due to finite capacity/noisy gradients</td><td>Existing methods apply priors only to features or encoders, not to generative dynamics</td><td>[Paper] [Paper: PDF p. 6]; Section 3.3 intro</td></tr>
+<tr><td>Train-inference magnitude mismatch from fixed masking</td><td>Input norm drops during training (masked entries = 0) but remains full during inference, causing instability</td><td>Fixed zero masking reduces average input norm by factor ~1−p(t), creating distribution shift analogous to dropout scaling problem</td><td>[Paper] [Paper: PDF p. 5]; Section 3.2.1</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<p>论文的核心思想是<strong>将基因互作从“可选先验”升级为“不可绕过的生成约束”</strong>。其逻辑链为：（1）观察到标准流匹配目标（Proposition 1）在数学上禁止跨基因梯度共享 → （2）提出annealed masking打破输入-输出维度一一对应，使masked基因的最优预测必须依赖joint conditional p(x⁽ᴹ⁾₁ \| x⁽ᴼ⁾₁, c)，从而<strong>将联合建模从可选变为必需</strong>（Proposition 2）→ （3）叠加gene graph正则化，将STRING功能关联与WGCNA数据驱动共表达融合为图拉普拉斯（Eq. 10）与Huber边约束（Eq. 11），使输出空间本身被生物结构所塑造。二者协同，前者改写学习任务，后者锚定解空间，共同迫使模型习得生物学一致的生成动力学。</p>
+<h2>07 方法总览</h2>
+<p>CorrFlow 是一个两阶段协同框架：<strong>第一阶段（Annealed-MFM）重构学习任务</strong>——通过timestep-dependent masking（Eq. 8）将标准流匹配转化为“部分观测下的联合推断”，使模型必须利用剩余基因推断被掩码基因，从而内生驱动跨基因建模；<strong>第二阶段（Gene Graph Regularization）约束解空间</strong>——构建融合STRING（S⁽ˢ⁾）与WGCNA（S⁽ʷ⁾）的基因亲和图（Eq. 9），并施加双重正则：Huber边损失（Llocal, Eq. 11）保障邻近基因预测一致性，图拉普拉斯损失（Lglobal, Eq. 12）抑制全图高频振荡，引导输出对齐低频共表达模块。最终目标为L = LMFM + ρLlocal + λLglobal（Eq. 16），所有组件均服务于一个目标：让生成的ST在数值准确（PCC）与生物合理（HPCC, GGC-Pearson）上同步提升。</p>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td>Annealed Masking Schedule</td><td>Replaces subset of gene dimensions in xt with learnable mask tokens mg, where masking ratio p(t) = pmax·t increases linearly with timestep</td><td>To break per-gene decomposition (Proposition 1) and suppress shortcut reconstruction near t=1; forces joint conditional modeling for masked genes</td><td>Input: xt ∈ ℝᴳ, t ∈ [0,1]; Output: ˜xt ∈ ℝᴳ with masked entries replaced by mg [Paper] [Paper: PDF p. 5, Eq. 5]</td><td>Proposition 2 proof [Paper] [Paper: PDF p. 5]; Ablation shows PCC ↓0.004 (Table 2); Hyperparameter study confirms f(t)=t optimal (Table 3)</td><td>Removal → reverts to per-gene marginal estimation; ablation shows PCC drops to 0.609 [Paper] [Paper: PDF p. 8, Table 2]</td></tr>
+<tr><td>Learnable Mask Token mg</td><td>Adapts token value during backprop to preserve input statistics across masking ratios</td><td>To avoid train-inference magnitude mismatch caused by fixed-zero masking (dropout scaling problem)</td><td>Input: mask set M; Output: mg ∈ ℝᴳ, shared across spatial locations [Paper] [Paper: PDF p. 5]</td><td>Explicitly motivated as mitigation for norm shift [Paper] [Paper: PDF p. 5]; no ablation on token vs. fixed zero, but design choice enables stable optimization</td><td>Expected: Fixed-zero masking would cause training instability and degraded convergence; not directly ablated but implied critical for stability</td></tr>
+<tr><td>Gene Affinity Graph Fusion</td><td>Fuses STRING functional prior S⁽ˢ⁾ and WGCNA data-driven co-expression S⁽ʷ⁾ via weighted average S = αS⁽ˢ⁾ + (1−α)S⁽ʷ⁾</td><td>To combine stable cross-dataset prior knowledge with dataset-specific co-expression structure, avoiding over-reliance on either alone</td><td>Input: S⁽ˢ⁾ (STRING), S⁽ʷ⁾ (WGCNA); Output: fused affinity matrix S ∈ ℝᴳˣᴳ [Paper] [Paper: PDF p. 6, Eq. 9]</td><td>Ablation shows both w/o WGCNA (PCC=0.607) and w/o STRING (PCC=0.604) underperform full model (0.613) [Paper] [Paper: PDF p. 8, Table 2]</td><td>Removal of either source → loss of complementary information; PCC drops more for STRING removal (−0.009) than WGCNA (−0.006), suggesting STRING provides stronger anchor</td></tr>
+<tr><td>Huber-based Local Constraint (Llocal)</td><td>Penalizes discrepancy ∆n,ij = zi − zj between z-scored predictions of connected genes (i,j)∈E, weighted by Sij</td><td>To enforce pairwise consistency among functionally related genes, robust to outliers on weak edges</td><td>Input: predicted expression ˆx₁,n, graph S; Output: scalar loss Llocal [Paper] [Paper: PDF p. 6, Eq. 11]</td><td>Ablation shows w/o Llocal → PCC=0.605 [Paper] [Paper: PDF p. 8, Table 2]; hyperparameter study shows ρ=0.3 optimal [Paper] [Paper: PDF p. 15, Table 6]</td><td>Removal → loss of fine-grained local coherence; ablation confirms larger drop than w/o Lglobal (0.605 vs 0.609)</td></tr>
+<tr><td>Graph Laplacian Global Constraint (Lglobal)</td><td>Penalizes ˆx⊤₁,nLˆx₁,n, where L is normalized Laplacian of fused graph</td><td>To suppress global oscillations and align predictions with low-frequency eigenmodes (large-scale co-expression modules)</td><td>Input: ˆx₁,n, graph Laplacian L; Output: scalar loss Lglobal [Paper] [Paper: PDF p. 6–7, Eq. 12]</td><td>Ablation shows w/o Lglobal → PCC=0.609 [Paper] [Paper: PDF p. 8, Table 2]; hyperparameter study shows λ=10⁻³ optimal [Paper] [Paper: PDF p. 15, Table 6]</td><td>Removal → loss of global module-level smoothness; smaller PCC drop than Llocal, indicating complementary role</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<ul>
+<li><strong>No verifiable closed-form equation for the core method</strong>: The paper defines components (Eq. 5, 8, 9, 10, 11, 12, 16) but does not present a single unified equation for CorrFlow’s forward pass or loss; the overall objective is modularly composed.</li>
+<li><strong>Key symbols &amp; metrics</strong>:</li>
+<li><code>xt = (1−t)x₀ + tx₁</code> (Eq. 1): Linear interpolant in flow matching; <code>x₀</code> ~ ZINB prior, <code>x₁</code> = ground-truth ST.</li>
+<li><code>p(t) = pmax · t</code> (Eq. 8): Annealed masking ratio; <code>pmax ∈ (0,1)</code> controls max masking intensity.</li>
+<li><code>S = α S(s) + (1−α) S(w)</code> (Eq. 9): Fused gene affinity matrix; <code>S(s)</code> = STRING, <code>S(w)</code> = WGCNA, <code>α ∈ [0,1]</code>.</li>
+<li><code>L = I − A</code>, <code>A = D⁻¹ᐟ²SD⁻¹ᐟ²</code> (Eq. 10): Normalized graph Laplacian and adjacency.</li>
+<li><code>rg = cov(ŷ:,g, y:,g) / (σ(ŷ:,g) σ(y:,g))</code> (Eq. 17): Gene-wise Pearson correlation coefficient (PCC).</li>
+<li><code>Pearson = (1/|G|) Σg rg</code> (Eq. 18): Mean PCC over gene set G.</li>
+<li><code>HPCC = (1/|K|) Σk (1/|Pk∩G|) Σg∈Pk∩G rg</code> (Eq. 13): Hallmark-Gene PCC, averaged over MSigDB Hallmark pathways with ≥5 genes in G.</li>
+<li><code>GGC-Pearson = corr(vec△(Ĉ), vec△(C))</code> (Eq. 20): Correlation between upper-triangular vectors of predicted vs. ground-truth gene-gene correlation matrices.</li>
+</ul>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td>Main benchmark (HEST-1K, 10 datasets)</td><td>CorrFlow &gt; STFlow in average PCC/HPCC</td><td>Same HMHVG-50 genes, patient-stratified CV, identical backbone architecture</td><td>PCC: 0.613 vs 0.600 (+0.013); HPCC: 0.628 vs 0.613 (+0.015); all p&lt;0.05 [Table 12]</td><td>CorrFlow’s dependency-aware design yields statistically significant gains over strongest flow-matching baseline</td><td>That gains generalize to <em>all</em> cancer types equally (e.g., PAAD missing in Table 4 expansion)</td><td>[Paper] [Paper: PDF p. 8, Table 1; p. 19, Table 12]</td></tr>
+<tr><td>Ablation study (HMHVG-50)</td><td>Each component contributes positively</td><td>Full model vs. variants removing masking, Lgraph, Llocal, Lglobal, WGCNA, or STRING</td><td>Full model best (0.613); removals cause PCC drops: masking (−0.004), Lgraph (−0.008), STRING (−0.009)</td><td>All proposed components are complementary and necessary for peak performance</td><td>That masking is <em>more important</em> than graph (drop magnitudes similar; no statistical test on delta)</td><td>[Paper] [Paper: PDF p. 8, Table 2; p. 15, Table 5]</td></tr>
+<tr><td>Hyperparameter study (masking/graph)</td><td>Optimal settings exist and are identifiable</td><td>Varying f(t), pmax, α, ρ, λ on HMHVG-50</td><td>Best: f(t)=t, pmax=0.75, α=0.6, ρ=0.3, λ=10⁻³ [Tables 3, 6]</td><td>Design choices are empirically grounded, not arbitrary</td><td>That these settings are globally optimal across <em>all</em> gene panels or datasets (e.g., PAAD excluded from Table 4)</td><td>[Paper] [Paper: PDF p. 8–9, Tables 3, 6]</td></tr>
+<tr><td>Expanded gene sets (HMHVG-100/150/200)</td><td>Dependency-aware design scales with gene panel size</td><td>Same HEST-1K, broader gene sets</td><td>Consistent PCC/HPCC gains over STFlow across all sizes (e.g., PCC +0.007 at 100 genes) [Table 4]</td><td>Benefit of modeling dependencies persists beyond top-50 marker genes</td><td>That gains increase with panel size (margins are stable, not growing)</td><td>[Paper] [Paper: PDF p. 14, Table 4; p. 17, C.1]</td></tr>
+<tr><td>GGC-Pearson evaluation</td><td>CorrFlow better preserves gene-gene correlation structure</td><td>Compared to STFlow, BLEEP-UNI on HMHVG-50</td><td>Avg. GGC-Pearson: 0.648 vs 0.633 (STFlow) [Table 7]</td><td>Improved dependency modeling translates to better preservation of global co-expression topology</td><td>That this directly causes improved downstream biological utility (no downstream task validation)</td><td>[Paper] [Paper: PDF p. 17, Table 7; p. 15, B]</td></tr>
+<tr><td>Supplementary STImage-1K4M</td><td>Generalizability to larger, non-benchmark ST collections</td><td>Brain &amp; Breast cancer categories, random 8:1:1 split</td><td>PCC: 0.542 vs 0.530 (STFlow) [Table 9]</td><td>Gains hold on larger, less standardized datasets</td><td>That generalizability extends to <em>fully independent external cohorts</em> (no such validation performed)</td><td>[Paper] [Paper: PDF p. 18, Table 9; p. 19, C.3]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<p>论文结论应被理解为：<strong>在HEST-1K标准化患者分层交叉验证框架下，CorrFlow通过annealed masking与gene graph regularization的协同，实现了对STFlow基线的统计显著且稳健的PCC/HPCC提升，且该提升与基因互作建模的理论动机一致</strong>。关键限定包括：（1）提升幅度虽小（+0.013 PCC）但稳定，在10个数据集、多基因面板、多指标（PCC/HPCC/GGC-Pearson/MSE）上均成立；（2）HPCC增益（+0.015）大于PCC，证实其对通路级生物学一致性的特异性增强；（3）所有结论均基于同一骨干网络（STFlow），差异仅在于损失与正则，排除了架构优势干扰；（4）“biologically coherent”指定量指标（HPCC, GGC-Pearson）提升及可视化中空间模式更贴近ground truth（Fig. 3a），而非定性生物学发现。</p>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td>Lack of external cohort validation</td><td>Evaluation uses HEST-1K (cross-platform but internal) and STImage-1K4M (non-standard splits); no fully independent external cohort with different tissue prep/sequencing/scanner</td><td>Incorporate independently collected ST cohorts to assess clinical robustness under out-of-distribution variations</td><td>[Paper] [Paper: PDF p. 19, D]</td></tr>
+<tr><td>Insufficient clinical translation readiness</td><td>Prediction quality still insufficient for direct clinical use due to intrinsic challenge of inferring molecular states from morphology alone</td><td>Improve robustness via stronger dependency-aware modeling and higher-quality ST training data</td><td>[Paper] [Paper: PDF p. 19, D]</td></tr>
+<tr><td>Limited downstream utility assessment</td><td>Evaluation focuses on reconstruction fidelity (PCC) and structure preservation (GGC), not downstream biological/clinical tasks</td><td>Assess benefits for tissue-domain identification, pathway activity estimation, biomarker discovery, patient stratification, and prognosis modeling</td><td>[Paper] [Paper: PDF p. 20, D]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td>STRING+WGCNA fusion assumes static functional associations, but gene interactions are context-dependent (e.g., tumor vs. normal, cell-type specific)</td><td>The fused graph S may misrepresent true co-expression in specific disease contexts, leading to over-regularization on irrelevant edges</td><td>Could degrade performance on datasets where STRING prior is weak (e.g., novel cancer subtypes) or WGCNA fails (low N spots)</td><td>Compare CorrFlow using cell-type-specific co-expression networks (e.g., from scRNA-seq) vs. bulk WGCNA on same ST dataset; measure PCC delta per cell type</td><td>[Paper] [Paper: PDF p. 6, Eq. 9]; STRING/WGCNA are bulk-level resources, not context-aware</td></tr>
+<tr><td>Annealed masking with p(t)=pmax·t treats all genes identically, ignoring their biological roles (e.g., housekeeping vs. regulatory)</td><td>Masking key regulators uniformly may hinder learning of master regulatory logic, while masking noisy genes adds little signal</td><td>May limit ability to capture hierarchical gene regulation, not just pairwise correlation</td><td>Stratify masking probability by gene centrality (e.g., degree in STRING) or variance; test if adaptive masking improves HPCC on regulatory pathways</td><td>[Paper] [Paper: PDF p. 5, Eq. 8]; no gene-specific masking strategy explored</td></tr>
+<tr><td>Graph Laplacian Lglobal (Eq. 12) penalizes high-frequency oscillations but assumes smoothness = biological coherence</td><td>Some biologically valid expression patterns (e.g., sharp boundaries in tumor-stroma interface) require high-frequency variation, which Lglobal may suppress</td><td>Could blur spatially resolved biological signals, harming domain identification</td><td>Visualize spatial residuals (ŷ−y) in high-Lglobal regions (e.g., tumor margins) vs. low-Lglobal; correlate with histology-defined domains</td><td>[Paper] [Paper: PDF p. 7, Eq. 12]; Laplacian smoothness is a generic assumption, not biology-validated for ST</td></tr>
+<tr><td>HPCC metric (Eq. 13) aggregates only over Hallmark pathways with ≥5 genes in G, excluding many disease-specific signatures</td><td>For cancer datasets like PAAD or SKCM, Hallmark coverage may be low, making HPCC an incomplete proxy for disease-relevant coherence</td><td>May underestimate true biological utility in oncology contexts where custom pathways matter more</td><td>Compute PCC on cancer-specific pathway databases (e.g., Oncogenic Signatures) and compare delta CorrFlow-STFlow</td><td>[Paper] [Paper: PDF p. 7, Eq. 13]; MSigDB Hallmark is general, not cancer-focused</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>Flow matching的可塑性远超标准应用</strong>：其插值轨迹（xt）不仅是数学工具，更是可编辑的“学习界面”——通过掩码（Eq. 5）、重加权或注入结构，能将任意先验（如基因图）无缝嵌入动力学训练，比扩散模型的score matching更易耦合结构约束。</li>
+<li><strong>渐进式掩码（annealed masking）是诱导联合建模的轻量级杠杆</strong>：不需修改网络架构，仅通过输入扰动（p(t)）即可将优化目标从边际估计（Proposition 1）转向条件联合（Proposition 2），且理论保证收敛（Theorem 1）。</li>
+<li><strong>多源图融合需谨慎平衡</strong>：STRING提供跨数据集稳定性，WGCNA offers dataset specificity；α=0.6（Table 3）表明功能先验略占优，但二者缺一不可（Table 2 ablation），提示在single-cell foundation models中融合scRNA-seq co-expression与 PPI networks时，需动态调整权重。</li>
+<li><strong>评估必须分层</strong>：PCC衡量单基因空间保真，HPCC衡量通路级协调，GGC-Pearson衡量全局拓扑保真——三者提升方向一致（Table 1/7），证实CorrFlow的改进是系统性的，非指标偏倚。</li>
+<li><strong>计算效率与科学严谨可兼得</strong>：CorrFlow与STFlow参数量完全相同（Table 14），证明结构化正则（Lgraph）和掩码（LMFM）不增加模型复杂度，仅改变训练动态，这对资源受限的biomedical AI部署至关重要。</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>候选连接/方法论连接</strong>：</li>
+<li><em>single-cell foundation models</em>: CorrFlow’s gene graph regularization (Eq. 9–12) directly inspires integrating scRNA-seq-derived co-expression graphs (e.g., from CellxGene) as dynamic priors, replacing static STRING/WGCNA.</li>
+<li><em>spatial transcriptomics</em>: The annealed masking strategy (Eq. 8) is transferable to spot-to-spot imputation tasks where spatial neighbors serve as conditioning context, analogous to masking spatial coordinates.</li>
+<li><em>graph neural networks</em>: CorrFlow’s dual graph constraints (Llocal + Lglobal) provide a blueprint for GNNs in ST: local message passing (Huber on edges) + global spectral filtering (Laplacian), moving beyond standard GCN layers.</li>
+<li><em>multi-omics</em>: The fusion weight α (Eq. 9) formalizes how to balance prior knowledge (e.g., chromatin accessibility) and data-driven omics correlations (e.g., ATAC-RNA co-variation).</li>
+<li><em>perturbation prediction</em>: Proposition 2’s joint conditional modeling (Eq. 7) is foundational for predicting multi-gene perturbation effects—masking a gene set M and inferring it from O mirrors knockdown/knockout experiments.</li>
+<li><em>cross-modal alignment</em>: CorrFlow’s conditioning on histology features z and spatial q (Fig. 2) exemplifies tight modality binding; its success suggests that alignment should occur in the <em>generation space</em>, not just feature space.</li>
+</ul>
+<h2>16 研究想法</h2>
+<p>[Hypothesis] 以下研究想法为基于论文证据和局限的可检验假设，不代表论文作者已验证。</p>
+<ul>
+<li><strong>name</strong>: Cell-Type-Aware Gene Graph (CTAG)</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: [Analysis] STRING+WGCNA fusion ignores context-dependency; current graph is bulk-level, not cell-type-specific [Paper] [Paper: PDF p. 6, Eq. 9]. <strong>core hypothesis</strong>: Using scRNA-seq-derived cell-type-specific co-expression graphs as dynamic priors will improve CorrFlow’s accuracy in heterogeneous tissues (e.g., tumor microenvironment). <strong>delta from paper</strong>: Replace static S⁽ʷ⁾ with cell-type-weighted ensemble: S⁽ʷ⁾_ct = Σc w_c · S⁽ʷ⁾_c, where w_c is cell-type proportion from histology segmentation, and S⁽ʷ⁾_c is co-expression graph for cell type c. <strong>initial method</strong>: Integrate UNI [5] histology encoder with cell-type classifier (e.g., based on nuclei morphology); compute w_c per spot; fetch precomputed S⁽ʷ⁾_c from scRNA-seq atlas (e.g., Human Cell Atlas). <strong>validation</strong>: Test on LYMPH_IDC (Fig. 3a) where tumor/stroma boundaries are clear; measure PCC delta in stromal vs. tumor regions. <strong>failure modes</strong>: Poor cell-type segmentation → erroneous w_c; sparse scRNA-seq for rare cell types → noisy S⁽ʷ⁾_c. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Hierarchical Annealed Masking (HAM)</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: [Analysis] Uniform masking ignores gene functional hierarchy; masking master regulators may disrupt learning [Paper] [Paper: PDF p. 5, Eq. 8]. <strong>core hypothesis</strong>: Prioritizing masking of downstream effector genes (high variance, low centrality) while sparing upstream regulators (low variance, high STRING degree) will yield more biologically interpretable joint modeling. <strong>delta from paper</strong>: Replace Bernoulli masking with stratified sampling: mask probability p_g(t) = p(t) · (1 − centrality_g), where centrality_g is degree in STRING or variance-normalized expression variance. <strong>initial method</strong>: Precompute gene centrality from STRING; during training, sample M with p_g(t) instead of uniform p(t). <strong>validation</strong>: Compare HPCC on regulatory pathways (e.g., KEGG MAPK) vs. metabolic pathways; expect larger HPCC gain in regulatory sets. <strong>failure modes</strong>: Over-suppression of regulator masking may revert to marginal estimation; centrality metrics may not reflect true regulatory hierarchy in cancer. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Spatial Boundary-Aware Laplacian (SBAL)</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: [Analysis] Standard Lglobal (Eq. 12) may suppress biologically valid sharp expression boundaries [Paper] [Paper: PDF p. 7, Eq. 12]. <strong>core hypothesis</strong>: Modifying the graph Laplacian to preserve high-gradient spatial interfaces (e.g., tumor-stroma) will improve domain identification utility without sacrificing global coherence. <strong>delta from paper</strong>: Replace constant weight wij in Lglobal with spatially adaptive weight: wij ← wij · exp(−β · ‖∇I_i − ∇I_j‖²), where ∇I is histology gradient magnitude at spots i,j. <strong>initial method</strong>: Compute Sobel gradients on histology patches; embed gradient difference into edge weights before computing L. <strong>validation</strong>: Quantify boundary sharpness (e.g., gradient magnitude of ŷ) at histology-defined tumor margins; correlate with domain segmentation accuracy (e.g., Dice score). <strong>failure modes</strong>: Gradient noise in low-contrast regions → unstable weights; requires precise histology-ST spatial alignment. <strong>innovation status</strong>: unverified</p>
+</body>
+</html>

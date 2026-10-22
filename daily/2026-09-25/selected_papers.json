@@ -1,0 +1,99 @@
+[
+  {
+    "source": "arxiv",
+    "title": "STP-BENCH: A Unified Systematic Benchmark for Virtual Spatial Transcriptomics from Histopathology Images",
+    "authors": [
+      "Youngmin Chung",
+      "Ji Hun Ha",
+      "Andrew H. Song",
+      "Cristina Almagro-Pérez",
+      "Chaeyoung Seo",
+      "Won Jun Suh",
+      "Jeong Won Beom",
+      "Kyoung Bin Oh",
+      "Eytan Ruppin",
+      "Faisal Mahmood",
+      "Joo Sang Lee"
+    ],
+    "abstract": "Spatial transcriptomics (ST) provides unprecedented insights into tumor heterogeneity by capturing spatially resolved gene expression, yet its high experimental cost hinders large-scale adoption. Consequently, computational approaches that predict spatial gene expression directly from hematoxylin and eosin slides, termed virtual ST, have rapidly emerged. Despite this progress, assessing advances in the field remains difficult due to insufficient benchmarking: prior studies rely on small, heterogeneous datasets, inconsistent training and inference pipelines, and limited evaluation of biological interpretability and model robustness. To address these gaps, we present STP-BENCH, a standardized benchmark for virtual ST models. STP-BENCH comprises six cancer types spanning two ST platforms (Visium and Xenium), with each training dataset containing more than 30,000 spots and at least 15 slides to ensure statistical reliability. We evaluate 21 predictive approaches, re-implemented with a unified pathology foundation model as the morphological encoder when architecturally applicable. Beyond conventional benchmarks that report average predictive accuracy on highly variable genes, we systematically examine which genes and gene sets are recoverable from histomorphology. We further evaluate the downstream biological utility of predicted profiles through cell-type deconvolution and spatial domain identification, and assess model reliability under domain shifts and data scaling. Notably, unified morphological encoding substantially re-orders model rankings established in prior studies, indicating that architectural innovations and image encoding have been conflated in previous evaluations. We publicly release STP-BENCH to support reproducibility and serve as a community benchmark at https://github.com/NEXGEM/STP-Bench.",
+    "url": "https://arxiv.org/abs/2609.05956",
+    "pdf_url": "https://arxiv.org/pdf/2609.05956",
+    "score": 96.5,
+    "role": "best_match",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 9.0,
+      "evidence_quality": 10.0,
+      "transferability": 9.0,
+      "resource_value": 10.0,
+      "trend_value": 10.0,
+      "total": 96.5,
+      "role": "best_match",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as best_match; LLM total=96.5/100. STP-BENCH直击用户关注的virtual ST+foundation model+spatial domain+deconvolution，含6癌种/2平台/21模型统一评测 Risk: 依赖病理基础模型编码器，可能限制非图像模态迁移",
+    "arxiv_id": "2609.05956",
+    "published_date": "2026-09-05T00:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Discover, Falsify, Revise: Auditing Input-Use Claims from Source Code to Predictive Contribution in Agent-Discovered Cell Models",
+    "authors": [
+      "Mengran Li",
+      "Bo Li",
+      "Chengyang Zhang",
+      "Yang Yan",
+      "Jinfeng Xu",
+      "Zhenchao Tang"
+    ],
+    "abstract": "AI virtual cells aim to predict cellular responses to specified interventions, yet held-out predictive performance alone does not establish use of the supplied perturbation information. This prediction-claim gap matters in agentic model discovery, where language-model agents generate and revise predictors using score-based feedback. We introduce CELLAUDIT, which audits input-use claims by asking whether an input can enter the cited computation, whether fitted predictions depend on it, and whether that dependence improves prediction of observed response. On a paired morphology-transcriptomics perturbation benchmark (BBBC047), an agent-selected predictor attains a mean held-out Global Pearson correlation coefficient (PCC) of 0.3153 but remains invariant to compound replacement; a control-profile-only predictor reaches 0.3142. Source inspection identifies a compound-query pathway blocked by singleton key-value attention, and the invariance persists after refitting with disjoint control wells. In a stratified audit of 48 candidates across two linked tasks, 47 change predictions under compound replacement on both held-out folds, but only 20 show target-loss gains with intervals above zero on both folds. On BBBC047, falsification-guided revisions recover positive mean compound contributions while retaining gains over the control-profile-only baseline. In matched sci-Plex searches, audit-enriched feedback yields higher held-out performance and larger mean compound and dose contributions across five trajectories, although paired intervals span zero. Refitting fixed designs on an independently acquired cohort shows predictive generalization need not imply generalization of input-use claims: dose contribution persists, whereas support for compound identity does not. CELLAUDIT adds a falsification layer to agentic model discovery, moving from generate-score-revise toward discover-falsify-revise.",
+    "url": "https://arxiv.org/abs/2609.27234",
+    "pdf_url": "https://arxiv.org/pdf/2609.27234v1",
+    "score": 94.0,
+    "role": "method_inspiration",
+    "scoring": {
+      "relevance": 10.0,
+      "method_novelty": 9.0,
+      "evidence_quality": 9.0,
+      "transferability": 10.0,
+      "resource_value": 6.0,
+      "trend_value": 10.0,
+      "total": 94.0,
+      "role": "method_inspiration",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as method_inspiration; LLM total=94.0/100. 直接解决perturbation prediction可信度审计，含BBBC047和sci-Plex实证 Risk: 未明确开源代码/模型，资源价值中等",
+    "arxiv_id": "2609.27234v1",
+    "published_date": "2026-09-24T04:00:00+00:00"
+  },
+  {
+    "source": "arxiv",
+    "title": "Correlation-Guided Flow Matching with Annealed Masking for Spatial Transcriptomics Generation",
+    "authors": [
+      "Yupei Zhang",
+      "Hao Chen",
+      "Li Pan",
+      "Chao Li",
+      "Xiaohan Xing"
+    ],
+    "abstract": "Spatial transcriptomics (ST) provides spatially resolved gene expression profiling but remains expensive, motivating the prediction of ST from histology images. Generative models have emerged as a mainstream paradigm for ST prediction due to their ability to model the conditional distribution of gene expression and capture its inherent stochasticity. However, these methods typically treat genes as independent prediction targets and overlook the intrinsic gene-gene interactions in biological systems, which limits their ability to preserve biologically meaningful co-expression patterns. We argue that gene-gene interactions, which reflect shared pathways and regulatory mechanisms, are essential for generating numerically accurate and biologically coherent ST profiles. In this paper, we propose CorrFlow, a correlation-guided flow matching framework for histology-to-ST prediction that explicitly models gene-gene dependencies through two complementary mechanisms. First, we introduce an annealed masked flow matching strategy, where subsets of genes are progressively masked following a timestep-dependent annealing schedule, encouraging the model to infer masked genes conditioned on the remaining genes and promoting joint conditional modeling beyond per-gene marginal estimation. Second, we devise a gene graph-regularized optimization scheme that integrates prior knowledge from the STRING database and data-driven co-expression estimated by WGCNA to construct a gene affinity graph, which enforces both local consistency and global smoothness in the predicted expression. Extensive experiments across 12 datasets show that CorrFlow achieves the best average PCC and HPCC among evaluated methods, leading to more biologically coherent ST predictions.",
+    "url": "https://arxiv.org/abs/2609.22187",
+    "pdf_url": "https://arxiv.org/pdf/2609.22187",
+    "score": 91.5,
+    "role": "trend_signal",
+    "scoring": {
+      "relevance": 9.0,
+      "method_novelty": 10.0,
+      "evidence_quality": 9.0,
+      "transferability": 9.0,
+      "resource_value": 8.0,
+      "trend_value": 9.0,
+      "total": 91.5,
+      "role": "trend_signal",
+      "needs_llm_scoring": false
+    },
+    "selection_reason": "Selected as trend_signal; LLM total=91.5/100. CorrFlow首次将gene graph+flow matching+annealed masking结合，显式建模基因互作，契合perturbation prediction与cross-modal alignment Risk: STRING+WGCNA融合策略泛化性待验，未说明是否开源",
+    "arxiv_id": "2609.22187",
+    "published_date": "2026-09-01T00:00:00+00:00"
+  }
+]

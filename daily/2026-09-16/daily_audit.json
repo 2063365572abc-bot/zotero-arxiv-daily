@@ -1,0 +1,135 @@
+{
+  "status": "complete",
+  "run_date": "2026-09-16",
+  "candidate_target": 50,
+  "top20_target": 20,
+  "selected_target": 3,
+  "embedding_model": "text-embedding-v4",
+  "zotero_upload_attempted_for": "selected_high_relevance_only",
+  "candidate_or_top20_zotero_uploads": 0,
+  "fallbacks_used": [
+    "partial_high_relevance_selection:2/3; not padding with weakly related papers"
+  ],
+  "incomplete_zotero_corpus_excluded_count": 3,
+  "retrieval_sources": {
+    "api": 38
+  },
+  "retrieval_fallback_sources": {},
+  "raw_arxiv_count": 49,
+  "candidate_50_count": 38,
+  "excluded_previously_promoted_count": 11,
+  "top20_count": 20,
+  "selected_count": 2,
+  "embedding_audit": {
+    "embedding_model": "text-embedding-v4",
+    "zotero_embedding_count": 27,
+    "candidate_embedding_count": 192,
+    "zotero_cache_hit_count": 25,
+    "zotero_api_create_count": 1,
+    "candidate_cache_hit_count": 38,
+    "candidate_api_create_count": 0,
+    "embedding_missing_count": 0
+  },
+  "llm_model_calls": 4,
+  "deep_card_model_calls": 2,
+  "quick_look_model_calls": 3,
+  "daily_quote_model_calls": 1,
+  "three_card_digest_model_calls": 1,
+  "card_quality": [
+    {
+      "arxiv_id": "2608.26208v1",
+      "title": "Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+      "folder": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation/source_bundle.json",
+        "source_page_count": 24,
+        "source_character_count": 77585
+      }
+    },
+    {
+      "arxiv_id": "2609.14970v1",
+      "title": "Towards a knowledge-enhanced single-cell foundation model",
+      "folder": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model",
+      "audit": {
+        "status": "warning",
+        "errors": [],
+        "warnings": [
+          "missing_hypothesis_provenance"
+        ],
+        "card_path": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model/paper-card.md",
+        "source_bundle_path": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model/source_bundle.json",
+        "source_page_count": 31,
+        "source_character_count": 88555
+      }
+    }
+  ],
+  "quick_look_quality": [
+    {
+      "arxiv_id": "2608.26208v1",
+      "title": "Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation",
+      "path": "outputs/daily/2026-09-16/paper-1/Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State-Niche Correlation/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1356,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "arxiv_id": "2609.14970v1",
+      "title": "Towards a knowledge-enhanced single-cell foundation model",
+      "path": "outputs/daily/2026-09-16/paper-2/Towards a knowledge-enhanced single-cell foundation model/paper-quick-look.md",
+      "audit": {
+        "schema_version": "1.0",
+        "status": "pass",
+        "character_count": 1238,
+        "errors": [],
+        "warnings": []
+      }
+    }
+  ],
+  "daily_quote": {
+    "status": "generated",
+    "quote": "晨光初照，问题已在，答案尚远。",
+    "model": "qwen-plus-latest",
+    "prompt_chars": 73
+  },
+  "wechat_digest": {
+    "status": "three_card_digest",
+    "prompt_chars": 5242,
+    "digest_chars": 2790,
+    "model": "qwen-plus-latest",
+    "report_date": "2026-09-16",
+    "repair_attempted": false,
+    "audit": {
+      "schema_version": "1.0",
+      "status": "pass",
+      "character_count": 2790,
+      "errors": [],
+      "warnings": []
+    },
+    "quick_look_model_calls": 3,
+    "daily_quote_model_calls": 1
+  },
+  "freshness_distribution": {
+    "latest_48h": 36,
+    "recent_7d": 1,
+    "recent_30d": 1,
+    "backfill": 0,
+    "unknown": 0
+  },
+  "top20_from_candidates": true,
+  "top3_from_top20": true,
+  "pdf_success_count": 2,
+  "card_success_count": 2,
+  "zotero_upload_success_count": 2,
+  "zotero_upload_partial_count": 0,
+  "zotero_upload_failure_count": 0
+}
