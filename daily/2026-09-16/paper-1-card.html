@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>paper-1-card</title>
+<style>
+@page { size: A4; margin: 18mm 15mm; }
+* { box-sizing: border-box; }
+body {
+  color: #202124;
+  font-family: "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.58;
+  margin: 0;
+}
+h1 {
+  color: #111827;
+  font-size: 20pt;
+  line-height: 1.25;
+  margin: 0 0 14pt;
+  page-break-after: avoid;
+}
+h2 {
+  border-bottom: 1px solid #d7dbe0;
+  color: #1f2937;
+  font-size: 14pt;
+  line-height: 1.35;
+  margin: 18pt 0 8pt;
+  padding-bottom: 4pt;
+  page-break-after: avoid;
+}
+h3, h4 {
+  color: #374151;
+  font-size: 11.5pt;
+  margin: 12pt 0 5pt;
+  page-break-after: avoid;
+}
+p { margin: 0 0 7pt; }
+blockquote {
+  background: #f6f8fa;
+  border-left: 3px solid #5b6f8f;
+  color: #374151;
+  margin: 8pt 0 10pt;
+  padding: 7pt 9pt;
+}
+table {
+  border-collapse: collapse;
+  font-size: 8.4pt;
+  margin: 8pt 0 11pt;
+  table-layout: fixed;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #cfd6df;
+  padding: 4pt 5pt;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #eef2f7;
+  color: #243041;
+  font-weight: 700;
+}
+tr { break-inside: avoid; }
+ul, ol { margin: 0 0 8pt 17pt; padding: 0; }
+li { margin: 0 0 3pt; }
+code {
+  background: #f3f4f6;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9pt;
+  padding: 1pt 2pt;
+}
+pre {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4pt;
+  font-size: 8.5pt;
+  overflow-wrap: anywhere;
+  padding: 7pt;
+  white-space: pre-wrap;
+}
+a { color: #1d4ed8; text-decoration: none; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<blockquote>Source coverage: Full paper<br>Extraction confidence: High<br>Locator mode: page-grounded<br>Primary analytical lens: methods<br>Secondary analytical lens: discovery<br>Context verification: Paper-only<br>Card completeness: Complete relative to supplied source</blockquote>
+<h2>01 基本信息</h2>
+<ul>
+<li><strong>Title</strong>: Learning Interpretable Tumor Microenvironment Representations by Fitting Pan-Cancer Cell State–Niche Correlation</li>
+<li><strong>Authors</strong>: Xiao Xiao*, Jiashu He, Shiyang Zhang, Meiyi Mao</li>
+<li><strong>Source</strong>: arXiv preprint (2026-08-26), version v1</li>
+<li><strong>URL</strong>: http://arxiv.org/abs/2608.26208v1</li>
+<li><strong>PDF URL</strong>: https://arxiv.org/pdf/2608.26208v1</li>
+<li><strong>Pretraining corpus size</strong>: 4,254,069 spatial cells across 10 samples, 4 tumor contexts, 2 imaging platforms [Paper: PDF p. 6]</li>
+<li><strong>Model parameters</strong>: ∼2.3B (∼2,296,747,232) [Paper: PDF p. 6]</li>
+<li><strong>Key modalities used</strong>: Specimen-matched imaging-based spatial transcriptomics (IST) + scRNA-seq, integrated via SpaIM [Paper: PDF p. 2, 7]</li>
+<li><strong>Gene vocabulary</strong>: Imputed to shared 20,000-gene space [Paper: PDF p. 2, 7]</li>
+<li><strong>Core architecture</strong>: Hierarchical transformer with two prediction heads — additive single-layer graph transformer (head 1) and multi-layer graph transformer (head 2) [Paper: PDF p. 2, 5]</li>
+<li><strong>Evaluation design</strong>: Held-out cancer types (breast, colorectal, melanoma) and platforms (Xenium, MERFISH) not present in pretraining [Paper: PDF p. 7]</li>
+</ul>
+<h2>02 一句话总结</h2>
+<p>GITIII-scale 是首个可解释的、泛癌预训练的空间转录组基础模型，通过将 sender-receiver 细胞对、距离与直接接触建模为 token，并采用可分解的加性图归纳偏置 transformer（head 1）与高阶图 transformer（head 2），在 specimen-matched scRNA-seq + IST 数据上自监督学习细胞状态–微环境关联（cell state–niche correlation），其生成的 TME embedding 在未见癌症类型上优于现有空间基础模型，且能单细胞级归因 LR 通路（如 KDR 轴驱动内皮 MKI67 表达）[Paper: PDF p. 1–2, 9–10].</p>
+<h2>03 研究问题</h2>
+<ul>
+<li>如何从空间分辨的单细胞数据中，<strong>无偏地量化细胞状态偏离其细胞类型均值的程度（zi）有多少可归因于其邻近微环境（Ni）</strong>？即建模 cell state–niche correlation [Paper: PDF p. 1–2].</li>
+<li>如何使该建模过程<strong>可解释</strong>：不仅识别哪些细胞类型间存在相互作用，更需解耦每个 sender 细胞对 receiver 细胞每个基因的<strong>定量影响</strong>（influence tensor I(g)ij）[Paper: PDF p. 2, 5].</li>
+<li>如何使该建模具备<strong>泛化性</strong>：在未见过的癌症类型、平台和样本上仍能准确恢复 niche-associated state changes，而非仅拟合单个 dataset [Paper: PDF p. 2, 7].</li>
+<li>如何将可解释的 influence tensor <strong>桥接到已知生物学机制</strong>（如 ligand–receptor 通路），支持靶点发现 [Paper: PDF p. 2, 6].</li>
+</ul>
+<h2>04 研究背景与发展路径</h2>
+<ul>
+<li><strong>临床动机</strong>：肿瘤微环境（TME）中细胞状态受邻近细胞调控；识别失调的细胞间互作（CCI）是药物靶点发现核心 [Paper: PDF p. 1–2].</li>
+<li><strong>技术缺口</strong>：scRNA-seq 提供全转录组但丢失空间；IST 提供单细胞空间但仅测 panel（312–6,175 genes）；二者单独均无法同时捕获 niche 与 induced state [Paper: PDF p. 2].</li>
+<li><strong>方法学缺口</strong>：</li>
+<li>现有空间基础模型（TERRA, HEIST, Novae, SpatialFormer）目标为组织结构、空间域或细胞身份，<strong>不建模 cell state–niche correlation</strong>；其嵌入无法分解为 directional CCI 或下游转录效应 [Paper: PDF p. 2, 8, 15–16].</li>
+<li>现有 CCI 工具（CellPhoneDB, NicheNet, NCEM）多为 dataset-specific，或依赖先验网络（覆盖有限），或无法 scale 到 pan-cancer、full-transcriptome [Paper: PDF p. 2, 8, 17].</li>
+<li><strong>演进路径</strong>：GITIII-scale 继承 GITIII（Xiao et al., 2025）的可解释性动机，但通过三方面升级实现 foundation model 能力：（1）双层架构分离可分解性（head 1）与表达力（head 2）；（2）pan-cancer 预训练（vs. per-dataset）；（3）基于 specimen-matched IST+scRNA-seq 的 20k-gene imputation [Paper: PDF p. 17–18].</li>
+</ul>
+<h2>05 论文识别的核心痛点</h2>
+<table><thead><tr><th>Pain point</th><th>Manifestation</th><th>Cause or author explanation</th><th>Evidence from the paper</th></tr></thead><tbody><tr><td><strong>Lack of interpretable cell state–niche correlation modeling</strong></td><td>Existing spatial foundation models cannot decompose predicted cell state into gene-level contributions from individual neighboring cells; they encode tissue architecture or domain identity, not how niche <em>shifts</em> state [Paper: PDF p. 2]</td><td>Their objectives target spatial domains/cell identity/expression similarity — all orthogonal to quantifying <em>how much</em> a cell’s deviation from its type mean is attributable to neighbors [Paper: PDF p. 2]</td><td>“A model can therefore be perfectly domain-discriminative while carrying no information about how the niche shifted the receiver’s state” [Paper: PDF p. 2]; Figure 1b highlights GITIII-scale’s additive influence tensor as core interpretability mechanism [Paper: PDF p. 4].</td></tr>
+<tr><td><strong>Inadequate data for full-transcriptome, single-cell spatial modeling</strong></td><td>Models trained on spot-level data blur cell-level correlations; models trained on IST panel data only see a “panel-sized slice of the biology”, missing ligands/receptors outside panel [Paper: PDF p. 2]</td><td>Neither scRNA-seq (no space) nor IST (no full transcriptome) alone suffices; paired specimen data is rare but essential to impute full transcriptome at single-cell resolution [Paper: PDF p. 2, 7]</td><td>Pretraining corpus uses specimen-matched IST+scRNA-seq integrated by SpaIM to impute to 20,000-gene vocabulary [Paper: PDF p. 2, 7, S23]; enables influence tensor over full transcriptome and LR attribution across platforms [Paper: PDF p. 17–18].</td></tr>
+<tr><td><strong>Non-transferable CCI analysis</strong></td><td>Previous deep learning CCI methods (e.g., Xiao et al., 2025; Li et al., 2023a) are dataset-specific and cannot generalize learned CCI features across samples/tissues [Paper: PDF p. 2]</td><td>They lack large-scale pretraining on diverse biological corpora, so nothing learned in one tissue transfers to the next [Paper: PDF p. 17]</td><td>GITIII-scale pretrained on 4.25M cells across 4 tumor contexts/2 platforms; ablation shows dataset-specific training fails to converge and underperforms pan-cancer pretraining [Paper: PDF p. 9, S24].</td></tr>
+<tr><td><strong>Unverifiable LR attribution</strong></td><td>No ground truth exists for which LR pathway drives a given gene’s expression change in a receiver cell type; current methods infer correlation, not causality [Paper: PDF p. 10]</td><td>Biological validation is required but not yet performed; attribution relies on statistical association between received signal strength (S(ℓ,r)i) and measured cell-state z(g∗)i [Paper: PDF p. 10]</td><td>Authors explicitly state limitation: “It is hard to systematically evaluate the analysis accuracy... our analysis can only tell correlation instead of causality” [Paper: PDF p. 10]; case study reports PCC=0.23, not causal inference [Paper: PDF p. 10].</td></tr></tbody></table>
+<h2>06 核心思想</h2>
+<ul>
+<li><strong>Cell state–niche correlation as learnable mapping</strong>: Define zi = xi − µt(i) as cell state (deviation from cell-type mean), and model zi as a function of Ni (neighborhood) — this isolates niche-induced variation from intrinsic cell-type programs [Paper: PDF p. 3, Eq. 1].</li>
+<li><strong>Interpretability via strict additivity</strong>: Head 1 uses a single-layer graph transformer <em>without feed-forward network</em>, where per-gene attention scores α(g)ij are normalized <em>across senders</em> (not genes), and prediction ˆz(1)(g)i = Σj I(g)ij is an exact sum of sender-wise influences — no non-linear distortion preserves decomposability [Paper: PDF p. 5, Eq. 6].</li>
+<li><strong>Hierarchical representation</strong>: Head 1 yields gene-level, sender-decomposed influence tensor I ∈ RN×k×G; Head 2 consumes same tokens to generate permutation-invariant TME embedding hi ∈ R1024 capturing higher-order, combinatorial niche effects (e.g., co-presence requirements) [Paper: PDF p. 2, 5, Eq. 7].</li>
+<li><strong>Bridging to biology via data-driven distance scaling</strong>: For each (receiver type, target gene) pair, fit a monotone spline sc,g∗(d) to model how influence decays with distance — this is <em>learned from data</em>, not assumed globally, enabling accurate LR signal strength estimation S(ℓ,r)i [Paper: PDF p. 6, Fig. 3b].</li>
+</ul>
+<h2>07 方法总览</h2>
+<p>GITIII-scale 是一个两阶段、自监督的 hierarchical transformer 模型：</p>
+<ul>
+<li><strong>Input construction</strong>: For each receiver cell i, build neighborhood Ni of k=49 nearest cells; mask expression of i and all same-type neighbors to µt(i) to prevent interpolation artifacts [Paper: PDF p. 3, 22].</li>
+<li><strong>Tokenization</strong>: Sender/receiver cells → separate MLPs → T=32 tokens × d=256 dim; distance dij → 5-feature expansion → uij ∈ Rd; contact cij ∈ Rd [Paper: PDF p. 3–4, S18].</li>
+<li><strong>Pair encoding</strong>: Process [Sj; uij; cij] → SAB → ˜Sij; then [˜Sij; Ri; uij; cij] → SAB → Hij; pool via MCAB → eij ∈ R256 [Paper: PDF p. 4–5, Eqs. 3–5].</li>
+<li><strong>Head 1 (Additive)</strong>: Map eij → per-gene attention logits &amp; values → α(g)ij, I(g)ij → ˆz(1)(g)i = Σj I(g)ij [Paper: PDF p. 5, Eq. 6].</li>
+<li><strong>Head 2 (TME embedding)</strong>: Pool sender tokens Wpei1,…,Wpeik with Ri → MCAB → hi ∈ R1024 → ˆz(2)i = Wout hi [Paper: PDF p. 5, Eq. 7].</li>
+<li><strong>Objective</strong>: Maximize per-gene Pearson correlation ρ(g) = corri∈B(ˆz(g)i, z(g)i) within cell type B; loss LB = Σg w(g)[1−ρ(g)] + λ||˜z(g)−˜ˆz(g)||² [Paper: PDF p. 5, Eq. 8].</li>
+<li><strong>LR attribution</strong>: From I(g)ij, fit distance scaler sc,g∗(d), weight receivers by prediction fidelity ωi, compute S(ℓ,r)i = [Σj sc,g∗(dij)·gm(x(ℓ)j)]·gm(x(r)i), regress z(g∗)i on all S(ℓ,r)i via weighted LASSO [Paper: PDF p. 6, Eq. 9–10].</li>
+</ul>
+<h2>08 核心模块拆解</h2>
+<table><thead><tr><th>Module</th><th>Function</th><th>Why needed</th><th>Input and output</th><th>Supporting evidence</th><th>Known or expected effect of removal</th></tr></thead><tbody><tr><td><strong>Same-type masking</strong></td><td>Replace expression of receiver cell i and all same-type neighbors in Ni with cell-type mean µt(i)</td><td>Prevents model from scoring well by interpolating between spatially autocorrelated same-type neighbors, forcing it to learn true CCI rather than local copying [Paper: PDF p. 3, 22]</td><td>Input: raw expression xi, xj; Output: masked expression = µt(i) for i and same-type j [Paper: PDF p. 3]</td><td>Described as critical for “fair comparison” and “truly evaluate whether models can encode cell state–niche correlations” [Paper: PDF p. 7]; ablation not shown but rationale is foundational [Paper: PDF p. 3, 22]</td><td>Model would achieve high accuracy by copying neighbors, learning nothing about intercellular communication [Paper: PDF p. 3].</td></tr>
+<tr><td><strong>Distance featurization (ϕ(d))</strong></td><td>Expand scalar distance dij into 5 features spanning contact-range to diffusive scales (algebraic decay, cubic contact indicator, exponential decays at 0.76µm &amp; 190.67µm) [Paper: PDF p. 18, S5]</td><td>Captures biophysically plausible signaling decay regimes; avoids assuming a single parametric form [Paper: PDF p. 18]</td><td>Input: dij (µm); Output: ϕ(dij) ∈ R⁵ → embedded to uij ∈ R²⁵⁶ [Paper: PDF p. 4, S18]</td><td>Distance scaler in Fig. 3b fits sharp decay within ~20–50µm, aligning with physical law [Paper: PDF p. 10]; ablation shows removing distance embedding causes 27% relative loss in variance explained [Paper: PDF p. 9]</td><td>Performance drop of 0.0448 (0.1684→0.1236) in variance explained on breast sample, confirming spatial info is crucial [Paper: PDF p. 9].</td></tr>
+<tr><td><strong>Direct contact token (cij)</strong></td><td>Binary token indicating if sender j and receiver i share edge in Delaunay triangulation, embedded to cij ∈ R²⁵⁶</td><td>Encodes juxtacrine signaling distinct from paracrine/diffusive; Delaunay identifies direct physical contact [Paper: PDF p. 3, 4]</td><td>Input: binary contact flag; Output: cij ∈ R²⁵⁶ [Paper: PDF p. 4]</td><td>Ablation shows removing contact embedding causes 0.0155 drop (0.1684→0.1529) in variance explained [Paper: PDF p. 9]</td><td>9% relative loss in variance explained, second most damaging ablation after shrinking neighborhood [Paper: PDF p. 9].</td></tr>
+<tr><td><strong>Single-layer graph transformer (Head 1)</strong></td><td>Compute per-gene attention α(g)ij normalized across senders j, then I(g)ij = α(g)ij · WV(eij)(g), ˆz(1)(g)i = Σj I(g)ij [Paper: PDF p. 5, Eq. 6]</td><td>Ensures exact additivity and decomposability: each I(g)ij is a clean, one-layer mapping from (i,j,d) features to influence on gene g, without GNN distortion [Paper: PDF p. 5]</td><td>Input: eij ∈ R²⁵⁶; Output: I ∈ RN×k×G, ˆz(1)i ∈ RG [Paper: PDF p. 5]</td><td>Explicitly stated as “where the interpretability of the model is established” [Paper: PDF p. 5]; case study (Fig. 3) uses this head’s output [Paper: PDF p. 10]</td><td>Loss of exact decomposability; influence tensor I would no longer directly represent sender-wise contributions, breaking interpretability pipeline [Paper: PDF p. 5].</td></tr>
+<tr><td><strong>Multi-head cross-attention pooling (MCAB)</strong></td><td>Use L=4 learned latent queries to attend to token sets (Hij or [Wpei1,…,Wpeik; Ri]) and return fixed-size, permutation-invariant summary [Paper: PDF p. 4–5]</td><td>Enables handling variable neighborhood size (k=49) and ensures permutation invariance — critical for biological plausibility as sender order is arbitrary [Paper: PDF p. 4–5]</td><td>Input: Hij ∈ R(2T+4)×d or token list; Output: MCAB(Hij) ∈ RL×d → flattened eij ∈ R²⁵⁶ or hi ∈ R¹⁰²⁴ [Paper: PDF p. 4–5, Eqs. 4–5,7]</td><td>Described as producing “fixed-size, permutation-invariant summary” [Paper: PDF p. 4]; essential for both head 1 and head 2 [Paper: PDF p. 4–5]</td><td>Model would not be invariant to sender ordering, violating biological expectation; output dimension would scale with k, breaking fixed embedding size [Paper: PDF p. 4].</td></tr></tbody></table>
+<h2>09 关键公式与符号</h2>
+<table><thead><tr><th>ID</th><th>Formula</th><th>Meaning</th><th>Key symbols</th><th>Source</th></tr></thead><tbody><tr><td><strong>Eq. 1</strong></td><td>xi = µt(i) + zi, zi = xi − µt(i)</td><td>Decomposition of cell expression xi into cell-type mean µt(i) and cell state zi (deviation)</td><td>xi: measured profile; µt(i): mean of cell type t(i); zi: cell state component</td><td>[Paper: PDF p. 3]</td></tr>
+<tr><td><strong>Eq. 2</strong></td><td>Sj = reshape(MLPsnd(xj)), Ri = reshape(MLPrec(xi)) ∈ RT×d, T=32, d=256</td><td>Tokenization: sender/receiver cells mapped to T=32 tokens of width d=256</td><td>Sj: sender j tokens; Ri: receiver i tokens; MLPsnd/MLPrec: separate encoders</td><td>[Paper: PDF p. 4]</td></tr>
+<tr><td><strong>Eq. 3</strong></td><td>˜Sij = SAB([Sj; uij; cij]) ∈ R(T+2)×d</td><td>Self-attention block on sender + distance + contact tokens</td><td>uij: distance token; cij: contact token; SAB: self-attention block</td><td>[Paper: PDF p. 5]</td></tr>
+<tr><td><strong>Eq. 4</strong></td><td>Hij = SAB([˜Sij; Ri; uij; cij]) ∈ R(2T+4)×d</td><td>Self-attention block on combined sender-receiver interaction tokens</td><td>Hij: interaction token set for pair (i,j)</td><td>[Paper: PDF p. 5]</td></tr>
+<tr><td><strong>Eq. 5</strong></td><td>eij = Wc flatten(MCAB(Hij)), MCAB(·) ∈ RL×d, eij ∈ R256</td><td>Cross-attention pooling to fixed-size vector per sender-receiver pair</td><td>MCAB: multi-head cross-attention block; L=4; Wc: linear projection</td><td>[Paper: PDF p. 5]</td></tr>
+<tr><td><strong>Eq. 6</strong></td><td>α(g)ij = exp(WA(eij)(g)) / Σj′ exp(WA(eij′)(g)), I(g)ij = α(g)ij WV(eij)(g), ˆz(1)(g)i = Σj I(g)ij</td><td>Additive head: per-gene attention, influence tensor, and prediction</td><td>WA/WV: MLPs; α(g)ij: attention score for gene g; I(g)ij: influence of j on i&#x27;s gene g</td><td>[Paper: PDF p. 5]</td></tr>
+<tr><td><strong>Eq. 7</strong></td><td>hi = flatten(MCAB(SAB([Wpei1,…,Wpeik; Ri]))), ˆz(2)i = Wout hi</td><td>TME embedding head: neighborhood pooling to hi ∈ R1024</td><td>hi: TME embedding; Wout: linear predictor; SAB: self-attention blocks</td><td>[Paper: PDF p. 5]</td></tr></tbody></table>
+<h2>10 实验设计与证据链</h2>
+<table><thead><tr><th>Experiment</th><th>Claim tested</th><th>Comparison and conditions</th><th>Result</th><th>Supported conclusion</th><th>Unsupported stronger conclusion</th><th>Source</th></tr></thead><tbody><tr><td><strong>Benchmarking on held-out samples</strong></td><td>GITIII-scale recovers cell state–niche correlation better than existing foundation models on unseen cancer types/platforms</td><td>Compared against TERRA, HEIST, Novae, SpatialFormer (frozen), NCEM-GCN, GAT, k-NN proportion probe; all use identical masked neighborhoods, downstream MLP probe (1024-unit hidden layer), train/val/test split (0.7/0.15/0.15), and 5 seeds [Paper: PDF p. 7–8, S15–S16]</td><td>On Xenium Breast: GITIII-scale R²=0.168±0.003, PCC=0.398±0.004; best baseline (TERRA) R²=0.146±0.001, PCC=0.370±0.002 [Paper: PDF p. 15, Table S1]</td><td>GITIII-scale’s TME embeddings encode cell state–niche correlation more effectively than those of other spatial foundation models in out-of-distribution settings [Paper: PDF p. 8]</td><td>That GITIII-scale is universally superior across <em>all</em> tasks or datasets — baselines vary in strength by sample (e.g., TERRA best on melanoma) [Paper: PDF p. 8]</td><td>[Paper: PDF p. 8, 15]</td></tr>
+<tr><td><strong>Ablation: corpus size</strong></td><td>Performance improves with larger, more diverse pretraining corpus</td><td>Trained variants on cumulative subsets: 2.35M → 3.04M → 4.25M cells; same architecture, matched optimization steps [Paper: PDF p. 9, Fig. 2]</td><td>Variance explained increases from 0.1290 at 2.35M to 0.1684 at 4.25M [Paper: PDF p. 9, Fig. 2]</td><td>Gains are attributable to corpus size/diversity, not extra optimization; scaling benefits hold [Paper: PDF p. 9]</td><td>That performance would continue scaling linearly beyond 4.25M — no extrapolation tested</td><td>[Paper: PDF p. 9]</td></tr>
+<tr><td><strong>Ablation: model capacity</strong></td><td>Model performance scales with parameter count</td><td>Halved (0.9B) and quartered (0.4B) model width; same architecture otherwise [Paper: PDF p. 9, Fig. 2]</td><td>Variance explained drops from 0.1684 (2B) to 0.1577 (0.9B) and 0.1489 (0.4B) [Paper: PDF p. 9, Fig. 2]</td><td>GITIII-scale’s capacity is underutilized at 2B params; larger models may yield further gains [Paper: PDF p. 9]</td><td>That 2B is the optimal size — no upper bound explored</td><td>[Paper: PDF p. 9]</td></tr>
+<tr><td><strong>Ablation: neighborhood size (k)</strong></td><td>Signal extends beyond immediate neighbors</td><td>Tested k=49 (original), k=35, k=25, k=10 on breast sample [Paper: PDF p. 9, Fig. 2]</td><td>k=10 gives R²=0.1022, a 39% relative loss vs. k=49 (0.1684) [Paper: PDF p. 9, Fig. 2]</td><td>Cell state–niche correlation involves broader cellular neighborhoods, not just adjacent cells [Paper: PDF p. 9]</td><td>That k=49 is biologically optimal — no biological validation of k choice</td><td>[Paper: PDF p. 9]</td></tr>
+<tr><td><strong>Case study: endothelial MKI67</strong></td><td>GITIII-scale identifies canonical, targetable LR pathways in unseen tissue</td><td>Applied LR attribution pipeline (Sec 2.4) to predict MKI67 in endothelial cells of held-out breast sample [Paper: PDF p. 9–10]</td><td>KDR (VEGFR2) axis selected top-ranked; received signal strength correlates with MKI67 (PCC=0.23, P=3.3e-83, n=7064); distance scaler fits sharp decay ~20–50µm [Paper: PDF p. 10, Fig. 3]</td><td>GITIII-scale can recover known pathogenic mechanisms (VEGF-KDR angiogenesis) in tissues absent from training, supporting its biological relevance and interpretability [Paper: PDF p. 10]</td><td>That KDR inhibition would therapeutically suppress MKI67 — correlation ≠ causation; requires wet-lab validation [Paper: PDF p. 10]</td><td>[Paper: PDF p. 10]</td></tr></tbody></table>
+<h2>11 对结论的正确理解</h2>
+<ul>
+<li>GITIII-scale 的优势在于 <strong>cell state–niche correlation recovery</strong>, not general spatial domain segmentation or cell typing — its objective (per-gene PCC on zi) and evaluation (masked neighborhoods) are specifically designed for this [Paper: PDF p. 2, 5, 7–8].</li>
+<li>Its interpretability is <strong>architecturally enforced additivity</strong>, not post-hoc attribution (e.g., SHAP): the influence tensor I(g)ij is a direct, one-layer output of the model, not derived from gradients or perturbations [Paper: PDF p. 5, Eq. 6].</li>
+<li>The “pan-cancer” claim rests on training across <strong>4 tumor contexts (liver HCC/iCCA, colon, liver HCC, ovarian)</strong> and <strong>2 platforms (CosMx, Xenium)</strong>, but does <em>not</em> include breast, colorectal, or melanoma in pretraining — these are held out for OOD evaluation [Paper: PDF p. 6, 7, S23].</li>
+<li>LR attribution (e.g., KDR) is a <strong>statistical correlation analysis</strong> applied <em>post hoc</em> to the influence tensor using external LR databases and distance modeling; it is not part of the model’s forward pass or training objective [Paper: PDF p. 6, 10].</li>
+<li>The 2.3B parameter count reflects the <strong>full dual-head architecture</strong>, but the key interpretability guarantee comes solely from Head 1’s constrained design (single-layer, no FFN, per-gene sender-normalized attention), which costs only ~2% PCC vs. Head 2 [Paper: PDF p. 9].</li>
+</ul>
+<h2>12 作者明确承认的限制</h2>
+<table><thead><tr><th>Limitation</th><th>Specific manifestation</th><th>Future direction proposed by authors</th><th>Source</th></tr></thead><tbody><tr><td><strong>Data scarcity</strong></td><td>Specimen-level matched scRNA-seq and IST data are rare, limiting corpus scale</td><td>“We will keep collecting data to further scale the model” [Paper: PDF p. 10]</td><td>[Paper: PDF p. 10]</td></tr>
+<tr><td><strong>Causal inference gap</strong></td><td>LR attribution identifies correlation, not causality; no ground truth for validation</td><td>“Further biological validation will be performed to better evaluate and train our model” [Paper: PDF p. 10]</td><td>[Paper: PDF p. 10]</td></tr>
+<tr><td><strong>Input dependency</strong></td><td>Requires imputed full-transcriptome data from specimen-matched IST+scRNA-seq, limiting applicability to datasets without such pairing</td><td>Not explicitly stated, but implied by “it is important to note… our model requires inputs imputed from specimen-level paired IST and scRNA-seq data” [Paper: PDF p. 11]</td><td>[Paper: PDF p. 11]</td></tr>
+<tr><td><strong>Baseline objective mismatch</strong></td><td>Compared foundation models were not designed for cell state–niche correlation, so their underperformance reflects objective misalignment, not inherent inferiority</td><td>Authors note “the comparison only reflects differences in model objectives and design” and that baselines “may underperform… in encoding cell state–niche correlations” [Paper: PDF p. 11]</td><td>[Paper: PDF p. 11]</td></tr></tbody></table>
+<h2>13 批判性分析</h2>
+<table><thead><tr><th>[Analysis] Observation</th><th>Potential issue or alternative explanation</th><th>Why it matters</th><th>How to test it</th><th>Basis</th></tr></thead><tbody><tr><td><strong>Distance scaler is fitted per (receiver type, target gene) pair, but LR attribution uses the same scaler for all LR pairs targeting that pair</strong></td><td>A single distance decay trend may not apply equally to all ligands acting on the same receptor/gene (e.g., VEGFA vs. PGF binding KDR may have different diffusion kinetics) [Paper: PDF p. 6]</td><td>Over-simplifies biophysical diversity of ligands; could misattribute signal if ligands have distinct ranges</td><td>Fit separate scalers per LR pair (ℓ,r) instead of per (c,g∗); compare attribution stability and biological plausibility (e.g., does VEGFA get higher weight than PGF for KDR-MKI67?)</td><td>Authors state scaler is “estimated separately for each (receiver type, target gene) combination” but do not specify per-LR refinement [Paper: PDF p. 6].</td></tr>
+<tr><td><strong>Same-type masking removes all same-type neighbors, including potential autocrine/juxtacrine signals within a cell type</strong></td><td>Autocrine signaling (e.g., cancer cells secreting TGFβ that acts on themselves) is biologically important but eliminated by masking [Paper: PDF p. 3, 22]</td><td>May blind the model to key intra-type regulatory loops, especially in homogeneous tumors</td><td>Compare performance with partial masking (e.g., mask only <em>other</em> same-type neighbors, keep self) on datasets with known autocrine drivers (e.g., PDGF-PDGFR in glioblastoma)</td><td>Masking rule is absolute: “for cells within Ni that share the receiver’s type, including the receiver itself, their expressions are masked” [Paper: PDF p. 3].</td></tr>
+<tr><td><strong>LR attribution uses geometric mean (gm) for multimeric ligands/receptors, but assumes all subunits must be co-expressed in the same cell</strong></td><td>Many functional ligands/receptors (e.g., TNFα trimer, EGFR dimer) can form heteromultimers or be secreted/trans-presented; requiring all subunits in one cell is overly restrictive [Paper: PDF p. 6]</td><td>Could miss biologically real interactions where subunits are expressed in different cells (e.g., trans-presentation of MHC-II)</td><td>Test alternative aggregation (e.g., max, sum) for gm in Eq. 10; assess impact on top-ranked axes and known biology (e.g., does it recover CD40-CD40L if CD40L is on T cells and CD40 on B cells?)</td><td>Authors define gm as “geometric mean over the subunits of a multimeric ligand or receptor” and state “a complex scores highly only when all of its components are present” [Paper: PDF p. 6].</td></tr>
+<tr><td><strong>The “additivity cost” comparison (Head 1 vs. Head 2 PCC) uses the same checkpoint, but Head 1’s output is not the final prediction used in benchmarking</strong></td><td>Benchmarking uses Head 2’s TME embedding hi for the downstream probe [Paper: PDF p. 7], so the 2% PCC gap is between two internal heads, not between interpretable and final outputs</td><td>Overstates the “cost” of interpretability; the deployed model’s accuracy is Head 2’s, and Head 1’s role is purely for attribution</td><td>Report the PCC of the <em>final benchmarking prediction</em> (MLP(hi) + cell-type embedding) vs. a hypothetical probe using Head 1’s output — but Head 1 has no TME embedding, so this is architecturally impossible</td><td>Authors state “the two prediction heads also let us quantify the cost of interpretability directly” and report Head 1 PCC=0.1902 vs. Head 2=0.1934 [Paper: PDF p. 9].</td></tr></tbody></table>
+<h2>14 学到的知识</h2>
+<ul>
+<li><strong>Cell state–niche correlation</strong> is a well-defined, quantifiable quantity: zi = xi − µt(i), and its correlation with neighborhood features is a valid self-supervised objective [Paper: PDF p. 1–3].</li>
+<li><strong>Architectural constraints enable interpretability</strong>: A single-layer graph transformer with per-gene sender-normalized attention (Eq. 6) guarantees exact additivity — a powerful alternative to post-hoc methods [Paper: PDF p. 5].</li>
+<li><strong>Distance featurization matters</strong>: Using multiple decay regimes (algebraic, cubic, exponential) in ϕ(d) [Paper: PDF p. 18] allows the model to learn biologically plausible interaction ranges (e.g., Fig. 3b’s ~20–50µm decay) without assuming a parametric form.</li>
+<li><strong>Specimen-matched multimodal integration is transformative</strong>: Pairing IST and scRNA-seq from the <em>same specimen</em> enables full-transcriptome imputation at single-cell resolution, unlocking pan-cancer learning and cross-platform LR attribution — a key enabler missing in prior work [Paper: PDF p. 2, 7, 17–18].</li>
+<li><strong>Interpretability and performance need not trade off</strong>: The additive head loses only ~2% PCC vs. the deeper head [Paper: PDF p. 9], proving that strict decomposability can be achieved with minimal accuracy penalty.</li>
+</ul>
+<h2>15 与既有知识的连接</h2>
+<ul>
+<li><strong>single-cell foundation models</strong>: Contrasts with scGPT-spatial [Wang et al., 2025], which tokenizes <em>genes</em> and masks gene tokens; GITIII-scale tokenizes <em>cells</em>, making it inherently suited for CCI modeling [Paper: PDF p. 3, 15–16].</li>
+<li><strong>spatial transcriptomics</strong>: Builds on TERRA/HEIST/Novae but shifts objective from spatial context to cell state–niche correlation; differs from SpatialFormer’s convolutional-transformer hybrid by using pure transformer blocks on cell tokens [Paper: PDF p. 2, 8, 15–16].</li>
+<li><strong>graph neural networks</strong>: Uses graph transformers (not GCN/GAT) for neighborhood modeling; unlike NCEM-GCN [Fischer et al., 2022], it is pretrained, pan-cancer, and produces an interpretable influence tensor [Paper: PDF p. 2, 8, 17].</li>
+<li><strong>multi-omics</strong>: Leverages specimen-matched scRNA-seq + IST as a <em>data integration strategy</em>, not a multi-modal fusion task — the scRNA-seq serves solely to impute the IST panel to 20k genes [Paper: PDF p. 2, 7, 17–18].</li>
+<li><strong>biomedical AI</strong>: Embodies the “foundation model for target discovery” paradigm: pretrain on broad biological data, then apply frozen to specific disease contexts (e.g., breast cancer endothelial proliferation) for mechanistic insight [Paper: PDF p. 1–2, 9–10].</li>
+<li><strong>perturbation prediction</strong>: While not predicting perturbations directly, the influence tensor I(g)ij provides a quantitative basis for <em>in silico</em> perturbation: e.g., ablating sender j would reduce ˆz(g)i by I(g)ij [Paper: PDF p. 5].</li>
+<li><strong>cell state representation</strong>: Defines cell state zi as deviation from cell-type mean, a standard approach in methods like NicheNet [Browaeys et al., 2019], but learns the mapping to niche end-to-end rather than propagating through a static prior network.</li>
+<li><strong>cross-modal alignment</strong>: Alignment is achieved via <em>specimen matching</em> and <em>imputation</em> (SpaIM), not joint embedding or contrastive learning — a pragmatic, data-centric alignment strategy.</li>
+</ul>
+<h2>16 研究想法</h2>
+<ul>
+<li><strong>name</strong>: Specimen-free cross-platform LR attribution</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: LR attribution requires specimen-matched IST+scRNA-seq for imputation, limiting applicability [Paper: PDF p. 11]; current imputation (SpaIM) is computationally heavy (5 days) [Paper: PDF p. 23]. <strong>core hypothesis</strong>: A foundation model can learn platform-invariant LR signaling representations directly from raw IST panels and public scRNA-seq atlases, bypassing specimen matching. <strong>delta from paper</strong>: Replace specimen-matched imputation with contrastive alignment of IST panel embeddings (from GITIII-scale encoder) and scRNA-seq gene embeddings (from scGPT), using public atlases (e.g., Human Cell Atlas) as bridge. <strong>initial method</strong>: Train GITIII-scale variant with dual-head: Head 1 (additive) on IST panels only; Head 2 (TME) contrastively aligned to scRNA-seq cell-type embeddings via InfoNCE loss on matched cell types. <strong>validation</strong>: Test LR attribution on held-out IST samples without matched scRNA-seq; compare top axes to those from specimen-matched version (e.g., KDR in breast). <strong>failure modes</strong>: Poor alignment if IST panel genes are sparse in scRNA-seq atlas; batch effects dominate contrastive signal. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Autocrine-aware neighborhood masking</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Same-type masking eliminates autocrine signals by design [Paper: PDF p. 3, 22], potentially missing key intra-tumor dynamics. <strong>core hypothesis</strong>: A small fraction of same-type neighbors (e.g., the closest 1–3) carry biologically relevant autocrine/juxtacrine signals that should be preserved. <strong>delta from paper</strong>: Modify masking to retain expression of the <em>k_closest</em> same-type neighbors (including self) while masking others, where k_closest is learned or set to 3. <strong>initial method</strong>: Augment GITIII-scale’s input construction: for receiver i, identify same-type neighbors in Ni, sort by distance, keep top-k_closest unmasked, mask the rest. Tune k_closest on validation PCC. <strong>validation</strong>: Apply to tumor datasets with known autocrine drivers (e.g., EGFR ligands in lung adenocarcinoma); check if influence tensor shows strong self-influence on EGFR pathway genes. <strong>failure modes</strong>: Increased risk of interpolation artifact if k_closest is too large; marginal gain if autocrine signals are weak relative to paracrine. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Multi-scale distance scalers per LR pair</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Distance scaler sc,g∗(d) is fitted per (receiver type, target gene), not per LR pair, ignoring ligand-specific biophysics [Paper: PDF p. 6]. <strong>core hypothesis</strong>: Fitting scalers per (ℓ,r,c,g∗) triplet will improve LR attribution precision and biological plausibility. <strong>delta from paper</strong>: Replace single scaler sc,g∗(d) with S(ℓ,r,c,g∗)(d) in Eq. 10; use monotone splines per triplet, regularized by similarity to parent (c,g∗) scaler. <strong>initial method</strong>: For each (ℓ,r,c,g∗), fit spline to I(g∗)ij vs. dij for all j expressing ℓ and i expressing r; penalize deviation from sc,g∗(d) in loss. <strong>validation</strong>: On breast case study, compare top-ranked axes with/without per-LR scalers; check if VEGFA-KDR gets higher weight than other KDR ligands (e.g., PGF) consistent with literature. <strong>failure modes</strong>: Overfitting due to sparse data per triplet; increased computational cost for fitting thousands of splines. <strong>innovation status</strong>: unverified</p>
+<ul>
+<li><strong>name</strong>: Graph attention-guided influence tensor pruning</li>
+</ul>
+<p><strong>originating limitation/observation</strong>: Influence tensor I(g)ij is dense (N×k×G); many entries are near-zero but retained, bloating memory and obscuring key signals [Paper: PDF p. 5]. <strong>core hypothesis</strong>: A lightweight graph attention module can sparsify I(g)ij <em>during inference</em>, retaining only top-K sender-gene influences per receiver, guided by biological priors (e.g., LR database). <strong>delta from paper</strong>: Add a pruning head that takes eij and LR database flags (is_ℓr_pair(ℓ,r)) as input, outputs attention scores to select top-K (j,g) pairs for each i, zeroing others in I. <strong>initial method</strong>: Train pruning head jointly with main model using Gumbel-Softmax for differentiable top-K selection; constrain K=5 per i. <strong>validation</strong>: Measure sparsity (fraction of zeros in I) and correlation of pruned vs. full I with biological ground truth (e.g., known VEGF-responsive genes in endothelium). <strong>failure modes</strong>: Pruning may remove weak but biologically critical signals; Gumbel-Softmax introduces noise. <strong>innovation status</strong>: unverified</p>
+<p><strong>Weak connection/Methodology connection</strong> to user’s research directions: All ideas connect to <em>methodology</em> (interpretable GNNs, cross-modal alignment, perturbation prediction) but lack direct ties to <em>single-cell foundation models</em> (GITIII-scale is spatial, not single-cell generic), <em>spatial transcriptomics</em> (covered), <em>graph neural networks</em> (core), <em>multi-omics</em> (specimen-matching is omics-integration), <em>biomedical AI</em> (core), <em>perturbation prediction</em> (influence tensor enables it), <em>cell state representation</em> (zi definition), <em>cross-modal alignment</em> (SpaIM-based). No direct link to <em>spatial transcriptomics</em> beyond what’s already central, and none to <em>single-cell foundation models</em> as typically defined (gene-token, not cell-token).</p>
+</body>
+</html>
+
